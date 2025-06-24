@@ -633,7 +633,7 @@ const datasets = [{
 },
 {
     id: 'youtube_videos',
-    dataset_id: 'gd_m5mbdl081229ln6t4a',
+    dataset_id: 'gd_lk56epmy2i5g7lzu0k',
     description: [
         'Quickly read structured YouTube videos data.',
         'Requires a valid YouTube video URL.',
