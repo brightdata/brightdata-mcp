@@ -54,7 +54,7 @@ https://github.com/user-attachments/assets/59f6ebba-801a-49ab-8278-1b2120912e33
 
 https://github.com/user-attachments/assets/61ab0bee-fdfa-4d50-b0de-5fab96b4b91d 
 
-For YouTube tutorials and demos: [Demo](https://github.com/brightdata-com/brightdata-mcp/blob/main/examples/README.md)
+For more YouTube tutorials and demos: [Demo](https://github.com/brightdata-com/brightdata-mcp/blob/main/examples/README.md)
 
 ## ✨ Features
 
@@ -74,7 +74,50 @@ Some example queries that this MCP server will be able to help with:
 - "What's the 7-day weather forecast in [your location]?"
 - "Of the 3 highest paid tech CEOs, how long have their careers been?" 
 
-## 🚀 Quickstart with Claude Desktop
+## 🚀 Quickstart with hosted MCP on Claude Desktop
+
+### Through Connectors:
+
+1. Open Claude Desktop
+
+2. Go to: Settings → Connectors → Add custom connector
+
+3. Choose a Name, and in the “Remote MCP server URL” section, paste:
+
+```
+https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
+```
+
+4. Replace YOUR_API_TOKEN_HERE with your actual API token from Step 1, and click “Add”
+
+### Through Developer Settings:
+
+1. Open Claude Desktop
+
+2. Go to: Settings → Developer → Edit Config
+
+3. Add this to your claude_desktop_config.json:
+
+```json
+{
+  "mcpServers": {
+    "Bright Data": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE"
+      ]
+    }
+  }
+}
+```
+
+4. Replace YOUR_API_TOKEN_HERE with your actual API token from Step 1
+
+5. Save and restart Claude Desktop
+
+## 💻 Use with self hosted MCP on Claude Desktop
+
 ### Through [Claude Desktop Extension](https://support.anthropic.com/en/articles/10949351-getting-started-with-model-context-protocol-mcp-on-claude-for-desktop#h_4819d0d1b4):
 
 1. **Download** the Claude Desktop Extension:  
@@ -86,6 +129,7 @@ Some example queries that this MCP server will be able to help with:
 3. **Drag** the `.dtx` file from **Step 1** into the **dropping area**.
 
 4. **Enable** the service and **restart** Claude.
+
 5. Enjoy!
 
 ### Through `claude_desktop_config.json`:
