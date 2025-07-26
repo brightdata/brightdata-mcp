@@ -3,6 +3,9 @@ import {UserError, imageContent as image_content} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {Browser_session} from './browser_session.js';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 let browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 
 let open_session;
@@ -202,11 +205,31 @@ let scraping_browser_screenshot = {
             'You should avoid fullscreen if it\'s not important, since the '
             +'images can be quite large',
         ].join('\n')),
+        save_to_desktop: z.boolean().optional().describe([
+            'Whether to save the screenshot to desktop (default: false)',
+            'If true, saves the screenshot as a PNG file on your desktop',
+        ].join('\n')),
+        filename: z.string().optional().describe([
+            'Custom filename for the saved screenshot (without extension)',
+            'If not provided, uses timestamp-based filename',
+        ].join('\n')),
     }),
-    execute: async({full_page = false})=>{
+    execute: async({full_page = false, save_to_desktop = false, filename})=>{
         const page = await (await require_browser()).get_page();
         try {
             const buffer = await page.screenshot({fullPage: full_page});
+            
+            // Save to desktop if requested
+            if (save_to_desktop) {
+                const desktopPath = path.join(os.homedir(), 'Desktop');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const finalFilename = filename ? `${filename}.png` : `screenshot-${timestamp}.png`;
+                const fullPath = path.join(desktopPath, finalFilename);
+                
+                fs.writeFileSync(fullPath, buffer);
+                console.log(`Screenshot saved to: ${fullPath}`);
+            }
+            
             return image_content({buffer});
         } catch(e){
             throw new UserError(`Error taking screenshot: ${e}`);
@@ -304,6 +327,112 @@ let scraping_browser_scroll_to = {
     },
 };
 
+let scraping_browser_screenshot_ocr = {
+    name: 'scraping_browser_screenshot_ocr',
+    description: 'Take a screenshot of the current page and extract text using OCR',
+    parameters: z.object({
+        full_page: z.boolean().optional().describe([
+            'Whether to screenshot the full page (default: false)',
+            'You should avoid fullscreen if it\'s not important, since the '
+            +'images can be quite large',
+        ].join('\n')),
+        save_to_desktop: z.boolean().optional().describe([
+            'Whether to save the screenshot to desktop (default: false)',
+            'If true, saves the screenshot as a PNG file on your desktop',
+        ].join('\n')),
+        filename: z.string().optional().describe([
+            'Custom filename for the saved screenshot (without extension)',
+            'If not provided, uses timestamp-based filename',
+        ].join('\n')),
+        ocr_prompt: z.string().optional().describe([
+            'Custom prompt for OCR extraction (default: extracts all visible text)',
+            'Example: "Extract only the text from tables" or "Extract email addresses"',
+        ].join('\n')),
+    }),
+    execute: async({full_page = false, save_to_desktop = false, filename, ocr_prompt})=>{
+        const openai_api_key = process.env.OPENAI_API_KEY;
+        if (!openai_api_key) {
+            throw new UserError('OPENAI_API_KEY environment variable is required for OCR functionality');
+        }
+
+        const page = await (await require_browser()).get_page();
+        try {
+            // Take screenshot
+            const buffer = await page.screenshot({fullPage: full_page});
+            
+            // Save to desktop if requested
+            let savedPath = null;
+            if (save_to_desktop) {
+                const desktopPath = path.join(os.homedir(), 'Desktop');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const finalFilename = filename ? `${filename}.png` : `screenshot-ocr-${timestamp}.png`;
+                const fullPath = path.join(desktopPath, finalFilename);
+                
+                fs.writeFileSync(fullPath, buffer);
+                savedPath = fullPath;
+                console.log(`Screenshot saved to: ${fullPath}`);
+            }
+
+            // Convert buffer to base64 for OpenAI API
+            const base64Image = buffer.toString('base64');
+            
+            // Prepare OCR prompt
+            const defaultPrompt = 'Extract all visible text from this screenshot. Return the text in a clean, readable format, preserving the structure and layout as much as possible.';
+            const finalPrompt = ocr_prompt || defaultPrompt;
+
+            // Call OpenAI GPT-4o for OCR
+            const ocrResponse = await axios({
+                url: 'https://api.openai.com/v1/chat/completions',
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${openai_api_key}`,
+                    'Content-Type': 'application/json',
+                },
+                data: {
+                    model: 'gpt-4o',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: finalPrompt
+                                },
+                                {
+                                    type: 'image_url',
+                                    image_url: {
+                                        url: `data:image/png;base64,${base64Image}`
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens: 4000
+                }
+            });
+
+            const extractedText = ocrResponse.data.choices[0]?.message?.content || 'No text extracted';
+            
+            // Return simple string response with OCR text and optional save info
+            let result = `OCR Extracted Text:\n\n${extractedText}`;
+            if (savedPath) {
+                result += `\n\n--- Screenshot saved to: ${savedPath} ---`;
+            }
+            
+            return result;
+        } catch(e){
+            if (e.response?.status === 401) {
+                throw new UserError('Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.');
+            } else if (e.response?.status === 429) {
+                throw new UserError('OpenAI API rate limit exceeded. Please try again later.');
+            } else if (e.response?.data?.error) {
+                throw new UserError(`OpenAI API error: ${e.response.data.error.message}`);
+            }
+            throw new UserError(`Error taking screenshot and performing OCR: ${e.message}`);
+        }
+    },
+};
+
 export const tools = process.env.API_TOKEN ? [
     scraping_browser_navigate,
     scraping_browser_go_back,
@@ -317,4 +446,5 @@ export const tools = process.env.API_TOKEN ? [
     scraping_browser_get_html,
     scraping_browser_scroll,
     scraping_browser_scroll_to,
+    scraping_browser_screenshot_ocr,
 ] : [scraping_browser_activation_instructions];
