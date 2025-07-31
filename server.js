@@ -10,7 +10,8 @@ const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
-
+const pro_mode = process.env.PRO_MODE === 'true';
+const pro_mode_tools = ['search_engine', 'scrape_as_markdown'];
 function parse_rate_limit(rate_limit_str) {
     if (!rate_limit_str) 
         return null;
@@ -121,7 +122,14 @@ let server = new FastMCP({
     version: package_json.version,
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
-server.addTool({
+
+const addTool = (tool) => {
+    if (!pro_mode && !pro_mode_tools.includes(tool.name)) 
+        return;
+    server.addTool(tool);
+};
+
+addTool({
     name: 'search_engine',
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
     +'SERP results in markdown (URL, title, description)',
@@ -152,7 +160,7 @@ server.addTool({
     }),
 });
 
-server.addTool({
+addTool({
     name: 'scrape_as_markdown',
     description: 'Scrape a single webpage URL with advanced options for '
     +'content extraction and get back the results in MarkDown language. '
@@ -175,7 +183,7 @@ server.addTool({
         return response.data;
     }),
 });
-server.addTool({
+addTool({
     name: 'scrape_as_html',
     description: 'Scrape a single webpage URL with advanced options for '
     +'content extraction and get back the results in HTML. '
@@ -198,7 +206,7 @@ server.addTool({
     }),
 });
 
-server.addTool({
+addTool({
     name: 'extract',
     description: 'Scrape a webpage and extract structured data as JSON. '
         + 'First scrapes the page as markdown, then uses AI sampling to convert '
@@ -255,7 +263,7 @@ server.addTool({
     }),
 });
 
-server.addTool({
+addTool({
     name: 'session_stats',
     description: 'Tell the user about the tool usage during this session',
     parameters: z.object({}),
@@ -674,7 +682,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}} of datasets)
         parameters[input] = defaults[input] !== undefined ?
             param_schema.default(defaults[input]) : param_schema;
     }
-    server.addTool({
+    addTool({
         name: `web_data_${id}`,
         description,
         parameters: z.object(parameters),
@@ -739,7 +747,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}} of datasets)
 }
 
 for (let tool of browser_tools)
-    server.addTool(tool);
+    addTool(tool);
 
 console.error('Starting server...');
 server.start({transportType: 'stdio'});
