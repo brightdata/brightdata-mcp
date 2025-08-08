@@ -712,7 +712,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}} of datasets)
                         method: 'GET',
                         headers: api_headers(),
                     });
-                    if (snapshot_response.data?.status === 'running')
+                    if (['running', 'building'].includes(snapshot_response.data?.status))
                     {
                         console.error(`[web_data_${id}] snapshot not ready, `
                             +`polling again (attempt `
