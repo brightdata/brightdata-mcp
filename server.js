@@ -406,7 +406,7 @@ const datasets = [{
         'Quickly read structured linkedin people search data',
         'This can be a cache lookup, so it can be more reliable than scraping',
     ].join('\n'),
-    inputs: ['url', 'first_name', 'last_name'],
+    inputs: ['first_name', 'last_name'],
 }, {
     id: 'crunchbase_company',
     dataset_id: 'gd_l1vijqt9jfj7olije',
