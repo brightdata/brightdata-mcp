@@ -17,6 +17,8 @@
 <p align="center">
   <img src="https://img.shields.io/npm/dw/@brightdata/mcp"  
        alt="npm downloads"/>
+
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/luminati-io/brightdata-mcp)](https://archestra.ai/mcp-catalog/luminati-io__brightdata-mcp)
   <a href="https://smithery.ai/server/@luminati-io/brightdata-mcp">
     <img src="https://smithery.ai/badge/@luminati-io/brightdata-mcp"  
          alt="Smithery score"/>
