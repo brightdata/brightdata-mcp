@@ -24,7 +24,8 @@ export class Browser_session {
             this._domainSessions.set(domain, {
                 browser: null,
                 page: null,
-                browserClosed: true
+                browserClosed: true,
+                requests: new Map()
             });
         }
         return this._domainSessions.get(domain);
@@ -97,6 +98,13 @@ export class Browser_session {
                     else
                         session.page = await existingContexts[0].newPage();
                 }
+                session.page.on('request', request => {
+                    session.requests.set(request, null);
+                });
+                session.page.on('response', response => {
+                    session.requests.set(response.request(), response);
+                });
+                console.error('Network listeners attached, current requests:', session.requests.size);
                 session.browserClosed = false;
                 session.page.once('close', ()=>{
                     session.page = null;
@@ -116,6 +124,46 @@ export class Browser_session {
         }
     }
 
+    async capture_snapshot() {
+        const page = await this.get_page();
+        try {
+            const snapshot = await page._snapshotForAI();
+            return {
+                url: page.url(),
+                title: await page.title(),
+                aria_snapshot: snapshot,
+            };
+        } catch(e) {
+            throw new Error(`Error capturing ARIA snapshot: ${e.message}`);
+        }
+    }
+
+    async ref_locator({element, ref}) {
+        const page = await this.get_page();
+        try {
+            const snapshot = await page._snapshotForAI();
+            if (!snapshot.includes(`[ref=${ref}]`)) {
+                throw new Error(`Ref ${ref} not found in the current page snapshot. Try capturing new snapshot.`);
+            }
+            
+            return page.locator(`aria-ref=${ref}`).describe(element);
+        } catch(e) {
+            throw new Error(`Error creating ref locator for ${element} with ref ${ref}: ${e.message}`);
+        }
+    }
+
+    async get_requests() {
+        const domain = this._currentDomain;
+        const session = await this._getDomainSession(domain);
+        return session.requests;
+    }
+
+    async clear_requests() {
+        const domain = this._currentDomain;
+        const session = await this._getDomainSession(domain);
+        session.requests.clear();
+    }
+
     async close(domain=null){
         if (domain) {
             const session = this._domainSessions.get(domain);
@@ -126,6 +174,7 @@ export class Browser_session {
                 session.browser = null;
                 session.page = null;
                 session.browserClosed = true;
+                session.requests.clear();
                 this._domainSessions.delete(domain);
             }
         } else {
@@ -137,6 +186,7 @@ export class Browser_session {
                     session.browser = null;
                     session.page = null;
                     session.browserClosed = true;
+                    session.requests.clear();
                 }
             }
             this._domainSessions.clear();
