@@ -1,0 +1,6 @@
+*.dxt
+smithery.yaml
+Dockerfile
+examples
+assets
+CHANGELOG.md
