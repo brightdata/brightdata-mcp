@@ -397,8 +397,8 @@ const datasets = [{
         'Requires a valid search keyword and amazon domain URL.',
         'This can be a cache lookup, so it can be more reliable than scraping',
     ].join('\n'),
-    inputs: ['keyword', 'url', 'pages_to_search'],
-    defaults: {pages_to_search: '1'},
+    inputs: ['keyword', 'url'],
+    fixed_values: {pages_to_search: '1'}, 
 }, {
     id: 'walmart_product',
     dataset_id: 'gd_l95fol7l1ru6rlo116',
@@ -768,7 +768,7 @@ const datasets = [{
     ].join('\n'),
     inputs: ['url'],
 }];
-for (let {dataset_id, id, description, inputs, defaults = {}} of datasets)
+for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}} of datasets)
 {
     let parameters = {};
     for (let input of inputs)
@@ -782,6 +782,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}} of datasets)
         description,
         parameters: z.object(parameters),
         execute: tool_fn(`web_data_${id}`, async(data, ctx)=>{
+            data = {...data, ...fixed_values};
             let trigger_response = await axios({
                 url: 'https://api.brightdata.com/datasets/v3/trigger',
                 params: {dataset_id, include_errors: true},
