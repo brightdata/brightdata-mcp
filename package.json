@@ -29,5 +29,6 @@
         "server.js",
         "browser_tools.js",
         "browser_session.js"
-    ]
+    ],
+    "mcpName": "io.github.brightdata/brightdata-mcp"
 }
