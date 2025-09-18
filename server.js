@@ -133,31 +133,52 @@ const addTool = (tool) => {
 addTool({
     name: 'search_engine',
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
-    +'SERP results in markdown (URL, title, description)',
+        +'SERP results in JSON or Markdown (URL, title, description), Ideal for'
+        +'gathering current information, news, and detailed search results.',
     parameters: z.object({
         query: z.string(),
-        engine: z.enum([
-            'google',
-            'bing',
-            'yandex',
-        ]).optional().default('google'),
-        cursor: z.string().optional().describe('Pagination cursor for next page'),
+        engine: z.enum(['google', 'bing', 'yandex'])
+            .optional()
+            .default('google'),
+        cursor: z.string()
+            .optional()
+            .describe('Pagination cursor for next page'),
     }),
-    execute: tool_fn('search_engine', async({query, engine, cursor})=>{
+    execute: tool_fn('search_engine', async ({query, engine, cursor})=>{
+        const is_google = engine=='google';
+        const url = search_url(engine, query, cursor);
         let response = await axios({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
-                url: search_url(engine, query, cursor),
+                url: url,
                 zone: unlocker_zone,
                 format: 'raw',
-                data_format: 'markdown',
+                data_format: is_google ? 'parsed' : 'markdown',
             },
             headers: api_headers(),
             responseType: 'text',
         });
-
-        return response.data;
+        if (!is_google)
+            return response.data;
+        try {
+            const searchData = JSON.parse(response.data);
+            return JSON.stringify({
+                organic: searchData.organic || [],
+                images: searchData.images
+                    ? searchData.images.map(img=>img.link) : [],
+                current_page: searchData.pagination.current_page || {},
+                related: searchData.related || [],
+                ai_overview: searchData.ai_overview || null,
+            });
+        } catch(e){
+            return JSON.stringify({
+                organic: [],
+                images: [],
+                pagination: {},
+                related: [],
+            });
+        }
     }),
 });
 
