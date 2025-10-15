@@ -28,6 +28,7 @@
     "files": [
         "server.js",
         "browser_tools.js",
-        "browser_session.js"
+        "browser_session.js",
+        "aria_snapshot_filter.js"
     ]
 }
