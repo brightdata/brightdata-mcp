@@ -3,6 +3,9 @@
     "version": "2.5.0",
     "description": "An MCP interface into the Bright Data toolset",
     "type": "module",
+    "scripts": {
+        "test": "node --test"
+    },
     "bin": {
         "@brightdata/mcp": "./server.js"
     },
