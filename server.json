@@ -44,6 +44,20 @@
           "isRequired": false,
           "isSecret": false,
           "format": "boolean"
+        },
+        {
+          "name": "TOOL_GROUPS",
+          "description": "Comma-separated tool group IDs (e.g., 'ecommerce,social,browser')",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "CUSTOM_TOOLS",
+          "description": "Comma-separated custom tool names to enable",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
         }
       ]
     }

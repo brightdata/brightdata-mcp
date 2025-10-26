@@ -29,7 +29,8 @@
         "server.js",
         "browser_tools.js",
         "browser_session.js",
-        "aria_snapshot_filter.js"
+        "aria_snapshot_filter.js",
+        "tool_groups.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"
 }
