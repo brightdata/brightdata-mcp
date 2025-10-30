@@ -4,14 +4,12 @@
     "description": "An MCP interface into the Bright Data toolset",
     "type": "module",
     "main": "./server.js",
-    "scripts": {
-        "test": "node --test"
-    },
     "bin": {
         "@brightdata/mcp": "./server.js"
     },
     "scripts": {
-        "start": "node server.js"
+        "start": "node server.js",
+        "test": "node --test"
     },
     "keywords": [
         "mcp",
