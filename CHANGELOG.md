@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.0] - 2025-10-27
+
+### Added
+- Client name logging and header passthrough for improved observability (PR #75)
+- ARIA ref-based browser automation for more reliable element interactions (PR #65)
+- ARIA snapshot filtering for better element targeting
+- Network request tracking in browser sessions
+- MCP Registry support (PR #71)
+- `scraping_browser_snapshot` tool to capture ARIA snapshots
+- `scraping_browser_click_ref`, `scraping_browser_type_ref`, `scraping_browser_wait_for_ref` tools using ref-based selectors
+- `scraping_browser_network_requests` tool to track HTTP requests
+
+### Changed
+- Enhanced search engine tool to return JSON with only relevant fields (PR #57)
+- Added `fixed_values` parameter to reduce token usage (PR #60)
+- Browser tools now use ARIA refs instead of CSS selectors for better reliability
+
+### Fixed
+- Stop polling on HTTP 400 errors in web data tools (PR #64)
+
+### Deprecated
+- Legacy selector-based tools (`scraping_browser_click`, `scraping_browser_type`, `scraping_browser_wait_for`) replaced by ref-based equivalents
+- `scraping_browser_links` tool deprecated in favor of snapshot-based approach
+
+
 ## [2.0.0] - 2025-05-26
 
 ### Changed

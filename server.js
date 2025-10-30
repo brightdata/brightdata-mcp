@@ -36,9 +36,10 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
-const api_headers = ()=>({
+const api_headers = (clientName=null)=>({
     'user-agent': `${package_json.name}/${package_json.version}`,
     authorization: `Bearer ${api_token}`,
+    ...(clientName ? {'x-mcp-client-name': clientName} : {}),
 });
 
 function check_rate_limit(){
@@ -144,7 +145,7 @@ addTool({
             .optional()
             .describe('Pagination cursor for next page'),
     }),
-    execute: tool_fn('search_engine', async ({query, engine, cursor})=>{
+    execute: tool_fn('search_engine', async ({query, engine, cursor}, ctx)=>{
         const is_google = engine=='google';
         const url = search_url(engine, query, cursor);
         let response = await axios({
@@ -156,7 +157,7 @@ addTool({
                 format: 'raw',
                 data_format: is_google ? 'parsed' : 'markdown',
             },
-            headers: api_headers(),
+            headers: api_headers(ctx.clientName),
             responseType: 'text',
         });
         if (!is_google)
@@ -189,7 +190,7 @@ addTool({
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
     parameters: z.object({url: z.string().url()}),
-    execute: tool_fn('scrape_as_markdown', async({url})=>{
+    execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
         let response = await axios({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
@@ -199,7 +200,7 @@ addTool({
                 format: 'raw',
                 data_format: 'markdown',
             },
-            headers: api_headers(),
+            headers: api_headers(ctx.clientName),
             responseType: 'text',
         });
         return response.data;
@@ -220,7 +221,7 @@ addTool({
                 .optional(),
         })).min(1).max(10),
     }),
-    execute: tool_fn('search_engine_batch', async ({queries})=>{
+    execute: tool_fn('search_engine_batch', async ({queries}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor})=>{
             const is_google = (engine || 'google') === 'google';
             const url = is_google
@@ -236,7 +237,7 @@ addTool({
                     format: 'raw',
                     data_format: is_google ? undefined : 'markdown',
                 },
-                headers: api_headers(),
+                headers: api_headers(ctx.clientName),
                 responseType: 'text',
             }).then(response => {
                 if (is_google) {
@@ -275,8 +276,8 @@ addTool({
    parameters: z.object({
        urls: z.array(z.string().url()).min(1).max(10).describe('Array of URLs to scrape (max 10)')
    }),
-   execute: tool_fn('scrape_batch', async ({urls})=>{
-       const scrapePromises = urls.map(url => 
+   execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
+       const scrapePromises = urls.map(url =>
            axios({
                url: 'https://api.brightdata.com/request',
                method: 'POST',
@@ -286,7 +287,7 @@ addTool({
                    format: 'raw',
                    data_format: 'markdown',
                },
-               headers: api_headers(),
+               headers: api_headers(ctx.clientName),
                responseType: 'text',
            }).then(response => ({
                url,
@@ -306,7 +307,7 @@ addTool({
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
     parameters: z.object({url: z.string().url()}),
-    execute: tool_fn('scrape_as_html', async({url})=>{
+    execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
         let response = await axios({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
@@ -315,7 +316,7 @@ addTool({
                 zone: unlocker_zone,
                 format: 'raw',
             },
-            headers: api_headers(),
+            headers: api_headers(ctx.clientName),
             responseType: 'text',
         });
         return response.data;
@@ -345,7 +346,7 @@ addTool({
                 format: 'raw',
                 data_format: 'markdown',
             },
-            headers: api_headers(),
+            headers: api_headers(ctx.clientName),
             responseType: 'text',
         });
 
@@ -809,7 +810,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                 params: {dataset_id, include_errors: true},
                 method: 'POST',
                 data: [data],
-                headers: api_headers(),
+                headers: api_headers(ctx.clientName),
             });
             if (!trigger_response.data?.snapshot_id)
                 throw new Error('No snapshot ID returned from request');
@@ -835,7 +836,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                             +`/snapshot/${snapshot_id}`,
                         params: {format: 'json'},
                         method: 'GET',
-                        headers: api_headers(),
+                        headers: api_headers(ctx.clientName),
                     });
                     if (['running', 'building'].includes(snapshot_response.data?.status))
                     {
@@ -868,16 +869,32 @@ for (let tool of browser_tools)
     addTool(tool);
 
 console.error('Starting server...');
+
+server.on('connect', (event)=>{
+    const session = event.session;
+    const clientInfo = session.server?.getClientVersion?.();
+    if (clientInfo) 
+        global.mcpClientInfo = clientInfo;
+});
+
 server.start({transportType: 'stdio'});
 function tool_fn(name, fn){
     return async(data, ctx)=>{
         check_rate_limit();
+        const clientInfo = global.mcpClientInfo;
+        const clientName = clientInfo?.name || 'unknown-client';
+        console.error(`[%s] executing (client=%s) %s`, name, clientName,
+            JSON.stringify(data));
         debug_stats.tool_calls[name] = debug_stats.tool_calls[name]||0;
         debug_stats.tool_calls[name]++;
         debug_stats.session_calls++;
         let ts = Date.now();
-        console.error(`[%s] executing %s`, name, JSON.stringify(data));
-        try { return await fn(data, ctx); }
+        const extended_ctx = {
+            ...ctx,
+            clientInfo,
+            clientName,
+        };
+        try { return await fn(data, extended_ctx); }
         catch(e){
         if (e.response)
             {

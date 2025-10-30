@@ -47,7 +47,9 @@ let scraping_browser_navigate = {
         url: z.string().describe('The URL to navigate to'),
     }),
     execute: async({url})=>{
-        const page = await (await require_browser()).get_page({url});
+        const browser_session = await require_browser();
+        const page = await browser_session.get_page({url});
+        await browser_session.clear_requests();
         try {
             await page.goto(url, {
                 timeout: 120000,
@@ -102,93 +104,83 @@ const scraping_browser_go_forward = {
     },
 };
 
-let scraping_browser_click = {
-    name: 'scraping_browser_click',
+let scraping_browser_snapshot = {
+    name: 'scraping_browser_snapshot',
     description: [
-        'Click on an element.',
-        'Avoid calling this unless you know the element selector (you can use '
-        +'other tools to find those)',
-    ].join('\n'),
-    parameters: z.object({
-        selector: z.string().describe('CSS selector for the element to click'),
-    }),
-    execute: async({selector})=>{
-        const page = await (await require_browser()).get_page();
-        try {
-            await page.click(selector, {timeout: 5000});
-            return `Successfully clicked element: ${selector}`;
-        } catch(e){
-            throw new UserError(`Error clicking element ${selector}: ${e}`);
-        }
-    },
-};
-
-let scraping_browser_links = {
-    name: 'scraping_browser_links',
-    description: [
-        'Get all links on the current page, text and selectors',
-        "It's strongly recommended that you call the links tool to check that "
-        +'your click target is valid',
+        'Capture an ARIA snapshot of the current page showing all interactive '
+        +'elements with their refs.',
+        'This provides accurate element references that can be used with '
+        +'ref-based tools.',
+        'Use this before interacting with elements to get proper refs instead '
+        +'of guessing selectors.'
     ].join('\n'),
     parameters: z.object({}),
     execute: async()=>{
-        const page = await (await require_browser()).get_page();
+        const browser_session = await require_browser();
         try {
-            const links = await page.$$eval('a', elements=>{
-                return elements.map(el=>{
-                    return {
-                        text: el.innerText,
-                        href: el.href,
-                        selector: el.outerHTML,
-                    };
-                });
-            });
-            return JSON.stringify(links, null, 2);
+            const snapshot = await browser_session.capture_snapshot();
+            return [
+                `Page: ${snapshot.url}`,
+                `Title: ${snapshot.title}`,
+                '',
+                'Interactive Elements:',
+                snapshot.aria_snapshot
+            ].join('\n');
         } catch(e){
-            throw new UserError(`Error getting links: ${e}`);
+            throw new UserError(`Error capturing snapshot: ${e}`);
         }
     },
 };
 
-let scraping_browser_type = {
-    name: 'scraping_browser_type',
-    description: 'Type text into an element',
+let scraping_browser_click_ref = {
+    name: 'scraping_browser_click_ref',
+    description: [
+        'Click on an element using its ref from the ARIA snapshot.',
+        'Use scraping_browser_snapshot first to get the correct ref values.',
+        'This is more reliable than CSS selectors.'
+    ].join('\n'),
     parameters: z.object({
-        selector: z.string()
-            .describe('CSS selector for the element to type into'),
+        ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
+        element: z.string().describe('Description of the element being clicked for context'),
+    }),
+    execute: async({ref, element})=>{
+        const browser_session = await require_browser();
+        try {
+            const locator = await browser_session.ref_locator({element, ref});
+            await locator.click({timeout: 5000});
+            return `Successfully clicked element: ${element} (ref=${ref})`;
+        } catch(e){
+            throw new UserError(`Error clicking element ${element} with ref ${ref}: ${e}`);
+        }
+    },
+};
+
+let scraping_browser_type_ref = {
+    name: 'scraping_browser_type_ref',
+    description: [
+        'Type text into an element using its ref from the ARIA snapshot.',
+        'Use scraping_browser_snapshot first to get the correct ref values.',
+        'This is more reliable than CSS selectors.'
+    ].join('\n'),
+    parameters: z.object({
+        ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
+        element: z.string().describe('Description of the element being typed into for context'),
         text: z.string().describe('Text to type'),
         submit: z.boolean().optional()
             .describe('Whether to submit the form after typing (press Enter)'),
     }),
-    execute: async({selector, text, submit})=>{
-        const page = await (await require_browser()).get_page();
+    execute: async({ref, element, text, submit})=>{
+        const browser_session = await require_browser();
         try {
-            await page.fill(selector, text);
+            const locator = await browser_session.ref_locator({element, ref});
+            await locator.fill(text);
             if (submit)
-                await page.press(selector, 'Enter');
-            return `Successfully typed "${text}" into element: `
-            +`${selector}${submit ? ' and submitted the form' : ''}`;
+                await locator.press('Enter');
+            const suffix = submit ? ' and submitted the form' : '';
+            return 'Successfully typed "'+text+'" into element: '+element
+                +' (ref='+ref+')'+suffix;
         } catch(e){
-            throw new UserError(`Error typing into element ${selector}: ${e}`);
-        }
-    },
-};
-
-let scraping_browser_wait_for = {
-    name: 'scraping_browser_wait_for',
-    description: 'Wait for an element to be visible on the page',
-    parameters: z.object({
-        selector: z.string().describe('CSS selector to wait for'),
-        timeout: z.number().optional()
-            .describe('Maximum time to wait in milliseconds (default: 30000)'),
-    }),
-    execute: async({selector, timeout})=>{
-        const page = await (await require_browser()).get_page();
-        try {
-            await page.waitForSelector(selector, {timeout: timeout||30000});
-            return `Successfully waited for element: ${selector}`;
-        } catch(e){
-            throw new UserError(`Error waiting for element ${selector}: ${e}`);
+            throw new UserError(`Error typing into element ${element} with ref ${ref}: ${e}`);
         }
     },
 };
@@ -203,7 +195,7 @@ let scraping_browser_screenshot = {
             +'images can be quite large',
         ].join('\n')),
     }),
-    execute: async({full_page = false})=>{
+    execute: async({full_page=false})=>{
         const page = await (await require_browser()).get_page();
         try {
             const buffer = await page.screenshot({fullPage: full_page});
@@ -216,9 +208,9 @@ let scraping_browser_screenshot = {
 
 let scraping_browser_get_html = {
     name: 'scraping_browser_get_html',
-    description: 'Get the HTML content of the current page. Avoid using the '
-    +'full_page option unless it is important to see things like script tags '
-    +'since this can be large',
+    description: 'Get the HTML content of the current page. Avoid using this '
+    +'tool and if used, use full_page option unless it is important to see '
+    +'things like script tags since this can be large',
     parameters: z.object({
         full_page: z.boolean().optional().describe([
             'Whether to get the full page HTML including head and script tags',
@@ -226,7 +218,7 @@ let scraping_browser_get_html = {
             +'quite large',
         ].join('\n')),
     }),
-    execute: async({full_page = false})=>{
+    execute: async({full_page=false})=>{
         const page = await (await require_browser()).get_page();
         try {
             if (!full_page)
@@ -252,17 +244,6 @@ let scraping_browser_get_text = {
     },
 };
 
-let scraping_browser_activation_instructions = {
-    name: 'scraping_browser_activation_instructions',
-    description: 'Instructions for activating the scraping browser',
-    parameters: z.object({}),
-    execute: async()=>{
-        return 'You need to run this MCP server with the BROWSER_AUTH '
-        +'environment varialbe before the browser tools will become '
-        +'available';
-    },
-};
-
 let scraping_browser_scroll = {
     name: 'scraping_browser_scroll',
     description: 'Scroll to the bottom of the current page',
@@ -280,41 +261,104 @@ let scraping_browser_scroll = {
     },
 };
 
-let scraping_browser_scroll_to = {
-    name: 'scraping_browser_scroll_to',
-    description: 'Scroll to a specific element on the page',
+let scraping_browser_scroll_to_ref = {
+    name: 'scraping_browser_scroll_to_ref',
+    description: [
+        'Scroll to a specific element using its ref from the ARIA snapshot.',
+        'Use scraping_browser_snapshot first to get the correct ref values.',
+        'This is more reliable than CSS selectors.'
+    ].join('\n'),
     parameters: z.object({
-        selector: z.string().describe('CSS selector for the element to scroll to'),
+        ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
+        element: z.string().describe('Description of the element to scroll to'),
     }),
-    execute: async({selector})=>{
-        const page = await (await require_browser()).get_page();
+    execute: async({ref, element})=>{
+        const browser_session = await require_browser();
         try {
-            await page.evaluate(sel=>{
-                const element = document.querySelector(sel);
-                if (element)
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                else 
-                    throw new Error(`Element with selector "${sel}" not found`);
-                
-            }, selector);
-            return `Successfully scrolled to element: ${selector}`;
+            const locator = await browser_session.ref_locator({element, ref});
+            await locator.scrollIntoViewIfNeeded();
+            return `Successfully scrolled to element: ${element} (ref=${ref})`;
         } catch(e){
-            throw new UserError(`Error scrolling to element ${selector}: ${e}`);
+            throw new UserError(`Error scrolling to element ${element} with `
+                +`ref ${ref}: ${e}`);
         }
     },
 };
 
-export const tools = process.env.API_TOKEN ? [
+let scraping_browser_network_requests = {
+    name: 'scraping_browser_network_requests',
+    description: [
+        'Get all network requests made since loading the current page.',
+        'Shows HTTP method, URL, status code and status text for each request.',
+        'Useful for debugging API calls, tracking data fetching, and '
+        +'understanding page behavior.'
+    ].join('\n'),
+    parameters: z.object({}),
+    execute: async()=>{
+        const browser_session = await require_browser();
+        try {
+            const requests = await browser_session.get_requests();
+            if (requests.size==0) 
+                return 'No network requests recorded for the current page.';
+
+            const results = [];
+            requests.forEach((response, request)=>{
+                const result = [];
+                result.push(`[${request.method().toUpperCase()}] ${request.url()}`);
+                if (response)
+                    result.push(`=> [${response.status()}] ${response.statusText()}`);
+
+                results.push(result.join(' '));
+            });
+            
+            return [
+                `Network Requests (${results.length} total):`,
+                '',
+                ...results
+            ].join('\n');
+        } catch(e){
+            throw new UserError(`Error getting network requests: ${e}`);
+        }
+    },
+};
+
+let scraping_browser_wait_for_ref = {
+    name: 'scraping_browser_wait_for_ref',
+    description: [
+        'Wait for an element to be visible using its ref from the ARIA snapshot.',
+        'Use scraping_browser_snapshot first to get the correct ref values.',
+        'This is more reliable than CSS selectors.'
+    ].join('\n'),
+    parameters: z.object({
+        ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
+        element: z.string().describe('Description of the element being waited for'),
+        timeout: z.number().optional()
+            .describe('Maximum time to wait in milliseconds (default: 30000)'),
+    }),
+    execute: async({ref, element, timeout})=>{
+        const browser_session = await require_browser();
+        try {
+            const locator = await browser_session.ref_locator({element, ref});
+            await locator.waitFor({timeout: timeout || 30000});
+            return `Successfully waited for element: ${element} (ref=${ref})`;
+        } catch(e){
+            throw new UserError(`Error waiting for element ${element} with ref ${ref}: ${e}`);
+        }
+    },
+};
+
+export const tools = [
     scraping_browser_navigate,
     scraping_browser_go_back,
     scraping_browser_go_forward,
-    scraping_browser_links,
-    scraping_browser_click,
-    scraping_browser_type,
-    scraping_browser_wait_for,
+    scraping_browser_snapshot,
+    scraping_browser_click_ref,
+    scraping_browser_type_ref,
     scraping_browser_screenshot,
+    scraping_browser_network_requests,
+    scraping_browser_wait_for_ref,
     scraping_browser_get_text,
     scraping_browser_get_html,
     scraping_browser_scroll,
-    scraping_browser_scroll_to,
-] : [scraping_browser_activation_instructions];
+    scraping_browser_scroll_to_ref,
+];

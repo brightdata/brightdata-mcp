@@ -1,13 +1,17 @@
 {
     "name": "@brightdata/mcp",
-    "version": "2.5.0",
+    "version": "2.6.0",
     "description": "An MCP interface into the Bright Data toolset",
     "type": "module",
+    "main": "./server.js",
     "scripts": {
         "test": "node --test"
     },
     "bin": {
         "@brightdata/mcp": "./server.js"
+    },
+    "scripts": {
+        "start": "node server.js"
     },
     "keywords": [
         "mcp",
@@ -16,7 +20,10 @@
     "author": "Bright Data",
     "repository": {
         "type": "git",
-        "url": "https://github.com/brightdata-com/brightdata-mcp.git"
+        "url": "https://github.com/brightdata/brightdata-mcp.git"
+    },
+    "bugs": {
+        "url": "https://github.com/brightdata/brightdata-mcp/issues"
     },
     "license": "MIT",
     "dependencies": {
@@ -31,7 +38,8 @@
     "files": [
         "server.js",
         "browser_tools.js",
-        "browser_session.js"
+        "browser_session.js",
+        "aria_snapshot_filter.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"
 }
