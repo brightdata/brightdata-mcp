@@ -5,6 +5,7 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import {createRequire} from 'node:module';
+import { encode } from '@toon-format/toon'
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
@@ -849,8 +850,10 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                     }
                     console.error(`[web_data_${id}] snapshot data received `
                         +`after ${attempts + 1} attempts`);
-                    let result_data = JSON.stringify(snapshot_response.data);
-                    return result_data;
+                    const data = JSON.parse(JSON.stringify(
+                            snapshot_response.data,
+                            (_k, v)=>v==null ? undefined : v));
+                    return encode(data, {delimiter: '\n', indent: 0});
                 } catch(e){
                     console.error(`[web_data_${id}] polling error: `
                         +`${e.message}`);
