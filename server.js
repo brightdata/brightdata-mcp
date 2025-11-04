@@ -5,7 +5,9 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import {createRequire} from 'node:module';
-import { encode } from '@toon-format/toon'
+import { encode } from '@toon-format/toon';
+import {remark} from 'remark';
+import strip from 'strip-markdown'
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
@@ -204,7 +206,10 @@ addTool({
             headers: api_headers(ctx.clientName),
             responseType: 'text',
         });
-        return response.data;
+        const minified_data = await remark()
+            .use(strip)
+            .process(response.data)
+        return minified_data.value;
     }),
 });
 
