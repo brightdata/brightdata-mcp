@@ -2,14 +2,14 @@ name: Release
 on:
   push:
     tags: v*
-
+    
+permissions:
+      contents: read
+      id-token: write
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -18,8 +18,7 @@ jobs:
           cache: "npm"
           registry-url: 'https://registry.npmjs.org'
           scope: '@brightdata'
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm audit signatures
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
