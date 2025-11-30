@@ -114,11 +114,17 @@ let scraping_browser_snapshot = {
         'Use this before interacting with elements to get proper refs instead '
         +'of guessing selectors.'
     ].join('\n'),
-    parameters: z.object({}),
-    execute: async()=>{
+    parameters: z.object({
+        filtered: z.boolean().optional().describe(
+            'Whether to apply filtering/compaction (default: true). '
+            +'Set to false to get the full raw snapshot for debugging.'),
+    }),
+    execute: async({filtered=true})=>{
         const browser_session = await require_browser();
         try {
-            const snapshot = await browser_session.capture_snapshot();
+            const snapshot = await browser_session.capture_snapshot({
+                filtered,
+            });
             const lines = [
                 `Page: ${snapshot.url}`,
                 `Title: ${snapshot.title}`,
