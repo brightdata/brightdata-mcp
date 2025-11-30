@@ -26,6 +26,7 @@ export class Aria_snapshot_filter {
                 continue;
             const name_match = trimmed.match(/"([^"]*)"/);
             const name = name_match ? name_match[1] : '';
+
             let url = null;
             const next_line_index = lines.indexOf(line)+1;
             if (next_line_index<lines.length)
@@ -66,11 +67,36 @@ export class Aria_snapshot_filter {
     static filter_snapshot(snapshot_text){
         try {
             const elements = this.parse_playwright_snapshot(snapshot_text);
-            if (elements.length===0)
+            if (elements.length==0)
                 return 'No interactive elements found';
             return this.format_compact(elements);
         } catch(e){
             return `Error filtering snapshot: ${e.message}\n${e.stack}`;
         }
+    }
+
+    static format_dom_elements(elements){
+        if (!elements || elements.length==0)
+            return null;
+        const lines = [];
+        for (const el of elements)
+        {
+            const parts = [`[${el.ref}]`, el.role || 'unknown'];
+            if (el.name && el.name.length>0)
+            {
+                const name = el.name.length>60 ?
+                    el.name.substring(0, 57)+'...' : el.name;
+                parts.push(`"${name}"`);
+            }
+            if (el.url && el.url.length>0 && !el.url.startsWith('#'))
+            {
+                let url = el.url;
+                if (url.length>50)
+                    url = url.substring(0, 47)+'...';
+                parts.push(`-> ${url}`);
+            }
+            lines.push(parts.join(' '));
+        }
+        return lines.join('\n');
     }
 }

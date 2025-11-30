@@ -119,13 +119,20 @@ let scraping_browser_snapshot = {
         const browser_session = await require_browser();
         try {
             const snapshot = await browser_session.capture_snapshot();
-            return [
+            const lines = [
                 `Page: ${snapshot.url}`,
                 `Title: ${snapshot.title}`,
                 '',
                 'Interactive Elements:',
-                snapshot.aria_snapshot
-            ].join('\n');
+                snapshot.aria_snapshot,
+            ];
+            if (snapshot.dom_snapshot)
+            {
+                lines.push('');
+                lines.push('DOM Interactive Elements:');
+                lines.push(snapshot.dom_snapshot);
+            }
+            return lines.join('\n');
         } catch(e){
             throw new UserError(`Error capturing snapshot: ${e}`);
         }

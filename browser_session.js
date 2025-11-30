@@ -7,6 +7,7 @@ export class Browser_session {
         this.cdp_endpoint = cdp_endpoint;
         this._domainSessions = new Map();
         this._currentDomain = 'default';
+        this._dom_refs = new Set();
     }
 
     _getDomain(url){
@@ -136,10 +137,135 @@ export class Browser_session {
             }
             const filtered_snapshot = Aria_snapshot_filter.filter_snapshot(
                 full_snapshot);
+            const dom_snapshot = await page.evaluate(()=>{
+                const selectors = [
+                    'a[href]', 'button', 'input', 'select', 'textarea',
+                    'option', '.radio-item', '[role]', '[tabindex]',
+                    '[onclick]', '[data-spm-click]', '[data-click]',
+                    '[data-action]', '[data-spm-anchor-id]',
+                    '[aria-pressed]', '[aria-label]', '[aria-haspopup]'
+                ];
+                const nodes = Array.from(document.querySelectorAll(
+                    selectors.join(',')));
+                const elements = [];
+                let counter = 0;
+
+                const collapse = text => (text || '')
+                    .replace(/\s+/g, ' ').trim();
+
+                const get_labelledby = el=>{
+                    const ids = (el.getAttribute('aria-labelledby') || '')
+                        .split(/\s+/);
+                    return ids.map(id=>{
+                        const ref = document.getElementById(id);
+                        return ref ? collapse(ref.innerText
+                            || ref.textContent || '') : '';
+                    }).filter(Boolean).join(' ');
+                };
+
+                const get_label_for = el=>{
+                    const id = el.id && el.id.trim();
+                    if (!id)
+                        return '';
+                    const lbl = document.querySelector(
+                        `label[for="${CSS.escape(id)}"]`);
+                    return lbl ? collapse(lbl.innerText
+                        || lbl.textContent || '') : '';
+                };
+
+                const is_intrinsic = el=>{
+                    const tag = el.tagName.toLowerCase();
+                    if (['a', 'input', 'button', 'select', 'textarea',
+                        'option'].includes(tag))
+                    {
+                        return true;
+                    }
+                    const role = (el.getAttribute('role') || '')
+                        .toLowerCase();
+                    if (['button', 'link', 'radio', 'option', 'tab',
+                        'checkbox', 'menuitem'].includes(role))
+                    {
+                        return true;
+                    }
+                    if (el.classList.contains('radio-item'))
+                        return true;
+                    return el.hasAttribute('onclick')
+                        || el.hasAttribute('data-click')
+                        || el.hasAttribute('data-action')
+                        || el.hasAttribute('data-spm-click')
+                        || el.hasAttribute('data-spm-anchor-id');
+                };
+
+                const is_clickable = el=>{
+                    const style = window.getComputedStyle(el);
+                    if (style.display=='none' || style.visibility=='hidden'
+                        || style.pointerEvents=='none')
+                    {
+                        return false;
+                    }
+                    const rect = el.getBoundingClientRect();
+                    if (!rect || rect.width==0 || rect.height==0)
+                        return false;
+                    const center_x = rect.left + rect.width/2;
+                    const center_y = rect.top + rect.height/2;
+                    if (center_x<0 || center_x>window.innerWidth
+                        || center_y<0 || center_y>window.innerHeight)
+                    {
+                        return false;
+                    }
+                    const top_el = document.elementFromPoint(center_x,
+                        center_y);
+                    if (top_el && (top_el==el || top_el.contains(el)
+                        || el.contains(top_el)))
+                    {
+                        return true;
+                    }
+                    return is_intrinsic(el);
+                };
+
+                for (const el of nodes)
+                {
+                    if (!is_clickable(el))
+                        continue;
+
+                    let name = collapse(el.getAttribute('aria-label'))
+                        || collapse(get_labelledby(el))
+                        || collapse(el.getAttribute('title'))
+                        || collapse(el.getAttribute('alt'))
+                        || collapse(el.getAttribute('placeholder'))
+                        || collapse(get_label_for(el));
+
+                    if (!name)
+                        name = collapse(el.innerText
+                            || el.textContent || '');
+
+                    if (name.length>80)
+                        name = name.slice(0, 77)+'...';
+
+                    const url = (el.href || el.getAttribute('data-url') || '')
+                        .toString();
+
+                    if (!name && !url)
+                        continue;
+                    if (!el.dataset.fastmcpRef)
+                        el.dataset.fastmcpRef = `dom-${++counter}`;
+                    elements.push({
+                        ref: el.dataset.fastmcpRef,
+                        role: el.getAttribute('role')
+                            || el.tagName.toLowerCase(),
+                        name,
+                        url,
+                    });
+                }
+                return elements;
+            });
+            this._dom_refs = new Set(dom_snapshot.map(el=>el.ref));
             return {
                 url: page.url(),
                 title: await page.title(),
                 aria_snapshot: filtered_snapshot,
+                dom_snapshot: Aria_snapshot_filter.format_dom_elements(
+                    dom_snapshot),
             };
         } catch(e){
             throw new Error(`Error capturing ARIA snapshot: ${e.message}`);
@@ -149,6 +275,9 @@ export class Browser_session {
     async ref_locator({element, ref}){
         const page = await this.get_page();
         try {
+            if (this._dom_refs.has(ref))
+                return page.locator(`[data-fastmcp-ref="${ref}"]`)
+                    .first().describe(element);
             const snapshot = await page._snapshotForAI();
             if (!snapshot.includes(`[ref=${ref}]`))
                 throw new Error('Ref '+ref+' not found in the current page '
