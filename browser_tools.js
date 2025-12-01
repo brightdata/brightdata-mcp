@@ -116,15 +116,16 @@ let scraping_browser_snapshot = {
     ].join('\n'),
     parameters: z.object({
         filtered: z.boolean().optional().describe(
-            'Whether to apply filtering/compaction (default: true). '
-            +'Set to false to get the full raw snapshot for debugging.'),
+            'Whether to apply filtering/compaction (default: false). '
+            +'Set to true to get a compacted version of the snapshot.'),
     }),
-    execute: async({filtered=true})=>{
-        const browser_session = await require_browser();
+    execute: async({filtered=false}, ctx)=>{
+        const browser_session = await require_browser(ctx.api_token,
+            ctx.browser_zone, ctx.browserSessionKey);
+        const page = await browser_session.get_page();
         try {
-            const snapshot = await browser_session.capture_snapshot({
-                filtered,
-            });
+            const snapshot = await browser_session.capture_snapshot(
+                {filtered});
             const lines = [
                 `Page: ${snapshot.url}`,
                 `Title: ${snapshot.title}`,

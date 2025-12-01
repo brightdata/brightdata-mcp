@@ -57,7 +57,7 @@ export class Aria_snapshot_filter {
                 let url = el.url;
                 if (url.length>50)
                     url = url.substring(0, 47)+'...';
-                parts.push(`→ ${url}`);
+                parts.push(`-> ${url}`);
             }
             lines.push(parts.join(' '));
         }
