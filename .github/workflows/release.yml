@@ -2,10 +2,9 @@ name: Release
 on:
   push:
     tags: v*
-    
 permissions:
-      contents: read
-      id-token: write
+  contents: read
+  id-token: write
 jobs:
   release:
     name: Release
