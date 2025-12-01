@@ -4,6 +4,7 @@ import {FastMCP} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
+import {GROUPS} from './tool_groups.js';
 import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
@@ -13,6 +14,29 @@ const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown', 
     'search_engine_batch', 'scrape_batch'];
+const tool_groups = process.env.GROUPS ?
+    process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
+        .filter(Boolean) : [];
+const custom_tools = process.env.TOOLS ?
+    process.env.TOOLS.split(',').map(t=>t.trim()).filter(Boolean) : [];
+
+function build_allowed_tools(groups = [], customTools = []){
+    const allowed = new Set();
+    for (let groupId of groups)
+    {
+        const group = Object.values(GROUPS).find(g=>g.id==groupId);
+        if (group)
+        
+            for (let tool of group.tools)
+                allowed.add(tool);
+        
+    }
+    for (let tool of customTools)
+        allowed.add(tool);
+    return allowed;
+}
+
+const allowed_tools = build_allowed_tools(tool_groups, custom_tools);
 function parse_rate_limit(rate_limit_str) {
     if (!rate_limit_str) 
         return null;
@@ -126,9 +150,21 @@ let server = new FastMCP({
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
 const addTool = (tool) => {
-    if (!pro_mode && !pro_mode_tools.includes(tool.name)) 
+    if (pro_mode)
+    {
+        server.addTool(tool);
         return;
-    server.addTool(tool);
+    }
+
+    if (allowed_tools.size>0)
+    {
+        if (allowed_tools.has(tool.name))
+            server.addTool(tool);
+        return;
+    }
+
+    if (pro_mode_tools.includes(tool.name))
+        server.addTool(tool);
 };
 
 addTool({
