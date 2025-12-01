@@ -114,18 +114,32 @@ let scraping_browser_snapshot = {
         'Use this before interacting with elements to get proper refs instead '
         +'of guessing selectors.'
     ].join('\n'),
-    parameters: z.object({}),
-    execute: async()=>{
-        const browser_session = await require_browser();
+    parameters: z.object({
+        filtered: z.boolean().optional().describe(
+            'Whether to apply filtering/compaction (default: false). '
+            +'Set to true to get a compacted version of the snapshot.'),
+    }),
+    execute: async({filtered=false}, ctx)=>{
+        const browser_session = await require_browser(ctx.api_token,
+            ctx.browser_zone, ctx.browserSessionKey);
+        const page = await browser_session.get_page();
         try {
-            const snapshot = await browser_session.capture_snapshot();
-            return [
+            const snapshot = await browser_session.capture_snapshot(
+                {filtered});
+            const lines = [
                 `Page: ${snapshot.url}`,
                 `Title: ${snapshot.title}`,
                 '',
                 'Interactive Elements:',
-                snapshot.aria_snapshot
-            ].join('\n');
+                snapshot.aria_snapshot,
+            ];
+            if (snapshot.dom_snapshot)
+            {
+                lines.push('');
+                lines.push('DOM Interactive Elements:');
+                lines.push(snapshot.dom_snapshot);
+            }
+            return lines.join('\n');
         } catch(e){
             throw new UserError(`Error capturing snapshot: ${e}`);
         }
