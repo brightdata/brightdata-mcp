@@ -276,8 +276,10 @@ export class Browser_session {
         const page = await this.get_page();
         try {
             if (this._dom_refs.has(ref))
+            {
                 return page.locator(`[data-fastmcp-ref="${ref}"]`)
                     .first().describe(element);
+            }
             const snapshot = await page._snapshotForAI();
             if (!snapshot.includes(`[ref=${ref}]`))
                 throw new Error('Ref '+ref+' not found in the current page '
@@ -334,4 +336,3 @@ export class Browser_session {
         }
     }
 }
-
