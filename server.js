@@ -7,7 +7,7 @@ import {tools as browser_tools} from './browser_tools.js';
 import {createRequire} from 'node:module';
 import { encode } from '@toon-format/toon';
 import {remark} from 'remark';
-import strip from 'strip-markdown'
+import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
@@ -158,7 +158,7 @@ addTool({
                 url: url,
                 zone: unlocker_zone,
                 format: 'raw',
-                data_format: is_google ? 'parsed' : 'markdown',
+                data_format: is_google ? 'parsed_light' : 'markdown',
             },
             headers: api_headers(ctx.clientName),
             responseType: 'text',
@@ -171,9 +171,7 @@ addTool({
                 clean_google_search_payload(search_data), null, 2);
         } catch(e){
             return JSON.stringify({
-                organic: [],
-                current_page: 1,
-                related_keywords: [],
+                organic: []
             }, null, 2);
         }
     }),
@@ -200,8 +198,9 @@ addTool({
             responseType: 'text',
         });
         const minified_data = await remark()
-            .use(strip)
-            .process(response.data)
+            .use(strip, {keep: ['link', 'linkReference', 'code',
+                'inlineCode']})
+            .process(response.data);
         return minified_data.value;
     }),
 });
@@ -223,9 +222,7 @@ addTool({
     execute: tool_fn('search_engine_batch', async ({queries}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor})=>{
             const is_google = (engine || 'google') === 'google';
-            const url = is_google
-                ? `${search_url(engine || 'google', query, cursor)}&brd_json=1`
-                : search_url(engine || 'google', query, cursor);
+            const url = search_url(engine || 'google', query, cursor);
 
             return axios({
                 url: 'https://api.brightdata.com/request',
@@ -234,7 +231,7 @@ addTool({
                     url,
                     zone: unlocker_zone,
                     format: 'raw',
-                    data_format: is_google ? undefined : 'markdown',
+                    data_format: is_google ? 'parsed_light' : 'markdown',
                 },
                 headers: api_headers(ctx.clientName),
                 responseType: 'text',
@@ -938,76 +935,24 @@ function tool_fn(name, fn){
 
 function clean_google_search_payload(raw_data){
     const data = raw_data && typeof raw_data=='object' ? raw_data : {};
-    const to_text = (value='')=>{
-        if (typeof value!='string')
-            return '';
-        return value
-            .replace(/[\u2000-\u200F\u2028\u2029]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    };
-    const pick_link = entry=>{
-        if (!entry || typeof entry!='object')
-            return '';
-        const source = entry.link
-            ?? entry.url
-            ?? entry.cache?.url
-            ?? '';
-        return typeof source=='string' ? source.trim() : '';
-    };
     const organic = Array.isArray(data.organic) ? data.organic : [];
-    const related = Array.isArray(data.related) ? data.related : [];
-    const pagination = data.pagination && typeof data.pagination=='object'
-        ? data.pagination
-        : {};
 
     const organic_clean = organic
         .map(entry=>{
-            const link = pick_link(entry);
-            const title = to_text(entry?.title
-                ?? entry?.heading
-                ?? entry?.name);
-            const desc_source = entry?.description
-                ?? entry?.snippet
-                ?? entry?.snippet_long
-                ?? entry?.subtitle;
-            const description = to_text(desc_source);
+            if (!entry || typeof entry!='object')
+                return null;
+            const link = typeof entry.link=='string' ? entry.link.trim() : '';
+            const title = typeof entry.title=='string'
+                ? entry.title.trim() : '';
+            const description = typeof entry.description=='string'
+                ? entry.description.trim() : '';
             if (!link || !title)
                 return null;
             return {link, title, description};
         })
         .filter(Boolean);
 
-    const related_keywords = Array.from(new Set(related
-        .map(item=>{
-            if (typeof item=='string')
-                return to_text(item);
-            if (!item || typeof item!='object')
-                return '';
-            return to_text(
-                item.query
-                ?? item.keyword
-                ?? item.text
-                ?? item.title
-                ?? item.question
-                ?? item.label
-                ?? item.term
-                ?? item.search_term
-            );
-        })
-        .filter(Boolean)));
-
-    const page_candidate = pagination.current_page
-        ?? pagination.currentPage
-        ?? pagination.page
-        ?? pagination.current
-        ?? pagination.index;
-    const parsed_page = Number(page_candidate);
-    const current_page = Number.isFinite(parsed_page) && parsed_page>0
-        ? parsed_page
-        : 1;
-
-    return {organic: organic_clean, current_page, related_keywords};
+    return {organic: organic_clean};
 }
 
 function search_url(engine, query, cursor){
