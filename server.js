@@ -5,7 +5,6 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import {createRequire} from 'node:module';
-import { encode } from '@toon-format/toon';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
@@ -850,7 +849,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                     const data = JSON.parse(JSON.stringify(
                             snapshot_response.data,
                             (_k, v)=>v==null ? undefined : v));
-                    return encode(data, {delimiter: '\n', indent: 0});
+                    return JSON.stringify(data);
                 } catch(e){
                     console.error(`[web_data_${id}] polling error: `
                         +`${e.message}`);
