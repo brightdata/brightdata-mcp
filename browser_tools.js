@@ -6,17 +6,25 @@ import {Browser_session} from './browser_session.js';
 let browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 
 let open_session;
-const require_browser = async()=>{
-    if (!open_session)
+let open_session_country = null;
+const require_browser = async(country)=>{
+    const normalized_country = country ? country.toLowerCase()
+        : open_session_country;
+
+    const needs_new_session = !open_session
+        || normalized_country!==open_session_country;
+
+    if (needs_new_session)
     {
+        open_session_country = normalized_country || null;
         open_session = new Browser_session({
-            cdp_endpoint: await calculate_cdp_endpoint(),
+            cdp_endpoint: await calculate_cdp_endpoint(open_session_country),
         });
     }
     return open_session;
 };
 
-const calculate_cdp_endpoint = async()=>{
+const calculate_cdp_endpoint = async(country)=>{
     try {
         const status_response = await axios({
             url: 'https://api.brightdata.com/status',
@@ -31,8 +39,9 @@ const calculate_cdp_endpoint = async()=>{
         });
         const password = password_response.data.passwords[0];
 
-        return `wss://brd-customer-${customer}-zone-${browser_zone}:`
-            +`${password}@brd.superproxy.io:9222`;
+        const country_suffix = country ? `-country-${country}` : '';
+        return `wss://brd-customer-${customer}-zone-${browser_zone}`
+            +`${country_suffix}:${password}@brd.superproxy.io:9222`;
     } catch(e){
         if (e.response?.status===422)
             throw new Error(`Browser zone '${browser_zone}' does not exist`);
@@ -45,9 +54,14 @@ let scraping_browser_navigate = {
     description: 'Navigate a scraping browser session to a new URL',
     parameters: z.object({
         url: z.string().describe('The URL to navigate to'),
+        country: z.string().regex(/^[A-Za-z]{2}$/)
+            .optional()
+            .describe('Optional 2-letter ISO country code to route the '
+            +'browser session (e.g., "US", "GB")'),
     }),
-    execute: async({url})=>{
-        const browser_session = await require_browser();
+    execute: async({url, country})=>{
+        const normalized_country = country?.toLowerCase();
+        const browser_session = await require_browser(normalized_country);
         const page = await browser_session.get_page({url});
         await browser_session.clear_requests();
         try {
@@ -119,9 +133,8 @@ let scraping_browser_snapshot = {
             'Whether to apply filtering/compaction (default: false). '
             +'Set to true to get a compacted version of the snapshot.'),
     }),
-    execute: async({filtered=false}, ctx)=>{
-        const browser_session = await require_browser(ctx.api_token,
-            ctx.browser_zone, ctx.browserSessionKey);
+    execute: async({filtered=false})=>{
+        const browser_session = await require_browser();
         const page = await browser_session.get_page();
         try {
             const snapshot = await browser_session.capture_snapshot(
