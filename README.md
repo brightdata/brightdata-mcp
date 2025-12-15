@@ -199,18 +199,33 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
     <code>scraping_browser_screenshot</code></td>
   </tr>
   <tr>
+    <td><code>finance</code></td>
+    <td>Financial intelligence datasets</td>
+    <td><code>web_data_yahoo_finance_business</code></td>
+  </tr>
+  <tr>
     <td><code>business</code></td>
-    <td>Company, property, and finance intelligence</td>
+    <td>Company and location intelligence datasets</td>
     <td><code>web_data_crunchbase_company</code>,
-    <code>web_data_yahoo_finance_business</code>,
+    <code>web_data_zoominfo_company_profile</code>,
     <code>web_data_zillow_properties_listing</code></td>
   </tr>
   <tr>
     <td><code>research</code></td>
-    <td>App store, news, and developer feeds</td>
-    <td><code>web_data_google_play_store</code>,
-    <code>web_data_apple_app_store</code>,
+    <td>News and developer data feeds</td>
+    <td><code>web_data_github_repository_file</code>,
     <code>web_data_reuter_news</code></td>
+  </tr>
+  <tr>
+    <td><code>app_stores</code></td>
+    <td>App store data</td>
+    <td><code>web_data_google_play_store</code>,
+    <code>web_data_apple_app_store</code></td>
+  </tr>
+  <tr>
+    <td><code>travel</code></td>
+    <td>Travel information</td>
+    <td><code>web_data_booking_hotel_listings</code></td>
   </tr>
   <tr>
     <td><code>advanced_scraping</code></td>
