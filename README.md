@@ -385,7 +385,7 @@ MIT © [Bright Data Ltd.](https://brightdata.com)
   <p>
     <strong>Built with ❤️ by</strong><br/>
     <a href="https://brightdata.com">
-      <img src="https://idsai.net.technion.ac.il/files/2022/01/Logo-600.png" alt="Bright Data" height="30"/>
+      <img src="https://idsai.net.technion.ac.il/files/2022/01/Logo-600.png" alt="Bright Data" height="120"/>
     </a>
   </p>
   <p>
