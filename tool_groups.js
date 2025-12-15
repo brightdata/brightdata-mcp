@@ -6,7 +6,7 @@ export const GROUPS = {
     ECOMMERCE: {
         id: 'ecommerce',
         name: 'E-commerce',
-        description: 'Retail and marketplace datasets for product intelligence.',
+        description: 'Retail and marketplace datasets for product intel.',
         tools: [
             ...base_tools,
             'web_data_amazon_product',
@@ -55,7 +55,7 @@ export const GROUPS = {
     BROWSER: {
         id: 'browser',
         name: 'Browser Automation',
-        description: 'Bright Data Scraping Browser tools for interactive automation.',
+        description: 'Bright Data Scraping Browser tools for automation.',
         tools: [
             ...base_tools,
             'scraping_browser_navigate',
@@ -118,7 +118,7 @@ export const GROUPS = {
     TRAVEL: {
         id: 'travel',
         name: 'Travel',
-        description: 'Travel inforamtion.',
+        description: 'Travel information.',
         tools: [
             ...base_tools,
             'web_data_booking_hotel_listings',

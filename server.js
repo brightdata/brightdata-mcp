@@ -20,18 +20,18 @@ const tool_groups = process.env.GROUPS ?
 const custom_tools = process.env.TOOLS ?
     process.env.TOOLS.split(',').map(t=>t.trim()).filter(Boolean) : [];
 
-function build_allowed_tools(groups = [], customTools = []){
+function build_allowed_tools(groups = [], custom_tools = []){
     const allowed = new Set();
-    for (let groupId of groups)
+    for (const group_id of groups)
     {
-        const group = Object.values(GROUPS).find(g=>g.id==groupId);
-        if (group)
-        
-            for (let tool of group.tools)
-                allowed.add(tool);
-        
+        const group = Object.values(GROUPS)
+            .find(g=>g.id===group_id);
+        if (!group)
+            continue;
+        for (const tool of group.tools)
+            allowed.add(tool);
     }
-    for (let tool of customTools)
+    for (const tool of custom_tools)
         allowed.add(tool);
     return allowed;
 }
@@ -73,7 +73,8 @@ function check_rate_limit(){
     const now = Date.now();
     const window_start = now - rate_limit_config.window;
     
-    debug_stats.call_timestamps = debug_stats.call_timestamps.filter(timestamp=>timestamp>window_start);
+    debug_stats.call_timestamps = debug_stats.call_timestamps
+        .filter(timestamp=>timestamp>window_start);
     
     if (debug_stats.call_timestamps.length>=rate_limit_config.limit)
         throw new Error(`Rate limit exceeded: ${rate_limit_config.display}`);
