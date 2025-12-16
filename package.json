@@ -1,6 +1,6 @@
 {
     "name": "@brightdata/mcp",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "description": "An MCP interface into the Bright Data toolset",
     "type": "module",
     "main": "./server.js",
