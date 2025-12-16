@@ -60,10 +60,11 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
-const api_headers = (clientName=null)=>({
+const api_headers = (clientName=null, tool_name=null)=>({
     'user-agent': `${package_json.name}/${package_json.version}`,
     authorization: `Bearer ${api_token}`,
-    ...(clientName ? {'x-mcp-client-name': clientName} : {}),
+    ...clientName ? {'x-mcp-client-name': clientName} : {},
+    ...tool_name ? {'x-mcp-tool': tool_name} : {},
 });
 
 function check_rate_limit(){
@@ -194,7 +195,7 @@ addTool({
                 format: 'raw',
                 data_format: is_google ? 'parsed' : 'markdown',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'search_engine'),
             responseType: 'text',
         });
         if (!is_google)
@@ -237,7 +238,7 @@ addTool({
                 format: 'raw',
                 data_format: 'markdown',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'scrape_as_markdown'),
             responseType: 'text',
         });
         return response.data;
@@ -274,7 +275,7 @@ addTool({
                     format: 'raw',
                     data_format: is_google ? undefined : 'markdown',
                 },
-                headers: api_headers(ctx.clientName),
+                headers: api_headers(ctx.clientName, 'search_engine_batch'),
                 responseType: 'text',
             }).then(response => {
                 if (is_google) {
@@ -324,7 +325,7 @@ addTool({
                    format: 'raw',
                    data_format: 'markdown',
                },
-               headers: api_headers(ctx.clientName),
+               headers: api_headers(ctx.clientName, 'scrape_batch'),
                responseType: 'text',
            }).then(response => ({
                url,
@@ -353,7 +354,7 @@ addTool({
                 zone: unlocker_zone,
                 format: 'raw',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'scrape_as_html'),
             responseType: 'text',
         });
         return response.data;
@@ -383,7 +384,7 @@ addTool({
                 format: 'raw',
                 data_format: 'markdown',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'extract'),
             responseType: 'text',
         });
 
@@ -829,6 +830,7 @@ const datasets = [{
 }];
 for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}} of datasets)
 {
+    const tool_name = `web_data_${id}`;
     let parameters = {};
     for (let input of inputs)
     {
@@ -837,22 +839,22 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
             param_schema.default(defaults[input]) : param_schema;
     }
     addTool({
-        name: `web_data_${id}`,
+        name: tool_name,
         description,
         parameters: z.object(parameters),
-        execute: tool_fn(`web_data_${id}`, async(data, ctx)=>{
+        execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
             let trigger_response = await axios({
                 url: 'https://api.brightdata.com/datasets/v3/trigger',
                 params: {dataset_id, include_errors: true},
                 method: 'POST',
                 data: [data],
-                headers: api_headers(ctx.clientName),
+                headers: api_headers(ctx.clientName, tool_name),
             });
             if (!trigger_response.data?.snapshot_id)
                 throw new Error('No snapshot ID returned from request');
             let snapshot_id = trigger_response.data.snapshot_id;
-            console.error(`[web_data_${id}] triggered collection with `
+            console.error(`[${tool_name}] triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
             let max_attempts = 600;
             let attempts = 0;
@@ -873,23 +875,23 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                             +`/snapshot/${snapshot_id}`,
                         params: {format: 'json'},
                         method: 'GET',
-                        headers: api_headers(ctx.clientName),
+                        headers: api_headers(ctx.clientName, tool_name),
                     });
                     if (['running', 'building'].includes(snapshot_response.data?.status))
                     {
-                        console.error(`[web_data_${id}] snapshot not ready, `
+                        console.error(`[${tool_name}] snapshot not ready, `
                             +`polling again (attempt `
                             +`${attempts + 1}/${max_attempts})`);
                         attempts++;
                         await new Promise(resolve=>setTimeout(resolve, 1000));
                         continue;
                     }
-                    console.error(`[web_data_${id}] snapshot data received `
+                    console.error(`[${tool_name}] snapshot data received `
                         +`after ${attempts + 1} attempts`);
                     let result_data = JSON.stringify(snapshot_response.data);
                     return result_data;
                 } catch(e){
-                    console.error(`[web_data_${id}] polling error: `
+                    console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
                     if (e.response?.status === 400) throw e;
                     attempts++;
