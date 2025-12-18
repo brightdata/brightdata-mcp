@@ -14,7 +14,7 @@ const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
-const pro_mode_tools = ['search_engine', 'scrape_as_markdown', 
+const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch'];
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
@@ -185,7 +185,7 @@ addTool({
             .optional()
             .describe('Pagination cursor for next page'),
     }),
-    execute: tool_fn('search_engine', async ({query, engine, cursor}, ctx)=>{
+    execute: tool_fn('search_engine', async({query, engine, cursor}, ctx)=>{
         const is_google = engine=='google';
         const url = search_url(engine, query, cursor);
         let response = await axios({
@@ -272,8 +272,9 @@ addTool({
                 },
                 headers: api_headers(ctx.clientName, 'search_engine_batch'),
                 responseType: 'text',
-            }).then(response => {
-                if (is_google) {
+            }).then(response=>{
+                if (is_google)
+                {
                     try {
                         const search_data = JSON.parse(response.data);
                         return {
@@ -281,7 +282,7 @@ addTool({
                             engine: engine || 'google',
                             result: clean_google_search_payload(search_data),
                         };
-                    } catch(e) {
+                    } catch(e){
                         return {
                             query,
                             engine: engine || 'google',
