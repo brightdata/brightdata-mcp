@@ -4,6 +4,7 @@ import {FastMCP} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
+import {GROUPS} from './tool_groups.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -15,6 +16,29 @@ const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown', 
     'search_engine_batch', 'scrape_batch'];
+const tool_groups = process.env.GROUPS ?
+    process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
+        .filter(Boolean) : [];
+const custom_tools = process.env.TOOLS ?
+    process.env.TOOLS.split(',').map(t=>t.trim()).filter(Boolean) : [];
+
+function build_allowed_tools(groups = [], custom_tools = []){
+    const allowed = new Set();
+    for (const group_id of groups)
+    {
+        const group = Object.values(GROUPS)
+            .find(g=>g.id===group_id);
+        if (!group)
+            continue;
+        for (const tool of group.tools)
+            allowed.add(tool);
+    }
+    for (const tool of custom_tools)
+        allowed.add(tool);
+    return allowed;
+}
+
+const allowed_tools = build_allowed_tools(tool_groups, custom_tools);
 function parse_rate_limit(rate_limit_str) {
     if (!rate_limit_str) 
         return null;
@@ -38,10 +62,11 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
-const api_headers = (clientName=null)=>({
+const api_headers = (clientName=null, tool_name=null)=>({
     'user-agent': `${package_json.name}/${package_json.version}`,
     authorization: `Bearer ${api_token}`,
-    ...(clientName ? {'x-mcp-client-name': clientName} : {}),
+    ...clientName ? {'x-mcp-client-name': clientName} : {},
+    ...tool_name ? {'x-mcp-tool': tool_name} : {},
 });
 
 function check_rate_limit(){
@@ -51,7 +76,8 @@ function check_rate_limit(){
     const now = Date.now();
     const window_start = now - rate_limit_config.window;
     
-    debug_stats.call_timestamps = debug_stats.call_timestamps.filter(timestamp=>timestamp>window_start);
+    debug_stats.call_timestamps = debug_stats.call_timestamps
+        .filter(timestamp=>timestamp>window_start);
     
     if (debug_stats.call_timestamps.length>=rate_limit_config.limit)
         throw new Error(`Rate limit exceeded: ${rate_limit_config.display}`);
@@ -128,9 +154,21 @@ let server = new FastMCP({
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
 const addTool = (tool) => {
-    if (!pro_mode && !pro_mode_tools.includes(tool.name)) 
+    if (pro_mode)
+    {
+        server.addTool(tool);
         return;
-    server.addTool(tool);
+    }
+
+    if (allowed_tools.size>0)
+    {
+        if (allowed_tools.has(tool.name))
+            server.addTool(tool);
+        return;
+    }
+
+    if (pro_mode_tools.includes(tool.name))
+        server.addTool(tool);
 };
 
 addTool({
@@ -159,7 +197,7 @@ addTool({
                 format: 'raw',
                 data_format: is_google ? 'parsed_light' : 'markdown',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'search_engine'),
             responseType: 'text',
         });
         if (!is_google)
@@ -193,7 +231,7 @@ addTool({
                 format: 'raw',
                 data_format: 'markdown',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'scrape_as_markdown'),
             responseType: 'text',
         });
         const minified_data = await remark()
@@ -232,7 +270,7 @@ addTool({
                     format: 'raw',
                     data_format: is_google ? 'parsed_light' : 'markdown',
                 },
-                headers: api_headers(ctx.clientName),
+                headers: api_headers(ctx.clientName, 'search_engine_batch'),
                 responseType: 'text',
             }).then(response => {
                 if (is_google) {
@@ -284,7 +322,7 @@ addTool({
                    format: 'raw',
                    data_format: 'markdown',
                },
-               headers: api_headers(ctx.clientName),
+               headers: api_headers(ctx.clientName, 'scrape_batch'),
                responseType: 'text',
            }).then(response => ({
                url,
@@ -313,7 +351,7 @@ addTool({
                 zone: unlocker_zone,
                 format: 'raw',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'scrape_as_html'),
             responseType: 'text',
         });
         return response.data;
@@ -343,7 +381,7 @@ addTool({
                 format: 'raw',
                 data_format: 'markdown',
             },
-            headers: api_headers(ctx.clientName),
+            headers: api_headers(ctx.clientName, 'extract'),
             responseType: 'text',
         });
 
@@ -789,6 +827,7 @@ const datasets = [{
 }];
 for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}} of datasets)
 {
+    const tool_name = `web_data_${id}`;
     let parameters = {};
     for (let input of inputs)
     {
@@ -797,22 +836,22 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
             param_schema.default(defaults[input]) : param_schema;
     }
     addTool({
-        name: `web_data_${id}`,
+        name: tool_name,
         description,
         parameters: z.object(parameters),
-        execute: tool_fn(`web_data_${id}`, async(data, ctx)=>{
+        execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
             let trigger_response = await axios({
                 url: 'https://api.brightdata.com/datasets/v3/trigger',
                 params: {dataset_id, include_errors: true},
                 method: 'POST',
                 data: [data],
-                headers: api_headers(ctx.clientName),
+                headers: api_headers(ctx.clientName, tool_name),
             });
             if (!trigger_response.data?.snapshot_id)
                 throw new Error('No snapshot ID returned from request');
             let snapshot_id = trigger_response.data.snapshot_id;
-            console.error(`[web_data_${id}] triggered collection with `
+            console.error(`[${tool_name}] triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
             let max_attempts = 600;
             let attempts = 0;
@@ -833,25 +872,25 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                             +`/snapshot/${snapshot_id}`,
                         params: {format: 'json'},
                         method: 'GET',
-                        headers: api_headers(ctx.clientName),
+                        headers: api_headers(ctx.clientName, tool_name),
                     });
                     if (['running', 'building'].includes(snapshot_response.data?.status))
                     {
-                        console.error(`[web_data_${id}] snapshot not ready, `
+                        console.error(`[${tool_name}] snapshot not ready, `
                             +`polling again (attempt `
                             +`${attempts + 1}/${max_attempts})`);
                         attempts++;
                         await new Promise(resolve=>setTimeout(resolve, 1000));
                         continue;
                     }
-                    console.error(`[web_data_${id}] snapshot data received `
+                    console.error(`[${tool_name}] snapshot data received `
                         +`after ${attempts + 1} attempts`);
                     const data = JSON.parse(JSON.stringify(
                             snapshot_response.data,
                             (_k, v)=>v==null ? undefined : v));
                     return JSON.stringify(data);
                 } catch(e){
-                    console.error(`[web_data_${id}] polling error: `
+                    console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
                     if (e.response?.status === 400) throw e;
                     attempts++;
