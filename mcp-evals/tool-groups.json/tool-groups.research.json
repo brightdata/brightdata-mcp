@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Test Research - GitHub and news",
+    "query": "Get the README file from facebook/react repository on GitHub and find recent Reuters news about artificial intelligence",
+    "runs": 1,
+    "model": "gpt-5-mini-2025-08-07",
+    "provider": "openai",
+    "expectedToolCalls": ["search_engine", "web_data_github_repository_file", "web_data_reuter_news"],
+    "selectedServers": ["research-server"],
+    "advancedConfig": {
+      "instructions": "You are a research assistant",
+      "temperature": 0.1,
+      "maxSteps": 5,
+      "toolChoice": "auto"
+    }
+  }
+]
