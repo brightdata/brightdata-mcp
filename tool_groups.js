@@ -62,6 +62,7 @@ export const GROUPS = {
             'scraping_browser_go_back',
             'scraping_browser_go_forward',
             'scraping_browser_snapshot',
+            'scraping_browser_fill_form',
             'scraping_browser_click_ref',
             'scraping_browser_type_ref',
             'scraping_browser_screenshot',
