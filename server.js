@@ -169,6 +169,16 @@ const addTool = (tool) => {
         server.addTool(tool);
 };
 
+function extract_departing_flights(markdown){
+    if (!markdown)
+        return '';
+    const header = '### Departing flights';
+    const idx = markdown.indexOf(header);
+    if (idx<0)
+        return markdown;
+    return markdown.substring(idx);
+}
+
 addTool({
     name: 'search_engine',
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
@@ -336,6 +346,110 @@ addTool({
        const results = await Promise.all(scrapePromises);
        return JSON.stringify(results, null, 2);
    }),
+});
+
+addTool({
+    name: 'flight_search',
+    description: 'Search Google for flight information using Google Flights '
+        +'data extracted from SERP results.',
+    parameters: z.object({
+        from: z.string().min(1, 'Origin is required')
+            .describe('Origin city or airport'),
+        to: z.string().min(1, 'Destination is required')
+            .describe('Destination city or airport'),
+        dates: z.string().optional()
+            .describe('Travel dates description (e.g., "24 nov to 30 nov")'),
+    }),
+    execute: tool_fn('flight_search',
+        async({from, to, dates}, ctx)=>{
+            const normalize = value=>value.trim().replace(/\s+/g, ' ');
+            const origin = normalize(from);
+            const destination = normalize(to);
+            const default_date = new Intl.DateTimeFormat('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+            }).format(new Date()).toLowerCase();
+            const travel_window = dates && dates.trim()
+                ? normalize(dates).toLowerCase()
+                : default_date;
+            const query = `flights from ${origin} to ${destination} in `
+                +`${travel_window}`;
+            const url = `https://www.google.com/search?q=`
+                +`${encodeURIComponent(query)}&brd_json=1`;
+            const response = await axios({
+                url: 'https://api.brightdata.com/request',
+                method: 'POST',
+                data: {
+                    url,
+                    zone: unlocker_zone,
+                    format: 'raw',
+                },
+                headers: api_headers(ctx.clientName, 'flight_search'),
+                responseType: 'text',
+            });
+            let payload;
+            try {
+                payload = JSON.parse(response.data);
+            } catch(e){
+                throw new Error('Failed to parse Google Flights response');
+            }
+            const flights = payload?.flights || {};
+            const items = Array.isArray(flights.items)
+                ? flights.items.map(item=>({
+                    carrier: item.travel_time || null,
+                    duration: item.stops || null,
+                    price: item.price || null,
+                    link: item.link || null,
+                }))
+                : [];
+            const date_prices = Array.isArray(flights.date_price_items)
+                ? flights.date_price_items
+                : [];
+            const links = items.map(item=>item.link).filter(Boolean);
+            if (!links.length)
+            {
+                return JSON.stringify({
+                    origin: flights.from || origin,
+                    destination: flights.to || destination,
+                    date_from: flights.date_from || null,
+                    date_to: flights.date_to || null,
+                    options: items,
+                    price_ranges: date_prices,
+                    detailed_results: [],
+                });
+            }
+            const scrape_promises = links.map(link=>
+                axios({
+                    url: 'https://api.brightdata.com/request',
+                    method: 'POST',
+                    data: {
+                        url: link,
+                        zone: unlocker_zone,
+                        format: 'raw',
+                        data_format: 'markdown',
+                    },
+                    headers: api_headers(ctx.clientName, 'flight_search'),
+                    responseType: 'text',
+                }).then(res=>({
+                    link,
+                    markdown: extract_departing_flights(res.data),
+                })).catch(e=>({
+                    link,
+                    error: e.message,
+                }))
+            );
+            const detailed_results = await Promise.all(scrape_promises);
+            return JSON.stringify({
+                origin: flights.from || origin,
+                destination: flights.to || destination,
+                date_from: flights.date_from || null,
+                date_to: flights.date_to || null,
+                options: items,
+                price_ranges: date_prices,
+                detailed_results,
+            });
+        }),
 });
 
 addTool({
