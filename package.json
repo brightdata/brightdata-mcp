@@ -1,6 +1,6 @@
 {
     "name": "@brightdata/mcp",
-    "version": "2.6.0",
+    "version": "2.7.1",
     "description": "An MCP interface into the Bright Data toolset",
     "type": "module",
     "main": "./server.js",
@@ -24,6 +24,7 @@
     },
     "license": "MIT",
     "dependencies": {
+       "@modelcontextprotocol/sdk": "1.21.2",
         "axios": "^1.11.0",
         "fastmcp": "^3.1.1",
         "playwright": "^1.51.1",
@@ -36,7 +37,8 @@
         "server.js",
         "browser_tools.js",
         "browser_session.js",
-        "aria_snapshot_filter.js"
+        "aria_snapshot_filter.js",
+        "tool_groups.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"
 }
