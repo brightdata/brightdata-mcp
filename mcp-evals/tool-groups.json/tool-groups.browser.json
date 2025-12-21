@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Test Browser Automation - Navigate and interact",
+    "query": "Navigate to example.com, take a screenshot, then click on the 'More information' link and get the page text",
+    "runs": 1,
+    "model": "gpt-5-mini-2025-08-07",
+    "provider": "openai",
+    "expectedToolCalls": ["search_engine", "scraping_browser_navigate", "scraping_browser_screenshot", "scraping_browser_click_ref", "scraping_browser_get_text"],
+    "selectedServers": ["browser-server"],
+    "advancedConfig": {
+      "instructions": "You are a web automation assistant",
+      "temperature": 0.1,
+      "maxSteps": 8,
+      "toolChoice": "auto"
+    }
+  }
+]

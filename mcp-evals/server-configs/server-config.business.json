@@ -1,0 +1,13 @@
+{
+  "timeout": 600000,
+  "servers": {
+    "business-server": {
+      "url": "https://mcp.brightdata.com/mcp?groups=business&browser=scraping_browser",
+      "requestInit": {
+        "headers": {
+          "Authorization": "Bearer <your-api-token>"
+        }
+      }
+    }
+  }
+}

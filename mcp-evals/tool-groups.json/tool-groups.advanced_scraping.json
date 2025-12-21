@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Test Advanced Scraping - Batch operations",
+    "query": "Perform a batch search on Google for 'machine learning tutorials' and 'python programming' then scrape the results as HTML",
+    "runs": 1,
+    "model": "gpt-5-mini-2025-08-07",
+    "provider": "openai",
+    "expectedToolCalls": ["search_engine", "search_engine_batch", "scrape_batch", "scrape_as_html"],
+    "selectedServers": ["advanced_scraping-server"],
+    "advancedConfig": {
+      "instructions": "You are an advanced web scraping assistant",
+      "temperature": 0.1,
+      "maxSteps": 5,
+      "toolChoice": "auto"
+    }
+  }
+]

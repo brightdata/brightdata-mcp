@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Test Business Intelligence - Company and location data",
+    "query": "Find information about Airbnb on Crunchbase and show me booking listings for hotels in New York",
+    "runs": 1,
+    "model": "gpt-5-mini-2025-08-07",
+    "provider": "openai",
+    "expectedToolCalls": ["search_engine", "web_data_crunchbase_company", "web_data_booking_hotel_listings"],
+    "selectedServers": ["business-server"],
+    "advancedConfig": {
+      "instructions": "You are a business intelligence assistant",
+      "temperature": 0.1,
+      "maxSteps": 5,
+      "toolChoice": "auto"
+    }
+  }
+]
