@@ -361,6 +361,62 @@ let scraping_browser_wait_for_ref = {
     },
 };
 
+let scraping_browser_fill_form = {
+    name: 'scraping_browser_fill_form',
+    description: [
+        'Fill multiple form fields in one operation.',
+        'Use scraping_browser_snapshot first to get the correct ref values.',
+        'This is more efficient than filling fields one by one.'
+    ].join('\n'),
+    parameters: z.object({
+        fields: z.array(z.object({
+            name: z.string().describe('Human-readable field name'),
+            type: z.enum(['textbox', 'checkbox', 'radio', 'combobox',
+                'slider']).describe('Type of the field'),
+            ref: z.string().describe(
+                'Exact target field reference from the page snapshot'),
+            value: z.string().describe([
+                'Value to fill in the field.',
+                'For checkbox: use "true" or "false".',
+                'For combobox: use the text of the option to select.'
+            ].join(' ')),
+        })).describe('Fields to fill in'),
+    }),
+    execute: async({fields})=>{
+        const browser_session = await require_browser();
+        try {
+            const results = [];
+            for (const field of fields)
+            {
+                const locator = await browser_session.ref_locator({
+                    element: field.name,
+                    ref: field.ref,
+                });
+                if (field.type=='textbox' || field.type=='slider')
+                {
+                    await locator.fill(field.value);
+                    results.push(`Filled ${field.name} with "${field.value}"`);
+                }
+                else if (field.type=='checkbox' || field.type=='radio')
+                {
+                    const checked = field.value=='true';
+                    await locator.setChecked(checked);
+                    results.push(`Set ${field.name} to ${checked ? 'checked'
+                        : 'unchecked'}`);
+                }
+                else if (field.type=='combobox')
+                {
+                    await locator.selectOption({label: field.value});
+                    results.push(`Selected "${field.value}" in ${field.name}`);
+                }
+            }
+            return 'Successfully filled form:\n'+results.join('\n');
+        } catch(e){
+            throw new UserError(`Error filling form: ${e}`);
+        }
+    },
+};
+
 export const tools = [
     scraping_browser_navigate,
     scraping_browser_go_back,
@@ -371,6 +427,7 @@ export const tools = [
     scraping_browser_screenshot,
     scraping_browser_network_requests,
     scraping_browser_wait_for_ref,
+    scraping_browser_fill_form,
     scraping_browser_get_text,
     scraping_browser_get_html,
     scraping_browser_scroll,
