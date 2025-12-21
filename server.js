@@ -169,6 +169,16 @@ const addTool = (tool) => {
         server.addTool(tool);
 };
 
+function extract_departing_flights(markdown){
+    if (!markdown)
+        return '';
+    const header = '### Departing flights';
+    const idx = markdown.indexOf(header);
+    if (idx<0)
+        return markdown;
+    return markdown.substring(idx);
+}
+
 addTool({
     name: 'search_engine',
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
@@ -355,19 +365,18 @@ addTool({
             const normalize = value=>value.trim().replace(/\s+/g, ' ');
             const origin = normalize(from);
             const destination = normalize(to);
-            const defaultDate = new Intl.DateTimeFormat('en-US', {
+            const default_date = new Intl.DateTimeFormat('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
             }).format(new Date()).toLowerCase();
-            const travelWindow = dates && dates.trim()
+            const travel_window = dates && dates.trim()
                 ? normalize(dates).toLowerCase()
-                : defaultDate;
-            const query = (`flights from ${origin} to ${destination} in 
-                ${travelWindow}`)
-                .trim();
-            const url = `https://www.google.com/search?q=${
-                encodeURIComponent(query)}&brd_json=1`;
+                : default_date;
+            const query = `flights from ${origin} to ${destination} in `
+                +`${travel_window}`;
+            const url = `https://www.google.com/search?q=`
+                +`${encodeURIComponent(query)}&brd_json=1`;
             const response = await axios({
                 url: 'https://api.brightdata.com/request',
                 method: 'POST',
@@ -376,7 +385,7 @@ addTool({
                     zone: unlocker_zone,
                     format: 'raw',
                 },
-                headers: api_headers(ctx.clientName),
+                headers: api_headers(ctx.clientName, 'flight_search'),
                 responseType: 'text',
             });
             let payload;
@@ -397,6 +406,40 @@ addTool({
             const date_prices = Array.isArray(flights.date_price_items)
                 ? flights.date_price_items
                 : [];
+            const links = items.map(item=>item.link).filter(Boolean);
+            if (!links.length)
+            {
+                return JSON.stringify({
+                    origin: flights.from || origin,
+                    destination: flights.to || destination,
+                    date_from: flights.date_from || null,
+                    date_to: flights.date_to || null,
+                    options: items,
+                    price_ranges: date_prices,
+                    detailed_results: [],
+                });
+            }
+            const scrape_promises = links.map(link=>
+                axios({
+                    url: 'https://api.brightdata.com/request',
+                    method: 'POST',
+                    data: {
+                        url: link,
+                        zone: unlocker_zone,
+                        format: 'raw',
+                        data_format: 'markdown',
+                    },
+                    headers: api_headers(ctx.clientName, 'flight_search'),
+                    responseType: 'text',
+                }).then(res=>({
+                    link,
+                    markdown: extract_departing_flights(res.data),
+                })).catch(e=>({
+                    link,
+                    error: e.message,
+                }))
+            );
+            const detailed_results = await Promise.all(scrape_promises);
             return JSON.stringify({
                 origin: flights.from || origin,
                 destination: flights.to || destination,
@@ -404,6 +447,7 @@ addTool({
                 date_to: flights.date_to || null,
                 options: items,
                 price_ranges: date_prices,
+                detailed_results,
             });
         }),
 });
