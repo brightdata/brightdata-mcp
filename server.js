@@ -862,7 +862,7 @@ const datasets = [{
     ].join('\n'),
     inputs: ['url'],
 }];
-const dataset_id_to_title = (id)=>{
+const dataset_id_to_title = id=>{
     return id.split('_')
         .map(word=>word.charAt(0).toUpperCase()+word.slice(1))
         .join(' ');
