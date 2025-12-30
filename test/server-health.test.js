@@ -9,7 +9,7 @@ import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
 const test_dir = dirname(fileURLToPath(import.meta.url));
 const repo_root = resolve(test_dir, '..');
 
-test('MCP serves session_stats tool over stdio', async ()=>{
+test('MCP serves session_stats tool over stdio', async()=>{
     const env = {
         ...process.env,
         API_TOKEN: 'dummy-token',
