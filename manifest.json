@@ -29,11 +29,7 @@
       "env": {
         "API_TOKEN": "${user_config.api_token}",
         "WEB_UNLOCKER_ZONE": "${user_config.web_unlocker_zone}",
-        "BROWSER_ZONE": "${user_config.browser_zone}",
-        "PRO_MODE": "${user_config.pro_mode}",
-        "GROUPS": "${user_config.groups}",
-        "TOOLS": "${user_config.tools}",
-        "RATE_LIMIT": "${user_config.rate_limit}"
+        "BROWSER_ZONE": "${user_config.browser_zone}"
       }
     }
   },
@@ -123,31 +119,6 @@
       "description": "Browser API zone name for browser automation (default: mcp_browser)",
       "required": false,
       "default": "mcp_browser"
-    },
-    "pro_mode": {
-      "type": "boolean",
-      "title": "Pro Mode",
-      "description": "Enable all tools including batch operations (requires paid plan)",
-      "required": false,
-      "default": false
-    },
-    "groups": {
-      "type": "string",
-      "title": "Tool Groups",
-      "description": "Comma-separated tool group IDs to enable: ecommerce, social, browser, finance, business, research, app_stores, travel, advanced_scraping",
-      "required": false
-    },
-    "tools": {
-      "type": "string",
-      "title": "Custom Tools",
-      "description": "Comma-separated specific tool names to enable (overrides groups)",
-      "required": false
-    },
-    "rate_limit": {
-      "type": "string",
-      "title": "Rate Limit",
-      "description": "API rate limit (format: limit/time+unit, e.g., 100/1h, 50/30m)",
-      "required": false
     }
   },
   "compatibility": {
