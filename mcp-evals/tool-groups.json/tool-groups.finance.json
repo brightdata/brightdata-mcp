@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Test Finance - Company financial data",
+    "query": "Get me the latest financial information and business overview for Apple Inc. from Yahoo Finance",
+    "runs": 1,
+    "model": "gpt-5-mini-2025-08-07",
+    "provider": "openai",
+    "expectedToolCalls": ["search_engine", "web_data_yahoo_finance_business"],
+    "selectedServers": ["finance-server"],
+    "advancedConfig": {
+      "instructions": "You are a financial research assistant",
+      "temperature": 0.1,
+      "maxSteps": 5,
+      "toolChoice": "auto"
+    }
+  }
+]

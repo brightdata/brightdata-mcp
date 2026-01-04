@@ -1,0 +1,13 @@
+{
+  "timeout": 600000,
+  "servers": {
+    "browser-server": {
+      "url": "https://mcp.brightdata.com/mcp?groups=browser&browser=scraping_browser",
+      "requestInit": {
+        "headers": {
+          "Authorization": "Bearer <your-api-token>"
+        }
+      }
+    }
+  }
+}

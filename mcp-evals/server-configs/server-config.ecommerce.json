@@ -1,0 +1,13 @@
+{
+  "timeout": 600000,
+  "servers": {
+    "ecommerce-server": {
+      "url": "https://mcp.brightdata.com/mcp?groups=ecommerce&browser=scraping_browser",
+      "requestInit": {
+        "headers": {
+          "Authorization": "Bearer <your-api-token>"
+        }
+      }
+    }
+  }
+}

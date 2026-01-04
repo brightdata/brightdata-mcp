@@ -1,0 +1,13 @@
+{
+  "timeout": 600000,
+  "servers": {
+    "social-server": {
+      "url": "https://mcp.brightdata.com/mcp?groups=social&browser=scraping_browser",
+      "requestInit": {
+        "headers": {
+          "Authorization": "Bearer <your-api-token>"
+        }
+      }
+    }
+  }
+}
