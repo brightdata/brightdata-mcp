@@ -72,6 +72,10 @@ Built by [Bright Data](https://brightdata.com), the world's #1 web data platform
 
 ## ⚡ Quick Start
 
+**Use the configuration wizard:** 
+
+![GIF for day2](https://github.com/user-attachments/assets/b3917553-6cf9-4264-bc7a-9b8b74df0a17)
+
 
 <summary><b>📡 Use our hosted server - No installation needed!</b></summary>
 
