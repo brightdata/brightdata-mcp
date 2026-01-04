@@ -1,0 +1,47 @@
+# Development files
+*.test.js
+*.spec.js
+__tests__/
+coverage/
+
+# Documentation (keep README)
+docs/
+*.md
+!README.md
+
+# Large demo assets (45+ MB total)
+assets/Demo*.gif
+assets/Demo.gif
+assets/Demo2.gif
+assets/Demo3.gif
+
+# Build artifacts
+*.map
+.tsbuildinfo
+
+# Environment
+.env*
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Old bundle files (replaced by .mcpb)
+*.dxt
+brightdata-mcp-extension.dxt
+
+# Smithery config (separate distribution)
+smithery.yaml
+
+# Docker files (not needed for bundle)
+Dockerfile
+
+# Examples directory
+examples/
