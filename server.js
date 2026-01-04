@@ -6,13 +6,15 @@ import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import {GROUPS} from './tool_groups.js';
 import {createRequire} from 'node:module';
+import {remark} from 'remark';
+import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
-const pro_mode_tools = ['search_engine', 'scrape_as_markdown', 
+const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch'];
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
@@ -183,7 +185,7 @@ addTool({
             .optional()
             .describe('Pagination cursor for next page'),
     }),
-    execute: tool_fn('search_engine', async ({query, engine, cursor}, ctx)=>{
+    execute: tool_fn('search_engine', async({query, engine, cursor}, ctx)=>{
         const is_google = engine=='google';
         const url = search_url(engine, query, cursor);
         let response = await axios({
@@ -193,7 +195,7 @@ addTool({
                 url: url,
                 zone: unlocker_zone,
                 format: 'raw',
-                data_format: is_google ? 'parsed' : 'markdown',
+                data_format: is_google ? 'parsed_light' : 'markdown',
             },
             headers: api_headers(ctx.clientName, 'search_engine'),
             responseType: 'text',
@@ -201,22 +203,13 @@ addTool({
         if (!is_google)
             return response.data;
         try {
-            const searchData = JSON.parse(response.data);
-            return JSON.stringify({
-                organic: searchData.organic || [],
-                images: searchData.images
-                    ? searchData.images.map(img=>img.link) : [],
-                current_page: searchData.pagination.current_page || {},
-                related: searchData.related || [],
-                ai_overview: searchData.ai_overview || null,
-            });
+            const search_data = JSON.parse(response.data);
+            return JSON.stringify(
+                clean_google_search_payload(search_data), null, 2);
         } catch(e){
             return JSON.stringify({
-                organic: [],
-                images: [],
-                pagination: {},
-                related: [],
-            });
+                organic: []
+            }, null, 2);
         }
     }),
 });
@@ -241,7 +234,11 @@ addTool({
             headers: api_headers(ctx.clientName, 'scrape_as_markdown'),
             responseType: 'text',
         });
-        return response.data;
+        const minified_data = await remark()
+            .use(strip, {keep: ['link', 'linkReference', 'code',
+                'inlineCode']})
+            .process(response.data);
+        return minified_data.value;
     }),
 });
 
@@ -262,9 +259,7 @@ addTool({
     execute: tool_fn('search_engine_batch', async ({queries}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor})=>{
             const is_google = (engine || 'google') === 'google';
-            const url = is_google
-                ? `${search_url(engine || 'google', query, cursor)}&brd_json=1`
-                : search_url(engine || 'google', query, cursor);
+            const url = search_url(engine || 'google', query, cursor);
 
             return axios({
                 url: 'https://api.brightdata.com/request',
@@ -273,24 +268,27 @@ addTool({
                     url,
                     zone: unlocker_zone,
                     format: 'raw',
-                    data_format: is_google ? undefined : 'markdown',
+                    data_format: is_google ? 'parsed_light' : 'markdown',
                 },
                 headers: api_headers(ctx.clientName, 'search_engine_batch'),
                 responseType: 'text',
-            }).then(response => {
-                if (is_google) {
-                    const search_data = JSON.parse(response.data);
-                    return {
-                        query,
-                        engine: engine || 'google',
-                        result: {
-                            organic: search_data.organic || [],
-                            images: search_data.images ? search_data.images.map(img => img.link) : [],
-                            current_page: search_data.pagination?.current_page || {},
-                            related: search_data.related || [],
-                            ai_overview: search_data.ai_overview || null
-                        }
-                    };
+            }).then(response=>{
+                if (is_google)
+                {
+                    try {
+                        const search_data = JSON.parse(response.data);
+                        return {
+                            query,
+                            engine: engine || 'google',
+                            result: clean_google_search_payload(search_data),
+                        };
+                    } catch(e){
+                        return {
+                            query,
+                            engine: engine || 'google',
+                            result: clean_google_search_payload(null),
+                        };
+                    }
                 }
                 return {
                     query,
@@ -888,8 +886,10 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                     }
                     console.error(`[${tool_name}] snapshot data received `
                         +`after ${attempts + 1} attempts`);
-                    let result_data = JSON.stringify(snapshot_response.data);
-                    return result_data;
+                    const data = JSON.parse(JSON.stringify(
+                            snapshot_response.data,
+                            (_k, v)=>v==null ? undefined : v));
+                    return JSON.stringify(data);
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
@@ -970,6 +970,28 @@ function tool_fn(name, fn){
             console.error(`[%s] tool finished in %sms`, name, dur);
         }
     };
+}
+
+function clean_google_search_payload(raw_data){
+    const data = raw_data && typeof raw_data=='object' ? raw_data : {};
+    const organic = Array.isArray(data.organic) ? data.organic : [];
+
+    const organic_clean = organic
+        .map(entry=>{
+            if (!entry || typeof entry!='object')
+                return null;
+            const link = typeof entry.link=='string' ? entry.link.trim() : '';
+            const title = typeof entry.title=='string'
+                ? entry.title.trim() : '';
+            const description = typeof entry.description=='string'
+                ? entry.description.trim() : '';
+            if (!link || !title)
+                return null;
+            return {link, title, description};
+        })
+        .filter(Boolean);
+
+    return {organic: organic_clean};
 }
 
 function search_url(engine, query, cursor){
