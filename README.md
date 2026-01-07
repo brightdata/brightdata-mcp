@@ -38,6 +38,24 @@
   </div>
 </div>
 
+  <br/>
+  
+  <div align="center">
+    <h3>🚀 <a href="https://brightdata.com/ai/mcp-server/launch-week">Launch Week - January 2026</a> 🚀</h3>
+    <p><strong>5 Days of Major Releases!</strong></p>
+    <table>
+      <tr>
+        <td align="center">📦 <a href="https://brightdata.com/ai/mcp-server/launch-week/day1">Tool Groups</a></td>
+        <td align="center">🧙 <a href="https://brightdata.com/ai/mcp-server/launch-week/day2">Setup Wizard</a></td>
+        <td align="center">⚡ <a href="https://brightdata.com/ai/mcp-server/launch-week/day3">Token Efficiency</a></td>
+        <td align="center">🏢 <a href="https://brightdata.com/ai/mcp-server/launch-week/day4">Enterprise Integrations</a></td>
+        <td align="center">📊 <a href="https://brightdata.com/ai/mcp-server/launch-week/day5">Observability</a></td>
+      </tr>
+    </table>
+  </div>
+
+
+
 ---
 
 ## 🌟 Overview
