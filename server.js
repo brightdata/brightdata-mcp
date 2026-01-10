@@ -4,6 +4,7 @@ import {FastMCP} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
+import {createAcaScrapingTools} from './aca_scraping_tools.js';
 import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
@@ -867,6 +868,11 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
 
 for (let tool of browser_tools)
     addTool(tool);
+
+// Add ACA Health Insurance scraping tools
+const aca_tools = createAcaScrapingTools(api_headers, unlocker_zone);
+for (let tool of aca_tools)
+    addTool({...tool, execute: tool_fn(tool.name, tool.execute)});
 
 console.error('Starting server...');
 
