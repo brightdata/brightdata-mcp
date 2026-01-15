@@ -6,17 +6,25 @@ import {Browser_session} from './browser_session.js';
 let browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 
 let open_session;
-const require_browser = async()=>{
-    if (!open_session)
+let open_session_country = null;
+const require_browser = async country=>{
+    const normalized_country = country ? country.toLowerCase()
+        : open_session_country;
+
+    const needs_new_session = !open_session
+        || normalized_country!==open_session_country;
+
+    if (needs_new_session)
     {
+        open_session_country = normalized_country || null;
         open_session = new Browser_session({
-            cdp_endpoint: await calculate_cdp_endpoint(),
+            cdp_endpoint: await calculate_cdp_endpoint(open_session_country),
         });
     }
     return open_session;
 };
 
-const calculate_cdp_endpoint = async()=>{
+const calculate_cdp_endpoint = async country=>{
     try {
         const status_response = await axios({
             url: 'https://api.brightdata.com/status',
@@ -31,8 +39,9 @@ const calculate_cdp_endpoint = async()=>{
         });
         const password = password_response.data.passwords[0];
 
-        return `wss://brd-customer-${customer}-zone-${browser_zone}:`
-            +`${password}@brd.superproxy.io:9222`;
+        const country_suffix = country ? `-country-${country}` : '';
+        return `wss://brd-customer-${customer}-zone-${browser_zone}`
+            +`${country_suffix}:${password}@brd.superproxy.io:9222`;
     } catch(e){
         if (e.response?.status===422)
             throw new Error(`Browser zone '${browser_zone}' does not exist`);
@@ -50,9 +59,14 @@ let scraping_browser_navigate = {
     },
     parameters: z.object({
         url: z.string().describe('The URL to navigate to'),
+        country: z.string().regex(/^[A-Za-z]{2}$/)
+            .optional()
+            .describe('Optional 2-letter ISO country code to route the '
+            +'browser session (e.g., "US", "GB")'),
     }),
-    execute: async({url})=>{
-        const browser_session = await require_browser();
+    execute: async({url, country})=>{
+        const normalized_country = country?.toLowerCase();
+        const browser_session = await require_browser(normalized_country);
         const page = await browser_session.get_page({url});
         await browser_session.clear_requests();
         try {
@@ -136,9 +150,8 @@ let scraping_browser_snapshot = {
             'Whether to apply filtering/compaction (default: false). '
             +'Set to true to get a compacted version of the snapshot.'),
     }),
-    execute: async({filtered=false}, ctx)=>{
-        const browser_session = await require_browser(ctx.api_token,
-            ctx.browser_zone, ctx.browserSessionKey);
+    execute: async({filtered=false})=>{
+        const browser_session = await require_browser();
         const page = await browser_session.get_page();
         try {
             const snapshot = await browser_session.capture_snapshot(
@@ -414,6 +427,62 @@ let scraping_browser_wait_for_ref = {
     },
 };
 
+let scraping_browser_fill_form = {
+    name: 'scraping_browser_fill_form',
+    description: [
+        'Fill multiple form fields in one operation.',
+        'Use scraping_browser_snapshot first to get the correct ref values.',
+        'This is more efficient than filling fields one by one.'
+    ].join('\n'),
+    parameters: z.object({
+        fields: z.array(z.object({
+            name: z.string().describe('Human-readable field name'),
+            type: z.enum(['textbox', 'checkbox', 'radio', 'combobox',
+                'slider']).describe('Type of the field'),
+            ref: z.string().describe(
+                'Exact target field reference from the page snapshot'),
+            value: z.string().describe([
+                'Value to fill in the field.',
+                'For checkbox: use "true" or "false".',
+                'For combobox: use the text of the option to select.'
+            ].join(' ')),
+        })).describe('Fields to fill in'),
+    }),
+    execute: async({fields})=>{
+        const browser_session = await require_browser();
+        try {
+            const results = [];
+            for (const field of fields)
+            {
+                const locator = await browser_session.ref_locator({
+                    element: field.name,
+                    ref: field.ref,
+                });
+                if (field.type=='textbox' || field.type=='slider')
+                {
+                    await locator.fill(field.value);
+                    results.push(`Filled ${field.name} with "${field.value}"`);
+                }
+                else if (field.type=='checkbox' || field.type=='radio')
+                {
+                    const checked = field.value=='true';
+                    await locator.setChecked(checked);
+                    results.push(`Set ${field.name} to ${checked ? 'checked'
+                        : 'unchecked'}`);
+                }
+                else if (field.type=='combobox')
+                {
+                    await locator.selectOption({label: field.value});
+                    results.push(`Selected "${field.value}" in ${field.name}`);
+                }
+            }
+            return 'Successfully filled form:\n'+results.join('\n');
+        } catch(e){
+            throw new UserError(`Error filling form: ${e}`);
+        }
+    },
+};
+
 export const tools = [
     scraping_browser_navigate,
     scraping_browser_go_back,
@@ -424,6 +493,7 @@ export const tools = [
     scraping_browser_screenshot,
     scraping_browser_network_requests,
     scraping_browser_wait_for_ref,
+    scraping_browser_fill_form,
     scraping_browser_get_text,
     scraping_browser_get_html,
     scraping_browser_scroll,

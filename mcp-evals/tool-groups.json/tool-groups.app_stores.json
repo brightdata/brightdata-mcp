@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Test App Stores - Cross-platform app search",
+    "query": "Search for the ChatGPT app on both Google Play Store and Apple App Store",
+    "runs": 1,
+    "model": "gpt-5-mini-2025-08-07",
+    "provider": "openai",
+    "expectedToolCalls": ["search_engine", "web_data_google_play_store", "web_data_apple_app_store"],
+    "selectedServers": ["app_stores-server"],
+    "advancedConfig": {
+      "instructions": "You are an app store research assistant",
+      "temperature": 0.1,
+      "maxSteps": 5,
+      "toolChoice": "auto"
+    }
+  }
+]
