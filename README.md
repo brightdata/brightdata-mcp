@@ -38,6 +38,24 @@
   </div>
 </div>
 
+  <br/>
+  
+  <div align="center">
+    <h3>🚀 <a href="https://brightdata.com/ai/mcp-server/launch-week">Launch Week - January 2026</a> 🚀</h3>
+    <p><strong>5 Days of Major Releases!</strong></p>
+    <table>
+      <tr>
+        <td align="center">📦 <a href="https://brightdata.com/ai/mcp-server/launch-week/day1">Tool Groups</a></td>
+        <td align="center">🧙 <a href="https://brightdata.com/ai/mcp-server/launch-week/day2">Setup Wizard</a></td>
+        <td align="center">⚡ <a href="https://brightdata.com/ai/mcp-server/launch-week/day3">Token Efficiency</a></td>
+        <td align="center">🏢 <a href="https://brightdata.com/ai/mcp-server/launch-week/day4">Enterprise Integrations</a></td>
+        <td align="center">📊 <a href="https://brightdata.com/ai/mcp-server/launch-week/day5">Observability</a></td>
+      </tr>
+    </table>
+  </div>
+
+
+
 ---
 
 ## 🌟 Overview
@@ -71,6 +89,10 @@ Built by [Bright Data](https://brightdata.com), the world's #1 web data platform
 ---
 
 ## ⚡ Quick Start
+
+**Use the configuration wizard:** 
+
+![GIF for day2](https://github.com/user-attachments/assets/b3917553-6cf9-4264-bc7a-9b8b74df0a17)
 
 
 <summary><b>📡 Use our hosted server - No installation needed!</b></summary>
@@ -114,6 +136,7 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
     <tr>
       <th width="33%">⚡ Rapid Mode (Free tier)</th>
       <th width="33%">💎 Pro Mode</th>
+      <th width="34%">🔧 Custom Mode</th>
     </tr>
     <tr>
       <td align="center">
@@ -129,7 +152,7 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
       </td>
       <td align="center">
         <h3>Pay-as-you-go</h3>
-        <p><strong>Every thing in rapid and 60+ Advanced Tools</strong></p>
+        <p><strong>Everything in rapid plus 60+ tools</strong></p>
         <hr/>
         <p>✅ Browser Control<br/>
         ✅ Web Data APIs<br/>
@@ -138,11 +161,120 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
         <br/>
         <code>PRO_MODE=true</code>
       </td>
+      <td align="center">
+        <h3>Usage-based</h3>
+        <p><strong>Pick the tools you need</strong></p>
+        <hr/>
+        <p>✅ Combine tool groups<br/>
+        ✅ Add individual tools<br/>
+        ❌ Overrides Pro eligibility</p>
+        <br/>
+        <code>GROUPS="browser"</code><br/>
+        <code>TOOLS="scrape_as_html"</code>
+      </td>
     </tr>
   </table>
 </div>
 
-> **💡 Note:** Pro mode is **not included** in the free tier and incurs additional charges based on usage.
+> **💡 Note:** Pro mode is **not included** in the free tier and incurs
+> additional charges based on usage.
+
+---
+
+## 🧠 Advanced Tool Selection
+
+- `GROUPS` lets you enable curated tool bundles. Use comma-separated group
+  IDs such as `ecommerce,browser`.
+- `TOOLS` adds explicit tool names on top of the selected groups.
+- Mode priority: `PRO_MODE=true` (all tools) → `GROUPS` / `TOOLS`
+  (whitelist) → default rapid mode (base toolkit).
+- Base tools always enabled: `search_engine`, `search_engine_batch`,
+  `scrape_as_markdown`, `scrape_batch`.
+- Group ID `custom` is reserved; use `TOOLS` for bespoke picks.
+
+
+<table>
+  <tr>
+    <th align="left">Group ID</th>
+    <th align="left">Description</th>
+    <th align="left">Featured tools</th>
+  </tr>
+  <tr>
+    <td><code>ecommerce</code></td>
+    <td>Retail and marketplace datasets</td>
+    <td><code>web_data_amazon_product</code>,
+    <code>web_data_walmart_product</code>,
+    <code>web_data_google_shopping</code></td>
+  </tr>
+  <tr>
+    <td><code>social</code></td>
+    <td>Social, community, and creator insights</td>
+    <td><code>web_data_linkedin_posts</code>,
+    <code>web_data_tiktok_posts</code>,
+    <code>web_data_youtube_videos</code></td>
+  </tr>
+  <tr>
+    <td><code>browser</code></td>
+    <td>Bright Data Scraping Browser automation tools</td>
+    <td><code>scraping_browser_snapshot</code>,
+    <code>scraping_browser_click_ref</code>,
+    <code>scraping_browser_screenshot</code></td>
+  </tr>
+  <tr>
+    <td><code>finance</code></td>
+    <td>Financial intelligence datasets</td>
+    <td><code>web_data_yahoo_finance_business</code></td>
+  </tr>
+  <tr>
+    <td><code>business</code></td>
+    <td>Company and location intelligence datasets</td>
+    <td><code>web_data_crunchbase_company</code>,
+    <code>web_data_zoominfo_company_profile</code>,
+    <code>web_data_zillow_properties_listing</code></td>
+  </tr>
+  <tr>
+    <td><code>research</code></td>
+    <td>News and developer data feeds</td>
+    <td><code>web_data_github_repository_file</code>,
+    <code>web_data_reuter_news</code></td>
+  </tr>
+  <tr>
+    <td><code>app_stores</code></td>
+    <td>App store data</td>
+    <td><code>web_data_google_play_store</code>,
+    <code>web_data_apple_app_store</code></td>
+  </tr>
+  <tr>
+    <td><code>travel</code></td>
+    <td>Travel information</td>
+    <td><code>web_data_booking_hotel_listings</code></td>
+  </tr>
+  <tr>
+    <td><code>advanced_scraping</code></td>
+    <td>Batch and AI-assisted extraction helpers</td>
+    <td><code>search_engine_batch</code>,
+    <code>scrape_batch</code>,
+    <code>extract</code></td>
+  </tr>
+</table>
+
+### Claude Desktop example
+
+```json
+{
+  "mcpServers": {
+    "Bright Data": {
+      "command": "npx",
+      "args": ["@brightdata/mcp"],
+      "env": {
+        "API_TOKEN": "<your-api-token-here>",
+        "GROUPS": "browser,advanced_scraping",
+        "TOOLS": "extract"
+      }
+    }
+  }
+}
+```
 
 ---
 
