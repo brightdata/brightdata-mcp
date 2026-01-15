@@ -254,7 +254,7 @@ addTool({
                 .default('google'),
             cursor: z.string()
                 .optional(),
-        })).min(1).max(10),
+        })).min(1).max(5),
     }),
     execute: tool_fn('search_engine_batch', async ({queries}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor})=>{
@@ -298,7 +298,7 @@ addTool({
             });
         });
 
-        const results = await Promise.all(search_promises);
+        const results = await Promise.allSettled(search_promises);
         return JSON.stringify(results, null, 2);
     }),
 });
@@ -310,7 +310,7 @@ addTool({
         +'This tool can unlock any webpage even if it uses bot detection or '
         +'CAPTCHA.',
    parameters: z.object({
-       urls: z.array(z.string().url()).min(1).max(10).describe('Array of URLs to scrape (max 10)')
+       urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 10)')
    }),
    execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
        const scrapePromises = urls.map(url =>
@@ -331,7 +331,7 @@ addTool({
            }))
        );
 
-       const results = await Promise.all(scrapePromises);
+       const results = await Promise.allSettled(scrapePromises);
        return JSON.stringify(results, null, 2);
    }),
 });
