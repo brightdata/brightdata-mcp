@@ -14,6 +14,7 @@ const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
+const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch'];
 const tool_groups = process.env.GROUPS ?
@@ -854,7 +855,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
             let snapshot_id = trigger_response.data.snapshot_id;
             console.error(`[${tool_name}] triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
-            let max_attempts = 600;
+            let max_attempts = polling_timeout;
             let attempts = 0;
             while (attempts < max_attempts)
             {

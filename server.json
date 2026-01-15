@@ -58,6 +58,13 @@
           "isRequired": false,
           "isSecret": false,
           "format": "string"
+        },
+        {
+          "name": "POLLING_TIMEOUT",
+          "description": "Polling timeout in seconds for web_data_* tools (default: 600)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number"
         }
       ]
     }
