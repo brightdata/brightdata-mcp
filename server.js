@@ -310,7 +310,7 @@ addTool({
         +'This tool can unlock any webpage even if it uses bot detection or '
         +'CAPTCHA.',
    parameters: z.object({
-       urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 10)')
+       urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
    }),
    execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
        const scrapePromises = urls.map(url =>
