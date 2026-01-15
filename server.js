@@ -176,6 +176,11 @@ addTool({
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
         +'SERP results in JSON or Markdown (URL, title, description), Ideal for'
         +'gathering current information, news, and detailed search results.',
+    annotations: {
+        title: 'Search Engine',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
     parameters: z.object({
         query: z.string(),
         engine: z.enum(['google', 'bing', 'yandex'])
@@ -220,6 +225,11 @@ addTool({
     +'content extraction and get back the results in MarkDown language. '
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
+    annotations: {
+        title: 'Scrape as Markdown',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
         let response = await axios({
@@ -246,6 +256,11 @@ addTool({
     name: 'search_engine_batch',
     description: 'Run multiple search queries simultaneously. Returns '
     +'JSON for Google, Markdown for Bing/Yandex.',
+    annotations: {
+        title: 'Search Engine Batch',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
     parameters: z.object({
         queries: z.array(z.object({
             query: z.string(),
@@ -309,6 +324,11 @@ addTool({
         +'content extraction and get back the results in MarkDown language. '
         +'This tool can unlock any webpage even if it uses bot detection or '
         +'CAPTCHA.',
+   annotations: {
+       title: 'Scrape Batch',
+       readOnlyHint: true,
+       openWorldHint: true,
+   },
    parameters: z.object({
        urls: z.array(z.string().url()).min(1).max(10).describe('Array of URLs to scrape (max 10)')
    }),
@@ -342,6 +362,11 @@ addTool({
     +'content extraction and get back the results in HTML. '
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
+    annotations: {
+        title: 'Scrape as HTML',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
         let response = await axios({
@@ -365,6 +390,11 @@ addTool({
         + 'First scrapes the page as markdown, then uses AI sampling to convert '
         + 'it to structured JSON format. This tool can unlock any webpage even '
         + 'if it uses bot detection or CAPTCHA.',
+    annotations: {
+        title: 'Extract Structured Data',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
     parameters: z.object({
         url: z.string().url(),
         extraction_prompt: z.string().optional().describe(
@@ -419,6 +449,10 @@ addTool({
 addTool({
     name: 'session_stats',
     description: 'Tell the user about the tool usage during this session',
+    annotations: {
+        title: 'Session Stats',
+        readOnlyHint: true,
+    },
     parameters: z.object({}),
     execute: tool_fn('session_stats', async()=>{
         let used_tools = Object.entries(debug_stats.tool_calls);
@@ -826,6 +860,12 @@ const datasets = [{
     ].join('\n'),
     inputs: ['url'],
 }];
+const dataset_id_to_title = id=>{
+    return id.split('_')
+        .map(word=>word.charAt(0).toUpperCase()+word.slice(1))
+        .join(' ');
+};
+
 for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}} of datasets)
 {
     const tool_name = `web_data_${id}`;
@@ -839,6 +879,11 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
     addTool({
         name: tool_name,
         description,
+        annotations: {
+            title: dataset_id_to_title(id),
+            readOnlyHint: true,
+            openWorldHint: true,
+        },
         parameters: z.object(parameters),
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};

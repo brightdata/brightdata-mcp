@@ -52,6 +52,11 @@ const calculate_cdp_endpoint = async country=>{
 let scraping_browser_navigate = {
     name: 'scraping_browser_navigate',
     description: 'Navigate a scraping browser session to a new URL',
+    annotations: {
+        title: 'Browser Navigate',
+        destructiveHint: true,
+        openWorldHint: true,
+    },
     parameters: z.object({
         url: z.string().describe('The URL to navigate to'),
         country: z.string().regex(/^[A-Za-z]{2}$/)
@@ -83,6 +88,10 @@ let scraping_browser_navigate = {
 let scraping_browser_go_back = {
     name: 'scraping_browser_go_back',
     description: 'Go back to the previous page',
+    annotations: {
+        title: 'Browser Go Back',
+        destructiveHint: true,
+    },
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
@@ -102,6 +111,10 @@ let scraping_browser_go_back = {
 const scraping_browser_go_forward = {
     name: 'scraping_browser_go_forward',
     description: 'Go forward to the next page',
+    annotations: {
+        title: 'Browser Go Forward',
+        destructiveHint: true,
+    },
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
@@ -128,6 +141,10 @@ let scraping_browser_snapshot = {
         'Use this before interacting with elements to get proper refs instead '
         +'of guessing selectors.'
     ].join('\n'),
+    annotations: {
+        title: 'Browser Snapshot',
+        readOnlyHint: true,
+    },
     parameters: z.object({
         filtered: z.boolean().optional().describe(
             'Whether to apply filtering/compaction (default: false). '
@@ -166,6 +183,10 @@ let scraping_browser_click_ref = {
         'Use scraping_browser_snapshot first to get the correct ref values.',
         'This is more reliable than CSS selectors.'
     ].join('\n'),
+    annotations: {
+        title: 'Browser Click Element',
+        destructiveHint: true,
+    },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
         element: z.string().describe('Description of the element being clicked for context'),
@@ -189,6 +210,10 @@ let scraping_browser_type_ref = {
         'Use scraping_browser_snapshot first to get the correct ref values.',
         'This is more reliable than CSS selectors.'
     ].join('\n'),
+    annotations: {
+        title: 'Browser Type Text',
+        destructiveHint: true,
+    },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
         element: z.string().describe('Description of the element being typed into for context'),
@@ -215,6 +240,10 @@ let scraping_browser_type_ref = {
 let scraping_browser_screenshot = {
     name: 'scraping_browser_screenshot',
     description: 'Take a screenshot of the current page',
+    annotations: {
+        title: 'Browser Screenshot',
+        readOnlyHint: true,
+    },
     parameters: z.object({
         full_page: z.boolean().optional().describe([
             'Whether to screenshot the full page (default: false)',
@@ -238,6 +267,10 @@ let scraping_browser_get_html = {
     description: 'Get the HTML content of the current page. Avoid using this '
     +'tool and if used, use full_page option unless it is important to see '
     +'things like script tags since this can be large',
+    annotations: {
+        title: 'Browser Get HTML',
+        readOnlyHint: true,
+    },
     parameters: z.object({
         full_page: z.boolean().optional().describe([
             'Whether to get the full page HTML including head and script tags',
@@ -263,6 +296,10 @@ let scraping_browser_get_html = {
 let scraping_browser_get_text = {
     name: 'scraping_browser_get_text',
     description: 'Get the text content of the current page',
+    annotations: {
+        title: 'Browser Get Text',
+        readOnlyHint: true,
+    },
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
@@ -274,6 +311,10 @@ let scraping_browser_get_text = {
 let scraping_browser_scroll = {
     name: 'scraping_browser_scroll',
     description: 'Scroll to the bottom of the current page',
+    annotations: {
+        title: 'Browser Scroll',
+        destructiveHint: true,
+    },
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
@@ -295,6 +336,10 @@ let scraping_browser_scroll_to_ref = {
         'Use scraping_browser_snapshot first to get the correct ref values.',
         'This is more reliable than CSS selectors.'
     ].join('\n'),
+    annotations: {
+        title: 'Browser Scroll to Element',
+        destructiveHint: true,
+    },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
         element: z.string().describe('Description of the element to scroll to'),
@@ -320,6 +365,10 @@ let scraping_browser_network_requests = {
         'Useful for debugging API calls, tracking data fetching, and '
         +'understanding page behavior.'
     ].join('\n'),
+    annotations: {
+        title: 'Browser Network Requests',
+        readOnlyHint: true,
+    },
     parameters: z.object({}),
     execute: async()=>{
         const browser_session = await require_browser();
@@ -356,6 +405,10 @@ let scraping_browser_wait_for_ref = {
         'Use scraping_browser_snapshot first to get the correct ref values.',
         'This is more reliable than CSS selectors.'
     ].join('\n'),
+    annotations: {
+        title: 'Browser Wait for Element',
+        readOnlyHint: true,
+    },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
         element: z.string().describe('Description of the element being waited for'),
