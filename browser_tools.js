@@ -7,7 +7,7 @@ let browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 
 let open_session;
 let open_session_country = null;
-const require_browser = async(country)=>{
+const require_browser = async country=>{
     const normalized_country = country ? country.toLowerCase()
         : open_session_country;
 
@@ -24,7 +24,7 @@ const require_browser = async(country)=>{
     return open_session;
 };
 
-const calculate_cdp_endpoint = async(country)=>{
+const calculate_cdp_endpoint = async country=>{
     try {
         const status_response = await axios({
             url: 'https://api.brightdata.com/status',
