@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Test E-commerce - Amazon product search",
+    "query": "Search for wireless headphones on Amazon and show me the top products with reviews",
+    "runs": 1,
+    "model": "gpt-5.1-2025-11-13",
+    "provider": "openai",
+    "expectedToolCalls": ["web_data_amazon_product_search"],
+    "selectedServers": ["ecommerce-server"],
+    "advancedConfig": {
+      "instructions": "You are a shopping assistant helping users find products on Amazon",
+      "temperature": 0.1,
+      "maxSteps": 5,
+      "toolChoice": "required"
+    }
+  },
+  {
+    "title": "Test E-commerce - Multi-platform product comparison",
+    "query": "Compare prices for iPhone 15 Pro on Walmart and Best Buy",
+    "runs": 1,
+    "model": "gpt-5.1-2025-11-13",
+    "provider": "openai",
+    "expectedToolCalls": ["search_engine","search_engine"],
+    "selectedServers": ["ecommerce-server"],
+    "advancedConfig": {
+      "instructions": "You are a price comparison assistant",
+      "temperature": 0.1,
+      "maxSteps": 5,
+      "toolChoice": "required"
+    }
+  }
+]
