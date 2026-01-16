@@ -920,7 +920,8 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
                         method: 'GET',
                         headers: api_headers(ctx.clientName, tool_name),
                     });
-                    if (['running', 'building'].includes(snapshot_response.data?.status))
+                    if (['running', 'building', 'starting'].includes(
+                        snapshot_response.data?.status))
                     {
                         console.error(`[${tool_name}] snapshot not ready, `
                             +`polling again (attempt `
