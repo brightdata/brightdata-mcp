@@ -490,7 +490,7 @@ const datasets = [{
         'This can be a cache lookup, so it can be more reliable than scraping',
     ].join('\n'),
     inputs: ['keyword', 'url'],
-    fixed_values: {pages_to_search: '1'}, 
+    fixed_values: {pages_to_search: '1'},
 }, {
     id: 'walmart_product',
     dataset_id: 'gd_l95fol7l1ru6rlo116',
@@ -859,6 +859,24 @@ const datasets = [{
         'This can be a cache lookup, so it can be more reliable than scraping',
     ].join('\n'),
     inputs: ['url'],
+}, {
+    id: 'npm_package',
+    dataset_id: 'gd_mk57m0301khq4jmsul',
+    description: [
+        'Quickly read structured npm package data.',
+        'Requires a valid npm package name (e.g., @brightdata/sdk).',
+        'This can be a cache lookup, so it can be more reliable than scraping',
+    ].join('\n'),
+    inputs: ['package_name'],
+}, {
+    id: 'pypi_package',
+    dataset_id: 'gd_mk57kc3t1wwgmnepp9',
+    description: [
+        'Quickly read structured PyPI package data.',
+        'Requires a valid PyPI package name (e.g., langchain-brightdata).',
+        'This can be a cache lookup, so it can be more reliable than scraping',
+    ].join('\n'),
+    inputs: ['package_name'],
 }];
 const dataset_id_to_title = id=>{
     return id.split('_')
