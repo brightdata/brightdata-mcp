@@ -1,0 +1,129 @@
+{
+  "manifest_version": "0.3",
+  "name": "brightdata-mcp",
+  "display_name": "Bright Data MCP",
+  "version": "2.7.1",
+  "description": "Enhance AI Agents with Real-Time Web Data via Bright Data's web scraping and unblocking services",
+  "long_description": "The official Bright Data Model Context Protocol (MCP) server enables LLMs to access, discover and extract web data in real-time. This server allows MCP clients to seamlessly search the web, navigate websites, take action and retrieve data - without getting blocked - perfect for scraping tasks. Features include search engine scraping, web page scraping as markdown/HTML, structured data extraction from popular sites, and browser automation capabilities.",
+  "author": {
+    "name": "Bright Data",
+    "email": "support@brightdata.com",
+    "url": "https://brightdata.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brightdata/brightdata-mcp.git"
+  },
+  "homepage": "https://brightdata.com",
+  "documentation": "https://github.com/brightdata/brightdata-mcp/blob/main/README.md",
+  "support": "https://github.com/brightdata/brightdata-mcp/issues",
+  "icon": "icon.png",
+  "keywords": ["web-scraping", "data-extraction", "proxy", "automation", "unblocking", "serp", "ecommerce", "social-media", "browser-automation"],
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "@brightdata/mcp",
+    "mcp_config": {
+      "command": "npx",
+      "args": ["@brightdata/mcp"],
+      "env": {
+        "API_TOKEN": "${user_config.api_token}",
+        "WEB_UNLOCKER_ZONE": "${user_config.web_unlocker_zone}",
+        "BROWSER_ZONE": "${user_config.browser_zone}"
+      }
+    }
+  },
+  "tools": [
+    {"name": "search_engine", "description": "Scrape search results from Google, Bing or Yandex. Returns SERP results in JSON or Markdown (URL, title, description). Ideal for gathering current information, news, and detailed search results."},
+    {"name": "scrape_as_markdown", "description": "Scrape a single webpage URL with advanced options for content extraction and get back the results in Markdown. This tool can unlock any webpage even if it uses bot detection or CAPTCHA."},
+    {"name": "search_engine_batch", "description": "Run multiple search queries simultaneously. Returns JSON for Google, Markdown for Bing/Yandex. Processes up to 10 queries in parallel."},
+    {"name": "scrape_batch", "description": "Scrape multiple webpage URLs with advanced options for content extraction and get back the results in Markdown. This tool can unlock any webpage even if it uses bot detection or CAPTCHA. Processes up to 10 URLs."},
+    {"name": "scrape_as_html", "description": "Scrape a single webpage URL with advanced options for content extraction and get back the results in HTML. This tool can unlock any webpage even if it uses bot detection or CAPTCHA."},
+    {"name": "extract", "description": "Scrape a webpage and extract structured data as JSON. First scrapes the page as markdown, then uses AI sampling to convert it to structured JSON format. This tool can unlock any webpage even if it uses bot detection or CAPTCHA."},
+    {"name": "session_stats", "description": "Tell the user about the tool usage during this session"},
+    {"name": "web_data_amazon_product", "description": "Quickly read structured amazon product data. Requires a valid product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_amazon_product_reviews", "description": "Quickly read structured amazon product review data. Requires a valid product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_amazon_product_search", "description": "Quickly read structured amazon product search data. Requires a valid search keyword and amazon domain URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_walmart_product", "description": "Quickly read structured walmart product data. Requires a valid product URL with /ip/ in it. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_walmart_seller", "description": "Quickly read structured walmart seller data. Requires a valid walmart seller URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_ebay_product", "description": "Quickly read structured ebay product data. Requires a valid ebay product URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_homedepot_products", "description": "Quickly read structured homedepot product data. Requires a valid homedepot product URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_zara_products", "description": "Quickly read structured zara product data. Requires a valid zara product URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_etsy_products", "description": "Quickly read structured etsy product data. Requires a valid etsy product URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_bestbuy_products", "description": "Quickly read structured bestbuy product data. Requires a valid bestbuy product URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_linkedin_person_profile", "description": "Quickly read structured linkedin people profile data. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_linkedin_company_profile", "description": "Quickly read structured linkedin company profile data. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_linkedin_job_listings", "description": "Quickly read structured linkedin job listings data. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_linkedin_posts", "description": "Quickly read structured linkedin posts data. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_linkedin_people_search", "description": "Quickly read structured linkedin people search data. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_crunchbase_company", "description": "Quickly read structured crunchbase company data. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_zoominfo_company_profile", "description": "Quickly read structured ZoomInfo company profile data. Requires a valid ZoomInfo company URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_instagram_profiles", "description": "Quickly read structured Instagram profile data. Requires a valid Instagram URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_instagram_posts", "description": "Quickly read structured Instagram post data. Requires a valid Instagram URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_instagram_reels", "description": "Quickly read structured Instagram reel data. Requires a valid Instagram URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_instagram_comments", "description": "Quickly read structured Instagram comments data. Requires a valid Instagram URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_facebook_posts", "description": "Quickly read structured Facebook post data. Requires a valid Facebook post URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_facebook_marketplace_listings", "description": "Quickly read structured Facebook marketplace listing data. Requires a valid Facebook marketplace listing URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_facebook_company_reviews", "description": "Quickly read structured Facebook company reviews data. Requires a valid Facebook company URL and number of reviews. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_facebook_events", "description": "Quickly read structured Facebook events data. Requires a valid Facebook event URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_tiktok_profiles", "description": "Quickly read structured TikTok profiles data. Requires a valid TikTok profile URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_tiktok_posts", "description": "Quickly read structured TikTok post data. Requires a valid TikTok post URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_tiktok_shop", "description": "Quickly read structured TikTok shop data. Requires a valid TikTok shop product URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_tiktok_comments", "description": "Quickly read structured TikTok comments data. Requires a valid TikTok video URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_google_maps_reviews", "description": "Quickly read structured Google Maps reviews data. Requires a valid Google Maps URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_google_shopping", "description": "Quickly read structured Google Shopping data. Requires a valid Google Shopping product URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_google_play_store", "description": "Quickly read structured Google Play Store data. Requires a valid Google Play Store app URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_apple_app_store", "description": "Quickly read structured Apple App Store data. Requires a valid Apple App Store app URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_reuter_news", "description": "Quickly read structured Reuters news data. Requires a valid Reuters news report URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_github_repository_file", "description": "Quickly read structured GitHub repository data. Requires a valid GitHub repository file URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_yahoo_finance_business", "description": "Quickly read structured Yahoo Finance business data. Requires a valid Yahoo Finance business URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_x_posts", "description": "Quickly read structured X (Twitter) post data. Requires a valid X post URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_zillow_properties_listing", "description": "Quickly read structured Zillow properties listing data. Requires a valid Zillow properties listing URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_booking_hotel_listings", "description": "Quickly read structured Booking.com hotel listings data. Requires a valid Booking hotel listing URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_youtube_profiles", "description": "Quickly read structured YouTube profiles data. Requires a valid YouTube profile URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_youtube_comments", "description": "Quickly read structured YouTube comments data. Requires a valid YouTube video URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_youtube_videos", "description": "Quickly read structured YouTube videos data. Requires a valid YouTube video URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_reddit_posts", "description": "Quickly read structured Reddit posts data. Requires a valid Reddit post URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "scraping_browser_navigate", "description": "Navigate a scraping browser session to a new URL"},
+    {"name": "scraping_browser_go_back", "description": "Go back to the previous page in the browser session"},
+    {"name": "scraping_browser_go_forward", "description": "Go forward to the next page in the browser session"},
+    {"name": "scraping_browser_snapshot", "description": "Capture an ARIA snapshot of the current page showing all interactive elements with their refs. This provides accurate element references that can be used with ref-based tools. Use this before interacting with elements to get proper refs instead of guessing selectors."},
+    {"name": "scraping_browser_click_ref", "description": "Click on an element using its ref from the ARIA snapshot. Use scraping_browser_snapshot first to get the correct ref values. This is more reliable than CSS selectors."},
+    {"name": "scraping_browser_type_ref", "description": "Type text into an element using its ref from the ARIA snapshot. Use scraping_browser_snapshot first to get the correct ref values. This is more reliable than CSS selectors."},
+    {"name": "scraping_browser_screenshot", "description": "Take a screenshot of the current page"},
+    {"name": "scraping_browser_network_requests", "description": "Get all network requests made since loading the current page. Shows HTTP method, URL, status code and status text for each request. Useful for debugging API calls, tracking data fetching, and understanding page behavior."},
+    {"name": "scraping_browser_wait_for_ref", "description": "Wait for an element to be visible using its ref from the ARIA snapshot. Use scraping_browser_snapshot first to get the correct ref values. This is more reliable than CSS selectors."},
+    {"name": "scraping_browser_get_text", "description": "Get the text content of the current page"},
+    {"name": "scraping_browser_get_html", "description": "Get the HTML content of the current page. Avoid using the full_page option unless it is important to see things like script tags since this can be large."},
+    {"name": "scraping_browser_scroll", "description": "Scroll to the bottom of the current page"},
+    {"name": "scraping_browser_scroll_to_ref", "description": "Scroll to a specific element using its ref from the ARIA snapshot. Use scraping_browser_snapshot first to get the correct ref values. This is more reliable than CSS selectors."}
+  ],
+  "user_config": {
+    "api_token": {
+      "type": "string",
+      "title": "API Token",
+      "description": "Your Bright Data API token from https://brightdata.com/cp/setting/users",
+      "sensitive": true,
+      "required": true
+    },
+    "web_unlocker_zone": {
+      "type": "string",
+      "title": "Web Unlocker Zone",
+      "description": "Custom Web Unlocker zone name (default: mcp_unlocker)",
+      "required": false,
+      "default": "mcp_unlocker"
+    },
+    "browser_zone": {
+      "type": "string",
+      "title": "Browser Zone",
+      "description": "Browser API zone name for browser automation (default: mcp_browser)",
+      "required": false,
+      "default": "mcp_browser"
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
