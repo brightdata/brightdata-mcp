@@ -189,15 +189,22 @@ addTool({
         cursor: z.string()
             .optional()
             .describe('Pagination cursor for next page'),
+        geo_location: z.string()
+            .length(2)
+            .optional()
+            .describe('2-letter country code for geo-targeted results '
+                +'(e.g., "us", "uk")'),
     }),
-    execute: tool_fn('search_engine', async({query, engine, cursor}, ctx)=>{
+    execute: tool_fn('search_engine', async({query, engine, cursor,
+        geo_location}, ctx)=>
+    {
         const is_google = engine=='google';
-        const url = search_url(engine, query, cursor);
+        const url = search_url(engine, query, cursor, geo_location);
         let response = await axios({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
-                url: url,
+                url: is_google ? `${url}&brd_json=1` : url,
                 zone: unlocker_zone,
                 format: 'raw',
                 data_format: is_google ? 'parsed_light' : 'markdown',
@@ -269,18 +276,25 @@ addTool({
                 .default('google'),
             cursor: z.string()
                 .optional(),
+            geo_location: z.string()
+                .length(2)
+                .optional()
+                .describe('2-letter country code for geo-targeted results '
+                    +'(e.g., "us", "uk")'),
         })).min(1).max(10),
     }),
-    execute: tool_fn('search_engine_batch', async ({queries}, ctx)=>{
-        const search_promises = queries.map(({query, engine, cursor})=>{
+    execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
+        const search_promises = queries.map(({query, engine, cursor,
+            geo_location})=>{
             const is_google = (engine || 'google') === 'google';
-            const url = search_url(engine || 'google', query, cursor);
+            const url = search_url(engine || 'google', query, cursor,
+                geo_location);
 
             return axios({
                 url: 'https://api.brightdata.com/request',
                 method: 'POST',
                 data: {
-                    url,
+                    url: is_google ? `${url}&brd_json=1` : url,
                     zone: unlocker_zone,
                     format: 'raw',
                     data_format: is_google ? 'parsed_light' : 'markdown',
@@ -1040,7 +1054,7 @@ function clean_google_search_payload(raw_data){
     return {organic: organic_clean};
 }
 
-function search_url(engine, query, cursor){
+function search_url(engine, query, cursor, geo_location){
     let q = encodeURIComponent(query);
     let page = cursor ? parseInt(cursor) : 0;
     let start = page * 10;
@@ -1048,5 +1062,6 @@ function search_url(engine, query, cursor){
         return `https://yandex.com/search/?text=${q}&p=${page}`;
     if (engine=='bing')
         return `https://www.bing.com/search?q=${q}&first=${start + 1}`;
-    return `https://www.google.com/search?q=${q}&start=${start}`;
+    let gl = geo_location ? `&gl=${geo_location}` : '';
+    return `https://www.google.com/search?q=${q}&start=${start}${gl}`;
 }
