@@ -138,6 +138,16 @@ export const GROUPS = {
             'session_stats',
         ],
     },
+    CODE: {
+        id: 'code',
+        name: 'Code',
+        description: 'Developer tools and package information datasets.',
+        tools: [
+            ...base_tools,
+            'web_data_npm_package',
+            'web_data_pypi_package',
+        ],
+    },
     CUSTOM: {
         id: 'custom',
         name: 'Custom',
