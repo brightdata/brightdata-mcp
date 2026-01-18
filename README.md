@@ -398,12 +398,31 @@ Try the Web MCP without any setup:
         "PRO_MODE": "true",              // Enable all 60+ tools
         "RATE_LIMIT": "100/1h",          // Custom rate limiting
         "WEB_UNLOCKER_ZONE": "custom",   // Custom unlocker zone
-        "BROWSER_ZONE": "custom_browser" // Custom browser zone
+        "BROWSER_ZONE": "custom_browser", // Custom browser zone
+        "POLLING_TIMEOUT": "600"         // Polling timeout in seconds (default: 600)
       }
     }
   }
 }
 ```
+
+### Environment Variables
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `API_TOKEN` | Your Bright Data API token (required) | - | `your-token-here` |
+| `PRO_MODE` | Enable all 60+ tools | `false` | `true` |
+| `RATE_LIMIT` | Custom rate limiting | unlimited | `100/1h`, `50/30m` |
+| `WEB_UNLOCKER_ZONE` | Custom Web Unlocker zone name | `mcp_unlocker` | `my_custom_zone` |
+| `BROWSER_ZONE` | Custom Browser zone name | `mcp_browser` | `my_browser_zone` |
+| `POLLING_TIMEOUT` | Timeout for web_data_* tools polling (seconds) | `600` | `300`, `1200` |
+| `GROUPS` | Comma-separated tool group IDs | - | `ecommerce,browser` |
+| `TOOLS` | Comma-separated individual tool names | - | `extract,scrape_as_html` |
+
+**Notes:**
+- `POLLING_TIMEOUT` controls how long web_data_* tools wait for results. Each second = 1 polling attempt.
+- Lower values (e.g., 300) will fail faster on slow data collections.
+- Higher values (e.g., 1200) allow more time for complex scraping tasks.
 
 ---
 
