@@ -65,6 +65,16 @@ export class Aria_snapshot_filter {
     }
 
     static filter_snapshot(snapshot_text){
+        if (typeof snapshot_text!=='string')
+        {
+            try {
+                return typeof snapshot_text==='object'
+                    ? JSON.stringify(snapshot_text, null, 2)
+                    : String(snapshot_text);
+            } catch(e){
+                return String(snapshot_text);
+            }
+        }
         try {
             const elements = this.parse_playwright_snapshot(snapshot_text);
             if (elements.length==0)
