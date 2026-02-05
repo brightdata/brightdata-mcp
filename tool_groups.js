@@ -46,6 +46,7 @@ export const GROUPS = {
             'web_data_tiktok_shop',
             'web_data_tiktok_comments',
             'web_data_x_posts',
+            'web_data_x_profile_posts',
             'web_data_youtube_profiles',
             'web_data_youtube_comments',
             'web_data_youtube_videos',

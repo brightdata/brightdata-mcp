@@ -583,7 +583,9 @@ const datasets = [{
     id: 'linkedin_posts',
     dataset_id: 'gd_lyy3tktm25m4avu764',
     description: [
-        'Quickly read structured linkedin posts data',
+        'Quickly read structured linkedin posts data.',
+        'Requires a real LinkedIn post URL, for example:',
+        'linkedin.com/pulse/... or linkedin.com/posts/...',
         'This can be a cache lookup, so it can be more reliable than scraping',
     ].join('\n'),
     inputs: ['url'],
@@ -802,6 +804,23 @@ const datasets = [{
         'This can be a cache lookup, so it can be more reliable than scraping',
     ].join('\n'),
     inputs: ['url'],
+}, {
+    id: 'x_profile_posts',
+    dataset_id: 'gd_lwxkxvnf1cynvib9co',
+    description: [
+        'Quickly read structured X posts from a profile.',
+        'Requires a valid X profile URL (e.g. https://x.com/username).',
+        'Returns the most recent posts from the profile.',
+        'Optionally filter by date range using start_date and end_date',
+        '(format: YYYY-MM-DD).',
+    ].join('\n'),
+    inputs: ['url', 'start_date', 'end_date'],
+    defaults: {start_date: '', end_date: ''},
+    trigger_params: {
+        type: 'discover_new',
+        discover_by: 'profile_url_most_recent_posts',
+        limit_per_input: 10,
+    },
 },
 {
     id: 'zillow_properties_listing',
@@ -867,7 +886,8 @@ const dataset_id_to_title = id=>{
         .join(' ');
 };
 
-for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}} of datasets)
+for (let {dataset_id, id, description, inputs, defaults = {},
+    fixed_values = {}, trigger_params = {}} of datasets)
 {
     const tool_name = `web_data_${id}`;
     let parameters = {};
@@ -890,7 +910,7 @@ for (let {dataset_id, id, description, inputs, defaults = {}, fixed_values = {}}
             data = {...data, ...fixed_values};
             let trigger_response = await axios({
                 url: 'https://api.brightdata.com/datasets/v3/trigger',
-                params: {dataset_id, include_errors: true},
+                params: {dataset_id, include_errors: true, ...trigger_params},
                 method: 'POST',
                 data: [data],
                 headers: api_headers(ctx.clientName, tool_name),
