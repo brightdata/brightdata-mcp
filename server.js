@@ -3,6 +3,8 @@
 import {FastMCP} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
+import pLimit from 'p-limit';
+import pdf_parse from 'pdf-parse';
 import {tools as browser_tools} from './browser_tools.js';
 import {GROUPS} from './tool_groups.js';
 import {createRequire} from 'node:module';
@@ -153,6 +155,7 @@ let server = new FastMCP({
     version: package_json.version,
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
+const pdf_limit = pLimit(2);
 
 const addTool = (tool) => {
     if (pro_mode)
@@ -382,6 +385,65 @@ addTool({
             responseType: 'text',
         });
         return response.data;
+    }),
+});
+
+addTool({
+    name: 'fetch_pdf',
+    description: 'Fetch a PDF, extract text and return it as plain text.',
+    parameters: z.object({
+        url: z.string().url(),
+        max_size_mb: z.number()
+            .int()
+            .positive()
+            .max(50)
+            .default(20)
+            .describe('Maximum PDF size to download (MB, capped at 50)'),
+    }),
+    execute: tool_fn('fetch_pdf', async ({url, max_size_mb}, ctx)=>{
+        return pdf_limit(async ()=>{
+            const max_bytes = max_size_mb*1024*1024;
+            const response = await axios({
+                url: 'https://api.brightdata.com/request',
+                method: 'POST',
+                data: {
+                    url,
+                    zone: unlocker_zone,
+                    format: 'raw',
+                },
+                headers: api_headers(ctx.clientName),
+                responseType: 'stream',
+                maxContentLength: max_bytes,
+                maxBodyLength: max_bytes,
+            });
+
+            let size = 0;
+            const chunks = [];
+            try {
+                for await (const chunk of response.data)
+                {
+                    size += chunk.length;
+                    if (size>max_bytes)
+                    {
+                        response.data.destroy();
+                        throw new Error(`PDF too large (> ${max_size_mb} MB)`);
+                    }
+                    chunks.push(chunk);
+                }
+            } catch(e){
+                response.data?.destroy?.();
+                throw e;
+            }
+
+            try {
+                const buffer = Buffer.concat(chunks);
+                const parsed = await pdf_parse(buffer);
+                return parsed?.text || '';
+            } catch(e){
+                console.error('[fetch_pdf] PDF parse failed:', e.message);
+                throw new Error(`PDF parse failed: ${e.message}`);
+            }
+        });
     }),
 });
 
