@@ -25,9 +25,10 @@
     },
     "license": "MIT",
     "dependencies": {
-       "@modelcontextprotocol/sdk": "1.21.2",
+        "@mcpjam/sdk": "^0.8.2",
+        "@modelcontextprotocol/sdk": "^1.26.0",
         "axios": "^1.11.0",
-        "fastmcp": "^3.1.1",
+        "fastmcp": "^3.31.0",
         "playwright": "^1.51.1",
         "remark": "^15.0.1",
         "strip-markdown": "^6.0.0",
@@ -43,5 +44,8 @@
         "aria_snapshot_filter.js",
         "tool_groups.js"
     ],
-    "mcpName": "io.github.brightdata/brightdata-mcp"
+    "mcpName": "io.github.brightdata/brightdata-mcp",
+    "devDependencies": {
+        "dotenv": "^17.2.3"
+    }
 }
