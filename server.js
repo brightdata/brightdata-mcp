@@ -4,6 +4,7 @@ import {FastMCP} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
+import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
@@ -987,6 +988,8 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         }),
     });
 }
+
+server.addPrompts(prompts);
 
 for (let tool of browser_tools)
     addTool(tool);
