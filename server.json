@@ -6,13 +6,13 @@
     "url": "https://github.com/brightdata/brightdata-mcp",
     "source": "github"
   },
-  "version": "2.8.7",
+  "version": "2.8.8",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@brightdata/mcp",
-      "version": "2.8.7",
+      "version": "2.8.8",
       "transport": {
         "type": "stdio"
       },
