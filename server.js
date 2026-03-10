@@ -113,7 +113,7 @@ async function ensure_required_zones(){
                 },
                 data: {
                     zone: {name: unlocker_zone, type: 'unblocker'},
-                    plan: {type: 'unblocker'},
+                    plan: {type: 'unblocker', ub_premium: true},
                 },
             });
             console.error(`Zone "${unlocker_zone}" created successfully`);
