@@ -124,6 +124,7 @@ export const GROUPS = {
         tools: [
             ...base_tools,
             'web_data_booking_hotel_listings',
+            'flight_search',
         ],
     },
     ADVANCED_SCRAPING: {
