@@ -39,19 +39,23 @@
 </div>
 
   <br/>
-  
+
   <div align="center">
-    <h3>🚀 <a href="https://brightdata.com/ai/mcp-server/launch-week">Launch Week - January 2026</a> 🚀</h3>
-    <p><strong>5 Days of Major Releases!</strong></p>
+    <h3>NEW: GEO & AI Brand Visibility Tools</h3>
+    <p><strong>See how ChatGPT, Grok, and Perplexity talk about your brand.</strong></p>
+    <p>
+      Query leading LLMs directly from your agent and get back structured, markdown-formatted answers.<br/>
+      The ultimate feedback loop for <b>Generative Engine Optimization (GEO)</b> — monitor AI-generated
+      recommendations, track brand mentions across LLMs, and understand how AI perceives your products.
+    </p>
     <table>
       <tr>
-        <td align="center">📦 <a href="https://brightdata.com/ai/mcp-server/launch-week/day1">Tool Groups</a></td>
-        <td align="center">🧙 <a href="https://brightdata.com/ai/mcp-server/launch-week/day2">Setup Wizard</a></td>
-        <td align="center">⚡ <a href="https://brightdata.com/ai/mcp-server/launch-week/day3">Token Efficiency</a></td>
-        <td align="center">🏢 <a href="https://brightdata.com/ai/mcp-server/launch-week/day4">Enterprise Integrations</a></td>
-        <td align="center">📊 <a href="https://brightdata.com/ai/mcp-server/launch-week/day5">Observability</a></td>
+        <td align="center"><b>ChatGPT</b><br/><sub>AI-generated insights, citations &amp; recommendations</sub></td>
+        <td align="center"><b>Grok</b><br/><sub>Real-time AI analysis powered by X data</sub></td>
+        <td align="center"><b>Perplexity</b><br/><sub>Search-augmented AI answers with sources</sub></td>
       </tr>
     </table>
+    <p><code>GROUPS="geo"</code> &nbsp;·&nbsp; Works with any MCP-compatible agent</p>
   </div>
 
 
@@ -83,6 +87,7 @@ Built by [Bright Data](https://brightdata.com), the world's #1 web data platform
 - 🛍️ **E-commerce Intelligence** - Monitor products, prices, and availability  
 - 📊 **Market Analysis** - Track competitors and industry trends
 - 🤖 **AI Agents** - Build agents that can actually browse the web
+- 🧠 **GEO & Brand Visibility** - See how ChatGPT, Grok, and Perplexity perceive your brand
 - 📝 **Content Creation** - Access up-to-date information for writing
 - 🎓 **Academic Research** - Gather data from multiple sources efficiently
 
@@ -248,6 +253,13 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
     <td><code>travel</code></td>
     <td>Travel information</td>
     <td><code>web_data_booking_hotel_listings</code></td>
+  </tr>
+  <tr>
+    <td><code>geo</code></td>
+    <td>GEO &amp; LLM brand visibility</td>
+    <td><code>web_data_chatgpt_ai_insights</code>,
+    <code>web_data_grok_ai_insights</code>,
+    <code>web_data_perplexity_ai_insights</code></td>
   </tr>
   <tr>
     <td><code>advanced_scraping</code></td>
