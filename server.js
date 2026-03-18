@@ -897,6 +897,44 @@ const datasets = [{
         'This can be a cache lookup, so it can be more reliable than scraping',
     ].join('\n'),
     inputs: ['url'],
+}, {
+    id: 'chatgpt_ai_insights',
+    dataset_id: 'gd_m7aof0k82r803d5bjm',
+    description: [
+        'Send a prompt to ChatGPT and get back AI-generated insights.',
+        'Returns structured answer text, citations, recommendations,'
+        +' and markdown. Useful for GEO and LLM as a judge.',
+    ].join('\n'),
+    inputs: ['prompt'],
+    fixed_values: {
+        url: 'https://chatgpt.com/',
+        country: '',
+        web_search: false,
+        additional_prompt: '',
+    },
+    trigger_params: {custom_output_fields: 'answer_text_markdown'},
+}, {
+    id: 'grok_ai_insights',
+    dataset_id: 'gd_m8ve0u141icu75ae74',
+    description: [
+        'Send a prompt to Grok and get back AI-generated insights.',
+        'Returns structured answer text in markdown format.',
+        'Useful for GEO and LLM as a judge.',
+    ].join('\n'),
+    inputs: ['prompt'],
+    fixed_values: {url: 'https://grok.com/', index: ''},
+    trigger_params: {custom_output_fields: 'answer_text_markdown'},
+}, {
+    id: 'perplexity_ai_insights',
+    dataset_id: 'gd_m7dhdot1vw9a7gc1n',
+    description: [
+        'Send a prompt to Perplexity and get back AI-generated insights.',
+        'Returns structured answer text in markdown format.',
+        'Useful for GEO and LLM as a judge.',
+    ].join('\n'),
+    inputs: ['prompt'],
+    fixed_values: {url: 'https://www.perplexity.ai', index: '', country: ''},
+    trigger_params: {custom_output_fields: 'answer_text_markdown'},
 }];
 const dataset_id_to_title = id=>{
     return id.split('_')

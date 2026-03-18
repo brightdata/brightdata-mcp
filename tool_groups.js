@@ -139,6 +139,18 @@ export const GROUPS = {
             'session_stats',
         ],
     },
+    GEO: {
+        id: 'geo',
+        name: 'GEO & LLM Visibility',
+        description: 'Tools for measuring and analyzing AI/LLM brand '
+        +'visibility and generative engine optimization.',
+        tools: [
+            ...base_tools,
+            'web_data_chatgpt_ai_insights',
+            'web_data_grok_ai_insights',
+            'web_data_perplexity_ai_insights',
+        ],
+    },
     CUSTOM: {
         id: 'custom',
         name: 'Custom',
