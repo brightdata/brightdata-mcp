@@ -16,6 +16,10 @@ const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
+const base_timeout = process.env.BASE_TIMEOUT
+    ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
+const base_max_retries = Math.min(
+    parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch'];
 const tool_groups = process.env.GROUPS ?
@@ -63,6 +67,24 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
+
+async function base_request(config){
+    let last_err;
+    for (let attempt = 0; attempt <= base_max_retries; attempt++)
+    {
+        try {
+            return await axios({...config, timeout: base_timeout});
+        } catch(e){
+            last_err = e;
+            if (e.response?.status && e.response.status >= 400
+                && e.response.status < 500)
+            {
+                throw e;
+            }
+        }
+    }
+    throw last_err;
+}
 
 const api_headers = (clientName=null, tool_name=null)=>({
     'user-agent': `${package_json.name}/${package_json.version}`,
@@ -202,7 +224,7 @@ addTool({
     {
         const is_google = engine=='google';
         const url = search_url(engine, query, cursor, geo_location);
-        let response = await axios({
+        let response = await base_request({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
@@ -241,7 +263,7 @@ addTool({
     },
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
-        let response = await axios({
+        let response = await base_request({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
@@ -292,7 +314,7 @@ addTool({
             const url = search_url(engine || 'google', query, cursor,
                 geo_location);
 
-            return axios({
+            return base_request({
                 url: 'https://api.brightdata.com/request',
                 method: 'POST',
                 data: {
@@ -350,7 +372,7 @@ addTool({
    }),
    execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
        const scrapePromises = urls.map(url =>
-           axios({
+           base_request({
                url: 'https://api.brightdata.com/request',
                method: 'POST',
                data: {
