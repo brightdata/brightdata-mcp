@@ -6,13 +6,13 @@
     "url": "https://github.com/brightdata/brightdata-mcp",
     "source": "github"
   },
-  "version": "2.9.1",
+  "version": "2.9.2",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@brightdata/mcp",
-      "version": "2.9.1",
+      "version": "2.9.2",
       "transport": {
         "type": "stdio"
       },
@@ -62,6 +62,20 @@
         {
           "name": "POLLING_TIMEOUT",
           "description": "Polling timeout in seconds for web_data_* tools (default: 600)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number"
+        },
+        {
+          "name": "BASE_TIMEOUT",
+          "description": "Request timeout in seconds for base tools (search & scrape). No limit if unset",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "number"
+        },
+        {
+          "name": "BASE_MAX_RETRIES",
+          "description": "Max retries for base tools on transient errors (0-3, default: 0)",
           "isRequired": false,
           "isSecret": false,
           "format": "number"
