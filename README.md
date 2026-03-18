@@ -428,6 +428,8 @@ Try the Web MCP without any setup:
 | `WEB_UNLOCKER_ZONE` | Custom Web Unlocker zone name | `mcp_unlocker` | `my_custom_zone` |
 | `BROWSER_ZONE` | Custom Browser zone name | `mcp_browser` | `my_browser_zone` |
 | `POLLING_TIMEOUT` | Timeout for web_data_* tools polling (seconds) | `600` | `300`, `1200` |
+| `BASE_TIMEOUT` | Request timeout for base tools in seconds (search & scrape) | No limit | `60`, `120` |
+| `BASE_MAX_RETRIES` | Max retries for base tools on transient errors (0-3) | `0` | `1`, `3` |
 | `GROUPS` | Comma-separated tool group IDs | - | `ecommerce,browser` |
 | `TOOLS` | Comma-separated individual tool names | - | `extract,scrape_as_html` |
 
