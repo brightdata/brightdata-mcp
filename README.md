@@ -41,7 +41,24 @@
   <br/>
 
   <div align="center">
-    <h3>NEW: GEO & AI Brand Visibility Tools</h3>
+    <h3>NEW: Code Tool group - Your Coding Agent's Best Friend</h3>
+    <p><strong>Instant access to npm and PyPI package data, right from your AI agent.</strong></p>
+    <p>
+      Need the latest version of a package? Want to read its README without leaving your workflow?<br/>
+      The <b>Code</b> tool group gives coding agents structured, reliable package metadata on demand —<br/>
+      no scraping, no stale caches, just the data your agent needs to make smart dependency decisions.
+    </p>
+    <table>
+      <tr>
+        <td align="center"><b>npm</b><br/><sub>Package versions, READMEs, metadata &amp; dependencies</sub></td>
+        <td align="center"><b>PyPI</b><br/><sub>Python package info, versions &amp; project details</sub></td>
+      </tr>
+    </table>
+    <p><code>GROUPS="code"</code> &nbsp;·&nbsp; The go-to tool for Claude Code, Cursor, Windsurf &amp; any MCP-powered coding agent</p>
+  </div>
+
+  <div align="center">
+    <h3>GEO & AI Brand Visibility Tools</h3>
     <p><strong>See how ChatGPT, Grok, and Perplexity talk about your brand.</strong></p>
     <p>
       Query leading LLMs directly from your agent and get back structured, markdown-formatted answers.<br/>
@@ -87,6 +104,7 @@ Built by [Bright Data](https://brightdata.com), the world's #1 web data platform
 - 🛍️ **E-commerce Intelligence** - Monitor products, prices, and availability  
 - 📊 **Market Analysis** - Track competitors and industry trends
 - 🤖 **AI Agents** - Build agents that can actually browse the web
+- 💻 **Coding Agents** - Look up npm/PyPI packages, versions, and READMEs in real time
 - 🧠 **GEO & Brand Visibility** - See how ChatGPT, Grok, and Perplexity perceive your brand
 - 📝 **Content Creation** - Access up-to-date information for writing
 - 🎓 **Academic Research** - Gather data from multiple sources efficiently
@@ -262,6 +280,12 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
     <code>web_data_perplexity_ai_insights</code></td>
   </tr>
   <tr>
+    <td><code>code</code></td>
+    <td>Package intelligence for coding agents</td>
+    <td><code>web_data_npm_package</code>,
+    <code>web_data_pypi_package</code></td>
+  </tr>
+  <tr>
     <td><code>advanced_scraping</code></td>
     <td>Batch and AI-assisted extraction helpers</td>
     <td><code>search_engine_batch</code>,
@@ -282,6 +306,26 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
         "API_TOKEN": "<your-api-token-here>",
         "GROUPS": "browser,advanced_scraping",
         "TOOLS": "extract"
+      }
+    }
+  }
+}
+```
+
+### Coding agent example (Claude Code / Cursor / Windsurf)
+
+Give your coding agent real-time package intelligence — latest versions, READMEs,
+dependencies, and metadata from npm and PyPI without scraping:
+
+```json
+{
+  "mcpServers": {
+    "Bright Data": {
+      "command": "npx",
+      "args": ["@brightdata/mcp"],
+      "env": {
+        "API_TOKEN": "<your-api-token-here>",
+        "GROUPS": "code"
       }
     }
   }
@@ -317,6 +361,8 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
 ✅ "Get today's weather forecast for New York"
 ✅ "What movies are releasing this week?"
 ✅ "What are the trending topics on Twitter today?"
+✅ "What's the latest version of express on npm?"
+✅ "Get the README for the langchain-brightdata PyPI package"
 ```
 
 ---
