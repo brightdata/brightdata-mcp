@@ -610,3 +610,8 @@ MIT © [Bright Data Ltd.](https://brightdata.com)
     <a href="https://brightdata.com/blog">Read our Blog</a>
   </p>
 </div>
+
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/luminati-io-brightdata-mcp).
+
