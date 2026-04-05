@@ -21,7 +21,7 @@ const base_timeout = process.env.BASE_TIMEOUT
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
-    'search_engine_batch', 'scrape_batch'];
+    'search_engine_batch', 'scrape_batch', 'discover'];
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
         .filter(Boolean) : [];
@@ -484,6 +484,125 @@ addTool({
         });
 
         return sampling_response.content.text;
+    }),
+});
+
+addTool({
+    name: 'discover',
+    description: 'Search the web and rank results by AI-driven relevance. '
+        +'Returns scored results with title, description, and URL. Supports '
+        +'intent-based ranking, geo-targeting, date filtering, and keyword '
+        +'filtering.',
+    annotations: {
+        title: 'Discover',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        query: z.string().describe('The search query'),
+        intent: z.string().optional().describe('Describes the specific goal '
+            +'of the search to help the AI evaluate and rank result relevance.'
+            +'If not provided, the query string is used as the intent'),
+        country: z.string().length(2).optional()
+            .describe('2-letter ISO country code for localized results '
+                +'(e.g., "US", "GB", "DE")'),
+        city: z.string().optional()
+            .describe('City for localized results (e.g., "New York", '
+                +'"Berlin")'),
+        language: z.string().optional()
+            .describe('Language code (e.g., "en", "es", "fr")'),
+        num_results: z.number().int().optional()
+            .describe('Exact number of search results to return'),
+        filter_keywords: z.array(z.string()).optional()
+            .describe('Keywords that must appear in search results'),
+        remove_duplicates: z.boolean().optional()
+            .describe('Remove duplicate results (default: true)'),
+        start_date: z.string().optional()
+            .describe('Only content updated from this date (YYYY-MM-DD)'),
+        end_date: z.string().optional()
+            .describe('Only content updated until this date (YYYY-MM-DD)'),
+    }),
+    execute: tool_fn('discover', async(data, ctx)=>{
+        let body = {query: data.query, format: 'json'};
+        if (data.intent)
+            body.intent = data.intent;
+        if (data.country)
+            body.country = data.country;
+        if (data.city)
+            body.city = data.city;
+        if (data.language)
+            body.language = data.language;
+        if (data.num_results)
+            body.num_results = data.num_results;
+        if (data.filter_keywords)
+            body.filter_keywords = data.filter_keywords;
+        if (data.remove_duplicates===false)
+            body.remove_duplicates = false;
+        if (data.start_date)
+            body.start_date = data.start_date;
+        if (data.end_date)
+            body.end_date = data.end_date;
+        let trigger_response = await axios({
+            url: 'https://api.brightdata.com/discover',
+            method: 'POST',
+            data: body,
+            headers: {
+                ...api_headers(ctx.clientName, 'discover'),
+                'Content-Type': 'application/json',
+            },
+        });
+        let task_id = trigger_response.data?.task_id;
+        if (!task_id)
+            throw new Error('No task_id returned from discover request');
+        console.error(`[discover] triggered with task ID: ${task_id}`);
+        let max_attempts = polling_timeout;
+        let attempts = 0;
+        while (attempts<max_attempts)
+        {
+            try {
+                if (ctx && ctx.reportProgress)
+                {
+                    await ctx.reportProgress({
+                        progress: attempts,
+                        total: max_attempts,
+                        message: `Polling for discover results (attempt `
+                            +`${attempts+1}/${max_attempts})`,
+                    });
+                }
+                let poll_response = await axios({
+                    url: 'https://api.brightdata.com/discover',
+                    params: {task_id},
+                    method: 'GET',
+                    headers: api_headers(ctx.clientName, 'discover'),
+                });
+                if (poll_response.data?.status==='processing')
+                {
+                    console.error(`[discover] still processing, polling `
+                        +`again (attempt ${attempts+1}/${max_attempts})`);
+                    attempts++;
+                    await new Promise(resolve=>setTimeout(resolve, 1000));
+                    continue;
+                }
+                console.error(`[discover] results received after `
+                    +`${attempts+1} attempts`);
+                let results = poll_response.data?.results || [];
+                results = results.map(r=>({
+                    link: r.link,
+                    title: r.title,
+                    description: r.description,
+                    relevance_score: r.relevance_score,
+                }));
+                return JSON.stringify(results);
+            } catch(e){
+                console.error(`[discover] polling error: ${e.message}`);
+                if (e.response?.status===400)
+                    throw e;
+                attempts++;
+                await new Promise(resolve=>setTimeout(resolve, 1000));
+            }
+        }
+        throw new Error(`Timeout after ${max_attempts} seconds waiting `
+            +`for discover results`);
     }),
 });
 
