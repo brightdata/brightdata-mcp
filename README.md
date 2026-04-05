@@ -168,7 +168,6 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
         <hr/>
         <p>✅ Web Search<br/>
         ✅ Scraping with Web unlocker<br/>
-        ✅ AI-ranked Discover search<br/>
         ❌ Browser Automation<br/>
         ❌ Web data tools</p>
         <br/>
@@ -213,7 +212,7 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
 - Mode priority: `PRO_MODE=true` (all tools) → `GROUPS` / `TOOLS`
   (whitelist) → default rapid mode (base toolkit).
 - Base tools always enabled: `search_engine`, `search_engine_batch`,
-  `scrape_as_markdown`, `scrape_batch`, `discover`.
+  `scrape_as_markdown`, `scrape_batch`.
 - Group ID `custom` is reserved; use `TOOLS` for bespoke picks.
 
 
@@ -395,7 +394,6 @@ https://github.com/user-attachments/assets/61ab0bee-fdfa-4d50-b0de-5fab96b4b91d
 |------|-------------|----------|
 | 🔍 `search_engine` | Web search with AI-optimized results | Research, fact-checking, current events |
 | 📄 `scrape_as_markdown` | Convert any webpage to clean markdown | Content extraction, documentation |
-| 🎯 `discover` | AI-ranked web search with intent-based relevance scoring | Deep research, RAG pipelines, competitive analysis |
 
 ### 💎 Pro Mode Tools (60+ Tools)
 

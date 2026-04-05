@@ -1,0 +1,24 @@
+{
+  "name": "brightdata-mcp",
+  "version": "0.1.0",
+  "description": "Public web access and data collection from Codex via MCP",
+  "author": {
+    "name": "brightdata",
+    "url": "https://github.com/brightdata/brightdata-mcp"
+  },
+  "homepage": "https://github.com/brightdata/brightdata-mcp",
+  "repository": "https://github.com/brightdata/brightdata-mcp",
+  "keywords": [
+    "mcp",
+    "codex"
+  ],
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Bright Data MCP",
+    "shortDescription": "Public web access and data collection from Codex via MCP",
+    "longDescription": "A powerful MCP server for public web access. npm and PyPI package data, right from your AI agent.",
+    "category": "Web Scraping",
+    "websiteURL": "https://github.com/brightdata/brightdata-mcp"
+  }
+}
