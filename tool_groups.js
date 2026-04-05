@@ -1,6 +1,6 @@
 'use strict'; /*jslint node:true es9:true*/
 
-const base_tools = ['search_engine', 'scrape_as_markdown'];
+const base_tools = ['search_engine', 'scrape_as_markdown', 'discover'];
 
 export const GROUPS = {
     ECOMMERCE: {
