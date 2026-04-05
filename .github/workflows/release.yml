@@ -17,7 +17,6 @@ jobs:
           cache: "npm"
           registry-url: 'https://registry.npmjs.org'
           scope: '@brightdata'
-      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm audit signatures
       - run: npm publish
