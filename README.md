@@ -20,6 +20,9 @@
     <a href="https://github.com/brightdata-com/brightdata-mcp/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-purple?style=for-the-badge" alt="License"/>
     </a>
+    <a href="https://gitcgr.com/brightdata/brightdata-mcp" target="_blank" rel="noopener noreferrer">
+      <img src="https://gitcgr.com/badge/brightdata/brightdata-mcp.svg" alt="gitcgr" />
+    </a>
   </p>
 
   <p>
