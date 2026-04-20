@@ -4,8 +4,6 @@ function truncate_response(response_text, max_length = 300){
     if (typeof response_text != 'string')
         return '';
     const trimmed = response_text.trim();
-    // We only need enough of the body to identify whether this was HTML,
-    // an auth error, or some other upstream response shape mismatch.
     if (trimmed.length <= max_length)
         return trimmed;
     return `${trimmed.slice(0, max_length)}...`;
@@ -14,7 +12,6 @@ function truncate_response(response_text, max_length = 300){
 export function clean_google_search_payload(raw_data){
     const data = raw_data && typeof raw_data=='object' ? raw_data : {};
     const organic = Array.isArray(data.organic) ? data.organic : [];
-
     const organic_clean = organic
         .map(entry=>{
             if (!entry || typeof entry!='object')
@@ -24,26 +21,21 @@ export function clean_google_search_payload(raw_data){
                 ? entry.title.trim() : '';
             const description = typeof entry.description=='string'
                 ? entry.description.trim() : '';
-            // Dropping incomplete rows keeps downstream callers from treating
-            // malformed upstream entries as real search hits.
             if (!link || !title)
                 return null;
             return {link, title, description};
         })
         .filter(Boolean);
-
     return {organic: organic_clean};
 }
 
 export function parse_google_search_response(response_text, tool_name){
     try {
         return clean_google_search_payload(JSON.parse(response_text));
-    } catch (e){
-        // A short body snippet gives enough evidence to debug auth/HTML/error
-        // responses without flooding logs or tool output with full pages.
+    } catch(e){
         const snippet = truncate_response(response_text);
         const details = snippet ? ` Response snippet: ${snippet}` : '';
-        throw new Error(`Unexpected non-JSON response from Bright Data `
-            +`for ${tool_name}.${details}`, {cause: e});
+        throw new Error(`Unexpected non-JSON response from Bright Data`
+            +` for ${tool_name}.${details}`, {cause: e});
     }
 }

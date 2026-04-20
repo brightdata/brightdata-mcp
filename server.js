@@ -199,7 +199,7 @@ const addTool = (tool) => {
 addTool({
     name: 'search_engine',
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
-        +'SERP results in JSON or Markdown (URL, title, description), Ideal for'
+        +'SERP results in JSON or Markdown (URL, title, description),Ideal for'
         +'gathering current information, news, and detailed search results.',
     annotations: {
         title: 'Search Engine',
@@ -239,8 +239,6 @@ addTool({
         });
         if (!is_google)
             return response.data;
-        // An empty organic list looks like a legitimate search miss, so we
-        // fail here when Bright Data returns something other than Google JSON.
         return JSON.stringify(parse_google_search_response(response.data,
             'search_engine'), null, 2);
     }),
@@ -305,12 +303,11 @@ addTool({
     }),
     execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor,
-            geo_location})=> {
+            geo_location})=>{
             const normalized_engine = engine || 'google';
             const is_google = normalized_engine === 'google';
             const url = search_url(normalized_engine, query, cursor,
                 geo_location);
-
             return (async()=>{
                 try {
                     const response = await base_request({
@@ -341,9 +338,7 @@ addTool({
                         engine: normalized_engine,
                         result: response.data,
                     };
-                } catch (e){
-                    // Batch callers still need partial successes, so each item
-                    // carries its own error instead of hiding it in allSettled.
+                } catch(e){
                     return {
                         query,
                         engine: normalized_engine,
