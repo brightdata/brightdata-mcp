@@ -1,6 +1,6 @@
 {
     "name": "@brightdata/mcp",
-    "version": "2.9.4",
+    "version": "2.9.5",
     "description": "An MCP interface into the Bright Data toolset",
     "type": "module",
     "main": "./server.js",
@@ -38,6 +38,7 @@
     },
     "files": [
         "server.js",
+        "search_utils.js",
         "browser_tools.js",
         "browser_session.js",
         "aria_snapshot_filter.js",

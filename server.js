@@ -6,6 +6,7 @@ import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
+import {parse_google_search_response} from './search_utils.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -198,7 +199,7 @@ const addTool = (tool) => {
 addTool({
     name: 'search_engine',
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
-        +'SERP results in JSON or Markdown (URL, title, description), Ideal for'
+        +'SERP results in JSON or Markdown (URL, title, description),Ideal for'
         +'gathering current information, news, and detailed search results.',
     annotations: {
         title: 'Search Engine',
@@ -238,15 +239,8 @@ addTool({
         });
         if (!is_google)
             return response.data;
-        try {
-            const search_data = JSON.parse(response.data);
-            return JSON.stringify(
-                clean_google_search_payload(search_data), null, 2);
-        } catch(e){
-            return JSON.stringify({
-                organic: []
-            }, null, 2);
-        }
+        return JSON.stringify(parse_google_search_response(response.data,
+            'search_engine'), null, 2);
     }),
 });
 
@@ -310,48 +304,51 @@ addTool({
     execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor,
             geo_location})=>{
-            const is_google = (engine || 'google') === 'google';
-            const url = search_url(engine || 'google', query, cursor,
+            const normalized_engine = engine || 'google';
+            const is_google = normalized_engine === 'google';
+            const url = search_url(normalized_engine, query, cursor,
                 geo_location);
-
-            return base_request({
-                url: 'https://api.brightdata.com/request',
-                method: 'POST',
-                data: {
-                    url: is_google ? `${url}&brd_json=1` : url,
-                    zone: unlocker_zone,
-                    format: 'raw',
-                    data_format: is_google ? 'parsed_light' : 'markdown',
-                },
-                headers: api_headers(ctx.clientName, 'search_engine_batch'),
-                responseType: 'text',
-            }).then(response=>{
-                if (is_google)
-                {
-                    try {
-                        const search_data = JSON.parse(response.data);
+            return (async()=>{
+                try {
+                    const response = await base_request({
+                        url: 'https://api.brightdata.com/request',
+                        method: 'POST',
+                        data: {
+                            url: is_google ? `${url}&brd_json=1` : url,
+                            zone: unlocker_zone,
+                            format: 'raw',
+                            data_format: is_google ? 'parsed_light'
+                                : 'markdown',
+                        },
+                        headers: api_headers(ctx.clientName,
+                            'search_engine_batch'),
+                        responseType: 'text',
+                    });
+                    if (is_google)
+                    {
                         return {
                             query,
-                            engine: engine || 'google',
-                            result: clean_google_search_payload(search_data),
-                        };
-                    } catch(e){
-                        return {
-                            query,
-                            engine: engine || 'google',
-                            result: clean_google_search_payload(null),
+                            engine: normalized_engine,
+                            result: parse_google_search_response(response.data,
+                                'search_engine_batch'),
                         };
                     }
+                    return {
+                        query,
+                        engine: normalized_engine,
+                        result: response.data,
+                    };
+                } catch(e){
+                    return {
+                        query,
+                        engine: normalized_engine,
+                        error: e instanceof Error ? e.message : String(e),
+                    };
                 }
-                return {
-                    query,
-                    engine: engine || 'google',
-                    result: response.data
-                };
-            });
+            })();
         });
 
-        const results = await Promise.allSettled(search_promises);
+        const results = await Promise.all(search_promises);
         return JSON.stringify(results, null, 2);
     }),
 });
@@ -1254,28 +1251,6 @@ function tool_fn(name, fn){
             console.error(`[%s] tool finished in %sms`, name, dur);
         }
     };
-}
-
-function clean_google_search_payload(raw_data){
-    const data = raw_data && typeof raw_data=='object' ? raw_data : {};
-    const organic = Array.isArray(data.organic) ? data.organic : [];
-
-    const organic_clean = organic
-        .map(entry=>{
-            if (!entry || typeof entry!='object')
-                return null;
-            const link = typeof entry.link=='string' ? entry.link.trim() : '';
-            const title = typeof entry.title=='string'
-                ? entry.title.trim() : '';
-            const description = typeof entry.description=='string'
-                ? entry.description.trim() : '';
-            if (!link || !title)
-                return null;
-            return {link, title, description};
-        })
-        .filter(Boolean);
-
-    return {organic: organic_clean};
 }
 
 function search_url(engine, query, cursor, geo_location){
