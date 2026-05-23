@@ -22,15 +22,21 @@ export class ContextCache {
      * @returns {{ isDuplicate: boolean, contentHash: string, duplicateOf?: string }}
      */
     check(content, url) {
-        // Use prefix (first 2048) + suffix (last 64) for fingerprint.
-        // This catches duplicate headers/footers even when pages share
-        // the same total length but differ in body content.
-        const prefix = content.slice(0, this._prefix_len);
-        const suffix = content.slice(-64);
-        const hash = crypto
-            .createHash('sha256')
-            .update(prefix + suffix)
-            .digest('hex');
+        let hash;
+        if (content.length <= 2048) {
+            // Short content: use full content hash
+            hash = crypto.createHash('sha256').update(content).digest('hex');
+        } else {
+            // Long content: sample from start, middle, and end
+            const prefix = content.slice(0, 2048);
+            const midIdx = Math.floor(content.length / 2);
+            const middle = content.slice(midIdx, midIdx + 256);
+            const suffix = content.slice(-256);
+            hash = crypto
+                .createHash('sha256')
+                .update(prefix + middle + suffix)
+                .digest('hex');
+        }
 
         if (this._seen.has(hash)) {
             this._stats.hits++;
@@ -60,6 +66,14 @@ export class ContextCache {
                 : '0.000',
         };
     }
+
+    /**
+     * Clear the cache. Useful for long-running processes.
+     */
+    clear() {
+        this._seen.clear();
+        this._stats = { hits: 0, misses: 0, bytes_saved: 0 };
+    }
 }
 
 /**
@@ -72,7 +86,8 @@ export function filterFields(results, fields) {
     if (!fields || fields.length === 0) return results;
     if (!Array.isArray(results)) return results;
     return results.map(item => {
-        if (item == null) return item; // pass through null/undefined
+        if (item == null) return {};
+        if (typeof item !== 'object') return {};
         return Object.fromEntries(
             fields.filter(f => f in item).map(f => [f, item[f]])
         );

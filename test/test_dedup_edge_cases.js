@@ -82,7 +82,7 @@ test('filterFields with empty results array', () => {
 test('filterFields with null/undefined item', () => {
     const results = [{ link: 'https://a.com' }, null, { link: 'https://b.com' }];
     const filtered = filterFields(results, ['link']);
-    assert.equal(filtered[1], null); // null passes through
+    assert.deepEqual(filtered[1], {}); // null item returns empty object
 });
 
 console.log(`\n📊 Edge Case Results: ${passed} passed, ${failed} failed\n`);
