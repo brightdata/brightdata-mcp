@@ -384,7 +384,7 @@ addTool({
          +'This tool can unlock any webpage even if it uses bot detection or '
          +'CAPTCHA.',
     annotations: {
-        title: 'Batch Scrape with ContextForge Deduplication',
+        title: 'Batch Scrape',
         readOnlyHint: true,
         openWorldHint: true,
     },
@@ -398,6 +398,8 @@ addTool({
             .describe('Optional: return only these top-level fields from each result'),
         format: z.enum(['markdown', 'raw']).optional().default('markdown')
             .describe('Output format'),
+        include_metrics: z.boolean().optional().default(false)
+            .describe('Include deduplication metrics in response. Default: false (returns flat array).'),
     }),
     execute: tool_fn('scrape_batch', async (data, ctx) => {
         check_rate_limit();
@@ -460,12 +462,15 @@ addTool({
             r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message ?? String(r.reason ?? 'Unknown error') }
         );
 
-        return JSON.stringify({
-            results: output,
-            forge_metrics: cache
-                ? buildForgeMetrics(cache, { total_ms: Date.now() - t0 })
-                : null,
-        }, null, 2);
+        if (data.include_metrics) {
+            return JSON.stringify({
+                results: output,
+                metrics: cache
+                    ? buildForgeMetrics(cache, { total_ms: Date.now() - t0 })
+                    : null,
+            }, null, 2);
+        }
+        return JSON.stringify(output, null, 2);
     }),
 });
 

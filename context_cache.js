@@ -22,12 +22,14 @@ export class ContextCache {
      * @returns {{ isDuplicate: boolean, contentHash: string, duplicateOf?: string }}
      */
     check(content, url) {
-        // Include content length in hash to avoid false positives when
-        // content differs only after the prefix window
-        const fingerprint = content.slice(0, this._prefix_len);
+        // Use prefix (first 2048) + suffix (last 64) for fingerprint.
+        // This catches duplicate headers/footers even when pages share
+        // the same total length but differ in body content.
+        const prefix = content.slice(0, this._prefix_len);
+        const suffix = content.slice(-64);
         const hash = crypto
             .createHash('sha256')
-            .update(fingerprint + '|' + content.length)
+            .update(prefix + suffix)
             .digest('hex');
 
         if (this._seen.has(hash)) {
@@ -69,11 +71,12 @@ export class ContextCache {
 export function filterFields(results, fields) {
     if (!fields || fields.length === 0) return results;
     if (!Array.isArray(results)) return results;
-    return results.map(item =>
-        Object.fromEntries(
+    return results.map(item => {
+        if (item == null) return item; // pass through null/undefined
+        return Object.fromEntries(
             fields.filter(f => f in item).map(f => [f, item[f]])
-        )
-    );
+        );
+    });
 }
 
 /**

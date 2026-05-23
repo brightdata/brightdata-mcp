@@ -71,5 +71,47 @@ test('buildForgeMetrics returns valid structure', () => {
     assert.ok(metrics.timestamp_utc);
 });
 
+test('Content differing after 2048 chars with same length is NOT flagged duplicate', () => {
+    const cache = new ContextCache();
+    const prefix = 'A'.repeat(2048);
+    const content1 = prefix + 'UNIQUE_BODY_CONTENT_AAAA';
+    const content2 = prefix + 'UNIQUE_BODY_CONTENT_BBBB';
+    
+    const r1 = cache.check(content1, 'https://a.com');
+    const r2 = cache.check(content2, 'https://b.com');
+    
+    // Both should be unique because content length differs
+    assert.equal(r1.isDuplicate, false, 'First content should be UNIQUE');
+    assert.equal(r2.isDuplicate, false, 'Second content should be UNIQUE (different body)');
+    assert.notEqual(r1.contentHash, r2.contentHash, 'Hashes should differ');
+});
+
+test('Content with same prefix but different length is NOT flagged duplicate', () => {
+    const cache = new ContextCache();
+    const prefix = 'X'.repeat(2048);
+    const content1 = prefix + 'A';  // 2049 chars total
+    const content2 = prefix + 'AB'; // 2050 chars total
+    
+    const r1 = cache.check(content1, 'https://a.com');
+    const r2 = cache.check(content2, 'https://b.com');
+    
+    assert.equal(r1.isDuplicate, false, 'First should be UNIQUE');
+    assert.equal(r2.isDuplicate, false, 'Second should be UNIQUE (different length)');
+});
+
+test('Stats with complex dedup scenario', () => {
+    const cache = new ContextCache();
+    // 3 URLs, 2 with same content (duplicate), 1 unique
+    const same = 'Shared content header and footer';
+    cache.check(same, 'https://a.com');
+    cache.check(same, 'https://b.com'); // duplicate
+    cache.check('Different unique content', 'https://c.com');
+    
+    const stats = cache.stats();
+    assert.equal(stats.unique_blocks, 2, 'Should have 2 unique blocks');
+    assert.equal(stats.duplicate_blocks, 1, 'Should have 1 duplicate');
+    assert.ok(stats.bytes_saved > 0, 'Should have saved bytes');
+});
+
 console.log(`\n📊 Results: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
