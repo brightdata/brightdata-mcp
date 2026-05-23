@@ -10,6 +10,7 @@ import {parse_google_search_response} from './search_utils.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
+import { ContextCache, filterFields, buildForgeMetrics } from './context_cache.js';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
@@ -300,8 +301,11 @@ addTool({
                 .describe('2-letter country code for geo-targeted results '
                     +'(e.g., "us", "uk")'),
         })).min(1).max(5),
+        fields: z.array(z.enum(['link', 'title', 'description', 'relevance_score', 'cursor']))
+            .optional()
+            .describe('Filter response to only these fields. Saves tokens in agent pipelines.'),
     }),
-    execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
+    execute: tool_fn('search_engine_batch', async({queries, fields}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor,
             geo_location})=>{
             const normalized_engine = engine || 'google';
@@ -349,49 +353,120 @@ addTool({
         });
 
         const results = await Promise.all(search_promises);
-        return JSON.stringify(results, null, 2);
+
+        // Apply field filtering if requested
+        // For Google: filter within result.organic array
+        // For Bing/Yandex: result is just text, no fields to filter
+        let all_results = results;
+        if (fields && Array.isArray(all_results)) {
+            all_results = all_results.map(page_result => {
+                if (page_result.result && typeof page_result.result === 'object' && Array.isArray(page_result.result.organic)) {
+                    return {
+                        ...page_result,
+                        result: {
+                            ...page_result.result,
+                            organic: filterFields(page_result.result.organic, fields),
+                        },
+                    };
+                }
+                return page_result;
+            });
+        }
+
+        return JSON.stringify(all_results, null, 2);
     }),
 });
 
 addTool({
-   name: 'scrape_batch',
-   description: 'Scrape multiple webpages URLs with advanced options for '
-        +'content extraction and get back the results in MarkDown language. '
-        +'This tool can unlock any webpage even if it uses bot detection or '
-        +'CAPTCHA.',
-   annotations: {
-       title: 'Scrape Batch',
-       readOnlyHint: true,
-       openWorldHint: true,
-   },
-   parameters: z.object({
-       urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
-   }),
-   execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
-       const scrapePromises = urls.map(url =>
-           base_request({
-               url: 'https://api.brightdata.com/request',
-               method: 'POST',
-               data: {
-                   url,
-                   zone: unlocker_zone,
-                   format: 'raw',
-                   data_format: 'markdown',
-               },
-               headers: api_headers(ctx.clientName, 'scrape_batch'),
-               responseType: 'text',
-           }).then(async response=>({
-               url,
-               content: (await remark()
-                   .use(strip, {keep: ['link', 'linkReference', 'code',
-                       'inlineCode']})
-                   .process(response.data)).value,
-           }))
-       );
+    name: 'scrape_batch',
+    description: 'Scrape multiple webpages URLs with advanced options for '
+         +'content extraction and get back the results in MarkDown language. '
+         +'This tool can unlock any webpage even if it uses bot detection or '
+         +'CAPTCHA.',
+    annotations: {
+        title: 'Batch Scrape with ContextForge Deduplication',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        urls: z.array(z.string().url()).min(1).max(5)
+            .describe('List of URLs to scrape (max 5)'),
+        deduplicate: z.boolean().optional().default(true)
+            .describe('Remove duplicate content blocks across URLs. '
+                +'ContextForge INV-CF-1 deduplication. Default: true.'),
+        fields: z.array(z.string()).optional()
+            .describe('Optional: return only these top-level fields from each result'),
+        format: z.enum(['markdown', 'raw']).optional().default('markdown')
+            .describe('Output format'),
+    }),
+    execute: tool_fn('scrape_batch', async (data, ctx) => {
+        check_rate_limit();
+        const cache = data.deduplicate ? new ContextCache() : null;
+        const t0 = Date.now();
 
-       const results = await Promise.allSettled(scrapePromises);
-       return JSON.stringify(results, null, 2);
-   }),
+        const scrape_promises = data.urls.map(async (url) => {
+            const t_url = Date.now();
+            try {
+                const response = await base_request({
+                    url: `https://api.brightdata.com/request`,
+                    method: 'POST',
+                    headers: api_headers(ctx?.clientName, 'scrape_batch'),
+                    data: {
+                        zone: unlocker_zone,
+                        url,
+                        format: 'raw',
+                    },
+                });
+
+                let content = response.data;
+                if (data.format === 'markdown') {
+                    content = (await remark().use(strip, {
+                        keep: ['code', 'inlineCode'],
+                    }).process(content)).value;
+                }
+
+                const dedup = cache?.check(content, url);
+                const result = {
+                    url,
+                    status: 'success',
+                    latency_ms: Date.now() - t_url,
+                    ...(dedup?.isDuplicate
+                        ? {
+                            content: null,
+                            skipped: true,
+                            duplicate_of: dedup.duplicateOf,
+                            content_hash: dedup.contentHash,
+                        }
+                        : {
+                            content: data.fields
+                                ? filterFields([{ content }], data.fields)[0]
+                                : content,
+                            content_hash: dedup?.contentHash ?? null,
+                        }),
+                };
+                return result;
+            } catch (e) {
+                return {
+                    url,
+                    status: 'error',
+                    latency_ms: Date.now() - t_url,
+                    error: e.response?.data ?? e.message,
+                };
+            }
+        });
+
+        const results = await Promise.allSettled(scrape_promises);
+        const output = results.map(r =>
+            r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message ?? String(r.reason ?? 'Unknown error') }
+        );
+
+        return JSON.stringify({
+            results: output,
+            forge_metrics: cache
+                ? buildForgeMetrics(cache, { total_ms: Date.now() - t0 })
+                : null,
+        }, null, 2);
+    }),
 });
 
 addTool({
