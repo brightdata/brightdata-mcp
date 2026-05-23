@@ -10,7 +10,7 @@ import {parse_google_search_response} from './search_utils.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
-import { ContextCache, filterFields, buildForgeMetrics } from './context_cache.js';
+import { ContextCache, filterFields, buildBatchMetrics } from './context_cache.js';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
@@ -393,7 +393,7 @@ addTool({
             .describe('List of URLs to scrape (max 5)'),
         deduplicate: z.boolean().optional().default(true)
             .describe('Remove duplicate content blocks across URLs. '
-                +'ContextForge INV-CF-1 deduplication. Default: true.'),
+                +'Deduplication: removes duplicate content blocks across URLs. Default: true.'),
         fields: z.array(z.string()).optional()
             .describe('Optional: return only these top-level fields from each result'),
         format: z.enum(['markdown', 'raw']).optional().default('markdown')
@@ -466,7 +466,7 @@ addTool({
             return JSON.stringify({
                 results: output,
                 metrics: cache
-                    ? buildForgeMetrics(cache, { total_ms: Date.now() - t0 })
+                    ? buildBatchMetrics(cache, { total_ms: Date.now() - t0 })
                     : null,
             }, null, 2);
         }

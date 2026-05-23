@@ -1,6 +1,6 @@
-// test_context_cache.js — Tests for ContextForge dedup layer
+// test_context_cache.js — Tests for ContextCache dedup layer
 // Run: node --experimental-vm-modules test/test_context_cache.js
-import { ContextCache, filterFields, buildForgeMetrics } from '../context_cache.js';
+import { ContextCache, filterFields, buildBatchMetrics } from '../context_cache.js';
 import assert from 'node:assert/strict';
 
 let passed = 0;
@@ -17,7 +17,7 @@ function test(name, fn) {
     }
 }
 
-console.log('\n🧪 ContextCache — INV-CF-1 tests\n');
+console.log('\n🧪 ContextCache — deduplication tests\n');
 
 test('New content is not duplicate', () => {
     const cache = new ContextCache();
@@ -62,13 +62,13 @@ test('filterFields returns only requested fields', () => {
     assert.equal('metadata' in filtered[0], false);
 });
 
-test('buildForgeMetrics returns valid structure', () => {
+test('buildBatchMetrics returns valid structure', () => {
     const cache = new ContextCache();
     cache.check('test', 'https://a.com');
-    const metrics = buildForgeMetrics(cache, { total_ms: 123 });
-    assert.equal(metrics.invariant, 'INV-CF-1');
-    assert.ok(metrics.doi.includes('zenodo'));
+    const metrics = buildBatchMetrics(cache, { total_ms: 123 });
+    assert.equal(metrics.version, '1.0.0');
     assert.ok(metrics.timestamp_utc);
+    assert.ok(metrics.dedup);
 });
 
 test('Content differing after 2048 chars with same length is NOT flagged duplicate', () => {

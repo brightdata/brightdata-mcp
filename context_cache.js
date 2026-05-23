@@ -82,11 +82,9 @@ export function filterFields(results, fields) {
 /**
  * Build metrics summary for batch responses.
  */
-export function buildForgeMetrics(cache, timings = {}) {
+export function buildBatchMetrics(cache, timings = {}) {
     return {
-        forge_version: '1.0.0',
-        invariant: 'INV-CF-1',
-        doi: 'https://doi.org/10.5281/zenodo.20277875',
+        version: '1.0.0',
         dedup: cache.stats(),
         timings,
         timestamp_utc: new Date().toISOString(),
