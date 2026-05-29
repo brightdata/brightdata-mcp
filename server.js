@@ -7,6 +7,7 @@ import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
+import {classify_response, should_retry} from './retry_utils.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -69,6 +70,19 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
+const sleep = ms=>new Promise(resolve=>setTimeout(resolve, ms));
+
+// Backoff knobs (overridable via env) used by base_request and geo_fanout.
+// Issue #104: bursts of MCP calls hit intermittent 502/504 from the gateway and
+// there was no backoff guidance. We now classify each failure and retry only the
+// transient ones with exponential backoff + full jitter, honoring Retry-After.
+const backoff_opts = {
+    base_ms: parseInt(process.env.BASE_BACKOFF_MS || '500', 10),
+    max_ms: parseInt(process.env.MAX_BACKOFF_MS || '30000', 10),
+    factor: 2,
+    jitter: 'full',
+};
+
 async function base_request(config){
     let last_err;
     for (let attempt = 0; attempt <= base_max_retries; attempt++)
@@ -77,11 +91,14 @@ async function base_request(config){
             return await axios({...config, timeout: base_timeout});
         } catch(e){
             last_err = e;
-            if (e.response?.status && e.response.status >= 400
-                && e.response.status < 500)
-            {
+            const classification = classify_response({error: e});
+            const decision = should_retry(classification, attempt,
+                base_max_retries, backoff_opts);
+            if (!decision.retry)
                 throw e;
-            }
+            console.error(`[base_request] ${classification.reason}; retry `
+                +`${attempt + 1}/${base_max_retries} in ${decision.delay_ms}ms`);
+            await sleep(decision.delay_ms);
         }
     }
     throw last_err;
