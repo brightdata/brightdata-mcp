@@ -40,6 +40,7 @@
         "server.js",
         "search_utils.js",
         "retry_utils.js",
+        "geo_utils.js",
         "browser_tools.js",
         "browser_session.js",
         "aria_snapshot_filter.js",

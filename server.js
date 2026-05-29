@@ -8,6 +8,8 @@ import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {classify_response, should_retry} from './retry_utils.js';
+import {normalize_geos, build_geo_entry, summarize_fanout}
+    from './geo_utils.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -23,7 +25,7 @@ const base_timeout = process.env.BASE_TIMEOUT
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
-    'search_engine_batch', 'scrape_batch', 'discover'];
+    'search_engine_batch', 'scrape_batch', 'discover', 'geo_fanout'];
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
         .filter(Boolean) : [];
@@ -409,6 +411,69 @@ addTool({
        const results = await Promise.allSettled(scrapePromises);
        return JSON.stringify(results, null, 2);
    }),
+});
+
+addTool({
+    name: 'geo_fanout',
+    description: 'Fetch the SAME url from multiple country exits in parallel and '
+        +'return one structured report. A geo that is blocked (403/451), '
+        +'redirected (3xx to a different host), rate-limited (429) or fails '
+        +'transiently becomes a FIRST-CLASS classified result - not a discarded '
+        +'error. Ideal for detecting geo-gating, regional price/availability '
+        +'differences, and access denial across countries.',
+    annotations: {
+        title: 'Geo Fanout',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        url: z.string().url(),
+        countries: z.array(z.string().length(2))
+            .min(1)
+            .max(10)
+            .describe('2-letter ISO country codes to fan the request across '
+                +'(e.g., ["de", "be", "fr"]). Deduped; max 10.'),
+        data_format: z.enum(['raw', 'markdown'])
+            .optional()
+            .default('markdown')
+            .describe('Response body format per geo (default: markdown).'),
+    }),
+    execute: tool_fn('geo_fanout', async({url, countries, data_format}, ctx)=>{
+        const geos = normalize_geos(countries);
+        const now = Date.now();
+        const attempts = geos.map(geo=>(async()=>{
+            try {
+                const response = await base_request({
+                    url: 'https://api.brightdata.com/request',
+                    method: 'POST',
+                    data: {
+                        url,
+                        zone: unlocker_zone,
+                        format: 'raw',
+                        data_format,
+                        country: geo,
+                    },
+                    headers: api_headers(ctx.clientName, 'geo_fanout'),
+                    responseType: 'text',
+                });
+                const exit_ip = response.headers?.['x-brd-ip']
+                    || response.headers?.['x-luminati-ip'] || null;
+                return build_geo_entry({
+                    geo,
+                    url,
+                    response: {
+                        status: response.status,
+                        headers: response.headers,
+                        ...exit_ip ? {exit_ip} : {},
+                    },
+                }, now);
+            } catch(e){
+                return build_geo_entry({geo, url, error: e}, now);
+            }
+        })());
+        const entries = await Promise.all(attempts);
+        return JSON.stringify(summarize_fanout(entries), null, 2);
+    }),
 });
 
 addTool({
