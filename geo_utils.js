@@ -79,6 +79,7 @@ function outcome_to_geo_status(outcome){
     switch (outcome)
     {
     case OUTCOME.SUCCESS: return GEO_STATUS.OK;
+    case OUTCOME.REDIRECT: return GEO_STATUS.REDIRECTED;
     case OUTCOME.BLOCKED: return GEO_STATUS.BLOCKED;
     case OUTCOME.RATE_LIMITED: return GEO_STATUS.RATE_LIMITED;
     default: return GEO_STATUS.ERROR;

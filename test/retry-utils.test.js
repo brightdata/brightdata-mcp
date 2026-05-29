@@ -63,6 +63,25 @@ const classify_cases = [
         retryable: true,
     },
     {
+        name: '301 is a redirect, not fatal (self-consistent outcome)',
+        input: {status: 301, headers: {location: 'https://shop.example/x'}},
+        outcome: OUTCOME.REDIRECT,
+        retryable: false,
+        retry_after_ms: null,
+    },
+    {
+        name: '302 is a redirect, never retried',
+        input: {error: {response: {status: 302, headers: {}}}},
+        outcome: OUTCOME.REDIRECT,
+        retryable: false,
+    },
+    {
+        name: '307 temporary redirect is a redirect outcome',
+        input: {status: 307, headers: {}},
+        outcome: OUTCOME.REDIRECT,
+        retryable: false,
+    },
+    {
         name: '429 is rate_limited and retryable',
         input: {error: {response: {status: 429, headers: {}}}},
         outcome: OUTCOME.RATE_LIMITED,
@@ -184,8 +203,17 @@ const parse_retry_after_cases = [
     {name: 'null -> null', value: null, expected: null},
     {name: 'empty string -> null', value: '   ', expected: null},
     {name: 'integer seconds -> ms', value: '3', expected: 3000},
+    {name: 'large integer seconds -> ms', value: '120', expected: 120000},
     {name: 'zero seconds -> 0', value: '0', expected: 0},
     {name: 'garbage -> null', value: 'soon', expected: null},
+    // Strictness: fractional/negative/number-like junk must be null (fall back to
+    // computed backoff), NOT 0 (an immediate retry via permissive Date.parse).
+    {name: 'fractional seconds -> null (not 0)', value: '1.5', expected: null},
+    {name: 'negative seconds -> null (not 0)', value: '-3', expected: null},
+    {name: 'leading-plus -> null', value: '+5', expected: null},
+    {name: 'trailing junk -> null', value: '5s', expected: null},
+    {name: 'numeric-with-space -> null', value: '5 ', expected: 5000},
+    {name: 'date-shaped junk -> null', value: 'Mon, not a date', expected: null},
     {
         name: 'future HTTP-date -> positive ms',
         value: 'Mon, 19 Jan 2026 20:51:18 GMT',
@@ -324,6 +352,13 @@ const should_retry_cases = [
     {
         name: 'non-retryable -> never retry',
         classification: {retryable: false, retry_after_ms: null},
+        attempt: 0,
+        max_retries: 3,
+        expect_retry: false,
+    },
+    {
+        name: 'redirect classification -> never retried (no 3xx loop)',
+        classification: classify_response({status: 302, headers: {}}),
         attempt: 0,
         max_retries: 3,
         expect_retry: false,

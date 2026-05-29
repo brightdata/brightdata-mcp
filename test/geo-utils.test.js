@@ -7,6 +7,7 @@ import {
     build_geo_entry,
     summarize_fanout,
 } from '../geo_utils.js';
+import {OUTCOME} from '../retry_utils.js';
 
 const NOW = Date.parse('2026-01-19T20:51:08Z');
 
@@ -93,6 +94,14 @@ const entry_cases = [
         http_status: 301,
     },
     {
+        name: '303 with no Location -> redirected (self-consistent outcome)',
+        attempt: {geo: 'be', url: 'https://shop.example/p/1',
+            response: {status: 303, headers: {}}},
+        status: GEO_STATUS.REDIRECTED,
+        http_status: 303,
+        outcome: OUTCOME.REDIRECT,
+    },
+    {
         name: '429 -> rate_limited with retry_after',
         attempt: {geo: 'fr', url: 'https://shop.example/p/1',
             error: {response: {status: 429,
@@ -131,6 +140,11 @@ test('build_geo_entry classifies each geo as first-class (table-driven)', ()=>{
         {
             assert.equal(e.retry_after_ms, tc.retry_after_ms,
                 `${tc.name}: retry_after_ms`);
+        }
+        if (tc.outcome!==undefined)
+        {
+            assert.equal(e.outcome, tc.outcome,
+                `${tc.name}: outcome self-consistent with status`);
         }
         assert.equal(typeof e.reason, 'string', `${tc.name}: reason string`);
     }

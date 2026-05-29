@@ -9,6 +9,7 @@
 // what to do next, independent of any particular transport library.
 export const OUTCOME = {
     SUCCESS: 'success',         // 2xx - use the body
+    REDIRECT: 'redirect',       // 3xx - follow the Location (not an error)
     RETRYABLE: 'retryable',     // transient - safe to retry after a backoff
     RATE_LIMITED: 'rate_limited', // 429 - retry, but honor Retry-After if given
     BLOCKED: 'blocked',         // target actively blocked us (403/451) - terminal
@@ -47,20 +48,35 @@ function is_finite_number(value){
     return typeof value=='number' && Number.isFinite(value);
 }
 
+// An HTTP-date per RFC 9110: IMF-fixdate ("Sun, 06 Nov 1994 08:49:37 GMT"),
+// rfc850-date ("Sunday, 06-Nov-94 08:49:37 GMT"), or asctime
+// ("Sun Nov  6 08:49:37 1994"). We require a recognizable day-name prefix so a
+// bare number-like string ('1.5', '-3') is NEVER fed to the permissive
+// Date.parse (which would read it as a past date and clamp to an immediate retry).
+const HTTP_DATE_RE =
+    /^(mon|tue|wed|thu|fri|sat|sun)[a-z]*[,\s]/i;
+
 // Parse a Retry-After header value (RFC 9110). It is either a non-negative
 // integer number of seconds or an HTTP-date. Returns milliseconds, or null if
-// absent/unparseable/in the past. `now_ms` is injectable for deterministic tests.
+// absent/malformed/in the past. A malformed value (fractional '1.5', negative
+// '-3', junk) returns null so the caller falls back to its computed backoff
+// rather than retrying immediately. `now_ms` is injectable for deterministic tests.
 export function parse_retry_after(value, now_ms = Date.now()){
     if (value===undefined || value===null)
         return null;
     const raw = String(value).trim();
     if (!raw)
         return null;
+    // (a) a non-negative integer number of seconds.
     if (/^\d+$/.test(raw))
     {
         const seconds = parseInt(raw, 10);
         return seconds * 1000;
     }
+    // (b) a valid HTTP-date. Reject anything that is not date-shaped up front so
+    // permissive Date.parse never silently accepts numeric junk as a past date.
+    if (!HTTP_DATE_RE.test(raw))
+        return null;
     const when = Date.parse(raw);
     if (Number.isNaN(when))
         return null;
@@ -119,6 +135,16 @@ export function classify_response(input, now_ms = Date.now()){
     {
         return {outcome: OUTCOME.SUCCESS, status, retry_after_ms: null,
             retryable: false, reason: `http ${status}`};
+    }
+
+    // 3xx: a redirect, not an error. axios follows these transparently, so one
+    // surfacing here is a terminal-for-this-call signal to follow/report (the
+    // geo_fanout tool reads it as a geo-gating REDIRECTED signal). It is neither
+    // a retryable gateway error nor a hard fatal, hence its own outcome.
+    if (status>=300 && status<400)
+    {
+        return {outcome: OUTCOME.REDIRECT, status, retry_after_ms: null,
+            retryable: false, reason: `http ${status} redirect`};
     }
 
     if (status===429)
