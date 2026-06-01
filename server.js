@@ -7,6 +7,8 @@ import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
+import {dataset_id_schema, metadata_to_fields}
+    from './search_dataset_schema.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -600,6 +602,36 @@ addTool({
         }
         throw new Error(`Timeout after ${max_attempts} seconds waiting `
             +`for discover results`);
+    }),
+});
+
+const SEARCHABLE_DATASETS_DESC = [
+    'Supported dataset_id values:',
+    '- gd_l1viktl72bvl7bjuj0: LinkedIn people profiles',
+    '- gd_me5ppxjr2ge6icjuh0: LinkedIn people profiles (contact-enriched)',
+    '- gd_l1vikfnt1wgvvqz95w: LinkedIn company information',
+].join('\n');
+
+addTool({
+    name: 'list_dataset_fields',
+    description: 'List the filterable fields of a searchable dataset '
+        +'(field name, type, and description). Call this before '
+        +'search_dataset to learn which field names and types you can '
+        +'filter on.\n'+SEARCHABLE_DATASETS_DESC,
+    annotations: {
+        title: 'List Dataset Fields',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({dataset_id: dataset_id_schema}),
+    execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
+        let response = await base_request({
+            url: `https://api.brightdata.com/datasets/${dataset_id}`
+                +`/metadata`,
+            method: 'GET',
+            headers: api_headers(ctx.clientName, 'list_dataset_fields'),
+        });
+        return JSON.stringify(metadata_to_fields(response.data));
     }),
 });
 
