@@ -7,7 +7,7 @@ import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
-import {dataset_id_schema, metadata_to_fields}
+import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
@@ -632,6 +632,63 @@ addTool({
             headers: api_headers(ctx.clientName, 'list_dataset_fields'),
         });
         return JSON.stringify(metadata_to_fields(response.data));
+    }),
+});
+
+addTool({
+    name: 'search_dataset',
+    description: 'Search a Bright Data dataset by a filter and get matching '
+        +'records back directly (fast Elasticsearch-backed search; no '
+        +'snapshot). Use this to FIND MANY records by criteria, as opposed '
+        +'to the web_data_* tools which fetch ONE record by URL.\n'
+        +'First call list_dataset_fields to get valid field names.\n'
+        +'A filter is a tree: a group {operator:"and"|"or", filters:[...]} '
+        +'or a leaf {name, value, operator}. Max nesting depth 3.\n'
+        +'Leaf operators: '+FILTER_OPERATORS.join(', ')+'.\n'
+        +SEARCHABLE_DATASETS_DESC,
+    annotations: {
+        title: 'Search Dataset',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        dataset_id: dataset_id_schema,
+        filter: filter_schema.describe('Filter tree describing which '
+            +'records to match. Required, cannot be empty.'),
+        size: z.number().int().positive().optional().default(100)
+            .describe('Max number of records to return (default 100)'),
+        sort: z.union([
+            z.enum(['default', 'random']),
+            z.array(z.record(z.enum(['asc', 'desc']))),
+        ]).optional().describe('Sorting: "default", "random", or a custom '
+            +'array like [{"timestamp":"asc"}]. Use "default" or custom '
+            +'sort to paginate with search_after.'),
+        search_after: z.array(z.any()).optional().describe('Pagination '
+            +'cursor from a previous response\'s search_after value.'),
+    }),
+    execute: tool_fn('search_dataset', async({dataset_id, filter, size, sort,
+        search_after}, ctx)=>
+    {
+        let body = {mode: 'sync', filter, size};
+        if (sort!==undefined)
+            body.sort = sort;
+        if (search_after!==undefined)
+            body.search_after = search_after;
+        let response = await base_request({
+            url: `https://api.brightdata.com/datasets/search/${dataset_id}`,
+            method: 'POST',
+            data: body,
+            headers: {
+                ...api_headers(ctx.clientName, 'search_dataset'),
+                'Content-Type': 'application/json',
+            },
+        });
+        let {hits, total_hits, took, search_after: next_cursor}
+            = response.data || {};
+        let result = {hits, total_hits, took};
+        if (next_cursor!==undefined)
+            result.search_after = next_cursor;
+        return JSON.stringify(result);
     }),
 });
 
