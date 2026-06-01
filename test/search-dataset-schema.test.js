@@ -22,9 +22,13 @@ test('dataset_id_schema rejects an unknown id', ()=>{
 });
 
 test('FILTER_OPERATORS lists the documented operators', ()=>{
-    assert.ok(FILTER_OPERATORS.includes('includes'));
-    assert.ok(FILTER_OPERATORS.includes('is_null'));
-    assert.ok(FILTER_OPERATORS.includes('not_array_includes'));
+    assert.deepEqual(FILTER_OPERATORS, [
+        '=', '!=', '<', '<=', '>', '>=',
+        'in', 'not_in',
+        'includes', 'not_includes',
+        'array_includes', 'not_array_includes',
+        'is_null', 'is_not_null',
+    ]);
 });
 
 test('metadata_to_fields keeps active fields as name/type/description', ()=>{
@@ -48,4 +52,10 @@ test('metadata_to_fields keeps active fields as name/type/description', ()=>{
 test('metadata_to_fields tolerates missing fields object', ()=>{
     assert.deepEqual(metadata_to_fields({id: 'x'}), []);
     assert.deepEqual(metadata_to_fields(null), []);
+});
+
+test('metadata_to_fields skips non-object field entries', ()=>{
+    assert.deepEqual(metadata_to_fields({fields: {bad: null,
+        ok: {type: 'text', description: 'fine'}}}),
+        [{name: 'ok', type: 'text', description: 'fine'}]);
 });
