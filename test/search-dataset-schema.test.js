@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DATASET_IDS, dataset_id_schema, metadata_to_fields, FILTER_OPERATORS}
     from '../search_dataset_schema.js';
+import {filter_schema} from '../search_dataset_schema.js';
 
 test('DATASET_IDS lists the three supported datasets', ()=>{
     assert.deepEqual(DATASET_IDS, [
@@ -58,4 +59,52 @@ test('metadata_to_fields skips non-object field entries', ()=>{
     assert.deepEqual(metadata_to_fields({fields: {bad: null,
         ok: {type: 'text', description: 'fine'}}}),
         [{name: 'ok', type: 'text', description: 'fine'}]);
+});
+
+test('filter_schema accepts the documented flat example', ()=>{
+    const filter = {operator: 'and', filters: [
+        {name: 'name', value: 'Egor', operator: 'includes'},
+    ]};
+    assert.deepEqual(filter_schema.parse(filter), filter);
+});
+
+test('filter_schema accepts a single leaf node', ()=>{
+    const filter = {name: 'cb_rank', value: 100, operator: '<'};
+    assert.deepEqual(filter_schema.parse(filter), filter);
+});
+
+test('filter_schema accepts array and boolean leaf values', ()=>{
+    const filter = {operator: 'or', filters: [
+        {name: 'tags', value: ['a', 'b'], operator: 'array_includes'},
+        {name: 'verified', value: true, operator: '='},
+    ]};
+    assert.deepEqual(filter_schema.parse(filter), filter);
+});
+
+test('filter_schema accepts nesting up to depth 3', ()=>{
+    const filter = {operator: 'and', filters: [
+        {operator: 'or', filters: [
+            {operator: 'and', filters: [
+                {name: 'name', value: 'x', operator: 'includes'},
+            ]},
+        ]},
+    ]};
+    assert.deepEqual(filter_schema.parse(filter), filter);
+});
+
+test('filter_schema rejects nesting deeper than 3', ()=>{
+    const filter = {operator: 'and', filters: [
+        {operator: 'or', filters: [
+            {operator: 'and', filters: [
+                {operator: 'or', filters: [
+                    {name: 'name', value: 'x', operator: 'includes'},
+                ]},
+            ]},
+        ]},
+    ]};
+    assert.throws(()=>filter_schema.parse(filter));
+});
+
+test('filter_schema rejects an empty object', ()=>{
+    assert.throws(()=>filter_schema.parse({}));
 });
