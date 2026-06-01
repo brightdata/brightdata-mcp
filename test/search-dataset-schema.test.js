@@ -1,9 +1,8 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DATASET_IDS, dataset_id_schema, metadata_to_fields, FILTER_OPERATORS}
-    from '../search_dataset_schema.js';
-import {filter_schema} from '../search_dataset_schema.js';
+import {DATASET_IDS, dataset_id_schema, metadata_to_fields, FILTER_OPERATORS,
+    filter_schema} from '../search_dataset_schema.js';
 
 test('DATASET_IDS lists the three supported datasets', ()=>{
     assert.deepEqual(DATASET_IDS, [

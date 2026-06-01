@@ -40,7 +40,10 @@ function build_node_schema(depth){
     return z.union([group_schema, leaf_schema]);
 }
 
-export const filter_schema = build_node_schema(4);
+// depth param counts schema layers incl. the leaf layer, so the value is
+// MAX_NESTING + 1 to allow exactly MAX_NESTING levels of group nesting.
+const MAX_NESTING = 3;
+export const filter_schema = build_node_schema(MAX_NESTING+1);
 
 export function metadata_to_fields(metadata){
     const fields = metadata && typeof metadata=='object'
