@@ -28,8 +28,6 @@ const leaf_schema = z.object({
     value: leaf_value_schema,
 });
 
-// Build the filter node schema with a hard nesting cap (max depth 3).
-// At max depth, only leaf nodes are allowed.
 function build_node_schema(depth){
     if (depth<=1)
         return leaf_schema;
@@ -40,8 +38,6 @@ function build_node_schema(depth){
     return z.union([group_schema, leaf_schema]);
 }
 
-// depth param counts schema layers incl. the leaf layer, so the value is
-// MAX_NESTING + 1 to allow exactly MAX_NESTING levels of group nesting.
 const MAX_NESTING = 3;
 export const filter_schema = build_node_schema(MAX_NESTING+1);
 
