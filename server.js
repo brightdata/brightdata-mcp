@@ -655,8 +655,8 @@ addTool({
         dataset_id: dataset_id_schema,
         filter: filter_schema.describe('Filter tree describing which '
             +'records to match. Required, cannot be empty.'),
-        size: z.number().int().positive().optional().default(100)
-            .describe('Max number of records to return (default 100)'),
+        size: z.number().int().positive().max(10).optional().default(10)
+            .describe('Number of records to return (max 10, default 10)'),
         sort: z.union([
             z.enum(['default', 'random']),
             z.array(z.record(z.enum(['asc', 'desc']))),
