@@ -39,6 +39,7 @@
     "files": [
         "server.js",
         "search_utils.js",
+        "search_dataset_schema.js",
         "browser_tools.js",
         "browser_session.js",
         "aria_snapshot_filter.js",
