@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "brightdata-mcp",
   "display_name": "Bright Data MCP",
-  "version": "2.7.1",
+  "version": "2.10.0",
   "description": "Enhance AI Agents with Real-Time Web Data via Bright Data's web scraping and unblocking services",
   "long_description": "The official Bright Data Model Context Protocol (MCP) server enables LLMs to access, discover and extract web data in real-time. This server allows MCP clients to seamlessly search the web, navigate websites, take action and retrieve data - without getting blocked - perfect for scraping tasks. Features include search engine scraping, web page scraping as markdown/HTML, structured data extraction from popular sites, and browser automation capabilities.",
   "author": {

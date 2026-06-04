@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.0] - 2026-06-04
+
+### Added
+- `search_dataset` tool to search supported datasets by a filter and get matching records back directly via the fast search API (PR #142)
+- `list_dataset_fields` tool to discover a dataset's filterable fields (name, type, description) before building a filter (PR #142)
+
 ## [2.6.0] - 2025-10-27
 
 ### Added
