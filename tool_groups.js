@@ -33,6 +33,8 @@ export const GROUPS = {
             'web_data_linkedin_job_listings',
             'web_data_linkedin_posts',
             'web_data_linkedin_people_search',
+            'list_dataset_fields',
+            'search_dataset',
             'web_data_instagram_profiles',
             'web_data_instagram_posts',
             'web_data_instagram_reels',
@@ -95,6 +97,8 @@ export const GROUPS = {
             'web_data_google_maps_reviews',
             'web_data_zillow_properties_listing',
             'web_data_booking_hotel_listings',
+            'list_dataset_fields',
+            'search_dataset',
         ],
     },
     RESEARCH: {
