@@ -1116,6 +1116,18 @@ const datasets = [{
     inputs: ['url'],
 },
 {
+    id: 'reddit_comments',
+    dataset_id: 'gd_lvzdpsdlw09j6t702',
+    description: [
+        'Quickly read structured Reddit comments data.',
+        'Requires a valid Reddit post or comment thread URL.',
+        'Optionally filter by recency using days_back (number of days).',
+        'This can be a cache lookup, so it can be more reliable than scraping',
+    ].join('\n'),
+    inputs: ['url', 'days_back'],
+    defaults: {days_back: ''},
+},
+{
     id: 'youtube_videos',
     dataset_id: 'gd_lk56epmy2i5g7lzu0k',
     description: [

@@ -53,6 +53,7 @@ export const GROUPS = {
             'web_data_youtube_comments',
             'web_data_youtube_videos',
             'web_data_reddit_posts',
+            'web_data_reddit_comments',
         ],
     },
     BROWSER: {
