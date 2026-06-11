@@ -50,6 +50,7 @@
 |web_data_youtube_profiles|Quickly read structured YouTube channel profile data. Requires a valid YouTube channel URL. Often faster and more reliable than scraping.|
 |web_data_youtube_comments|Quickly read structured YouTube comments data. Requires a valid YouTube video URL and optional num_of_comments (default 10). Often faster and more reliable than scraping.|
 |web_data_reddit_posts|Quickly read structured Reddit post data. Requires a valid Reddit post URL. Often faster and more reliable than scraping.|
+|web_data_reddit_comments|Quickly read structured Reddit comments data. Requires a valid Reddit post or comment thread URL. Accepts an optional days_back parameter to limit results to comments posted within the last N days. Often faster and more reliable than scraping.|
 |web_data_youtube_videos|Quickly read structured YouTube video metadata. Requires a valid YouTube video URL. Often faster and more reliable than scraping.|
 |web_data_npm_package|Quickly read structured npm package data including latest version, README, dependencies, and metadata. Requires a valid npm package name (e.g., @brightdata/sdk). Your coding agent's go-to tool for package lookups.|
 |web_data_pypi_package|Quickly read structured PyPI package data including latest version, README, dependencies, and metadata. Requires a valid PyPI package name (e.g., langchain-brightdata). Your coding agent's go-to tool for Python package lookups.|
