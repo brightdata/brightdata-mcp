@@ -484,6 +484,8 @@ Try the Web MCP without any setup:
 | `POLLING_TIMEOUT` | Timeout for web_data_* tools polling (seconds) | `600` | `300`, `1200` |
 | `BASE_TIMEOUT` | Request timeout for base tools in seconds (search & scrape) | No limit | `60`, `120` |
 | `BASE_MAX_RETRIES` | Max retries for base tools on transient errors (0-3) | `0` | `1`, `3` |
+| `BASE_BACKOFF_MS` | Starting backoff (ms) between retries (doubles each attempt, with jitter) | `500` | `250`, `1000` |
+| `MAX_BACKOFF_MS` | Upper cap (ms) on a single backoff wait | `30000` | `5000`, `10000` |
 | `GROUPS` | Comma-separated tool group IDs | - | `ecommerce,browser` |
 | `TOOLS` | Comma-separated individual tool names | - | `extract,scrape_as_html` |
 
@@ -491,6 +493,11 @@ Try the Web MCP without any setup:
 - `POLLING_TIMEOUT` controls how long web_data_* tools wait for results. Each second = 1 polling attempt.
 - Lower values (e.g., 300) will fail faster on slow data collections.
 - Higher values (e.g., 1200) allow more time for complex scraping tasks.
+
+**Retry and backoff (base tools):**
+- When `BASE_MAX_RETRIES` is above `0`, transient gateway failures (502/504/503/500/408, network resets, and 429 rate limits) are retried. Permanent outcomes (4xx client errors, 403/451 blocks, 3xx redirects) are never retried.
+- Each retry waits an exponential, jittered backoff that starts at `BASE_BACKOFF_MS` and doubles per attempt, capped at `MAX_BACKOFF_MS`. A server `Retry-After` header (when present) takes precedence, also capped at `MAX_BACKOFF_MS`.
+- This means a single call can now block for tens of seconds before it ultimately fails. With the defaults (`BASE_MAX_RETRIES` up to `3`, `MAX_BACKOFF_MS` of `30000`), the worst case adds up to roughly 90 seconds of backoff (three waits capped at 30s each) on top of the request timeouts. Lower `MAX_BACKOFF_MS` (and/or `BASE_MAX_RETRIES`) if you need calls to fail faster.
 
 ---
 
