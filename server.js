@@ -12,6 +12,7 @@ import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
+import {filter_fields} from './field_filter.js';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
@@ -302,8 +303,13 @@ addTool({
                 .describe('2-letter country code for geo-targeted results '
                     +'(e.g., "us", "uk")'),
         })).min(1).max(5),
+        fields: z.array(z.enum(['link', 'title', 'description',
+            'relevance_score', 'cursor']))
+            .optional()
+            .describe('Filter response to only these fields. '
+                +'Saves tokens in agent pipelines.'),
     }),
-    execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
+    execute: tool_fn('search_engine_batch', async({queries, fields}, ctx)=>{
         const search_promises = queries.map(({query, engine, cursor,
             geo_location})=>{
             const normalized_engine = engine || 'google';
@@ -351,7 +357,20 @@ addTool({
         });
 
         const results = await Promise.all(search_promises);
-        return JSON.stringify(results, null, 2);
+        if (!fields)
+            return JSON.stringify(results, null, 2);
+        const filtered = results.map(item=>{
+            if (item && item.result && Array.isArray(item.result.organic))
+                return {
+                    ...item,
+                    result: {
+                        ...item.result,
+                        organic: filter_fields(item.result.organic, fields),
+                    },
+                };
+            return item;
+        });
+        return JSON.stringify(filtered, null, 2);
     }),
 });
 
@@ -367,29 +386,38 @@ addTool({
        openWorldHint: true,
    },
    parameters: z.object({
-       urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
+       urls: z.array(z.string().url()).min(1).max(5)
+           .describe('Array of URLs to scrape (max 5)'),
+       fields: z.array(z.string())
+           .optional()
+           .describe('Optional: return only these fields from each result '
+               +'(e.g. ["content"]).'),
    }),
-   execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
-       const scrapePromises = urls.map(url =>
-           base_request({
-               url: 'https://api.brightdata.com/request',
-               method: 'POST',
-               data: {
-                   url,
-                   zone: unlocker_zone,
-                   format: 'raw',
-                   data_format: 'markdown',
-               },
-               headers: api_headers(ctx.clientName, 'scrape_batch'),
-               responseType: 'text',
-           }).then(async response=>({
-               url,
-               content: (await remark()
+   execute: tool_fn('scrape_batch', async ({urls, fields}, ctx)=>{
+       const scrapePromises = urls.map(async url=>{
+           try {
+               const response = await base_request({
+                   url: 'https://api.brightdata.com/request',
+                   method: 'POST',
+                   data: {
+                       url,
+                       zone: unlocker_zone,
+                       format: 'raw',
+                       data_format: 'markdown',
+                   },
+                   headers: api_headers(ctx.clientName, 'scrape_batch'),
+                   responseType: 'text',
+               });
+               const content = (await remark()
                    .use(strip, {keep: ['link', 'linkReference', 'code',
                        'inlineCode']})
-                   .process(response.data)).value,
-           }))
-       );
+                   .process(response.data)).value;
+               const result = {url, content};
+               return fields ? filter_fields([result], fields)[0] : result;
+           } catch(e){
+               return {url, error: e instanceof Error ? e.message : String(e)};
+           }
+       });
 
        const results = await Promise.allSettled(scrapePromises);
        return JSON.stringify(results, null, 2);
