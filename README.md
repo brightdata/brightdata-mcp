@@ -157,44 +157,36 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
 <div align="center">
   <table>
     <tr>
-      <th width="33%">⚡ Rapid Mode (Free tier)</th>
-      <th width="33%">💎 Pro Mode</th>
-      <th width="34%">🔧 Custom Mode</th>
+      <th width="50%">⚡ Base Mode (Free tier)</th>
+      <th width="50%">🔧 Custom Mode</th>
     </tr>
     <tr>
       <td align="center">
         <h3>$0/month</h3>
-        <p><strong>5,000 credits</strong></p>
+        <p><strong>5,000 credits • the default toolkit</strong></p>
         <hr/>
-        <p>✅ Web Search<br/>
-        ✅ Scraping with Web unlocker<br/>
+        <p>✅ Web Search (+ batch)<br/>
+        ✅ Scraping as Markdown / HTML (+ batch)<br/>
         ✅ AI-ranked Discover search<br/>
+        ✅ Structured <code>extract</code><br/>
         ❌ Browser Automation<br/>
         ❌ Web data tools</p>
         <br/>
         <code>Default Mode</code>
       </td>
       <td align="center">
-        <h3>Pay-as-you-go</h3>
-        <p><strong>Everything in rapid plus 60+ tools</strong></p>
-        <hr/>
-        <p>✅ Browser Control<br/>
-        ✅ Web Data APIs<br/>
-        <br/>
-        <br/>
-        <br/>
-        <code>PRO_MODE=true</code>
-      </td>
-      <td align="center">
         <h3>Usage-based</h3>
-        <p><strong>Pick the tools you need</strong></p>
+        <p><strong>Everything beyond Base — pick what you need, or enable all 60+ tools</strong></p>
         <hr/>
-        <p>✅ Combine tool groups<br/>
-        ✅ Add individual tools<br/>
-        ❌ Overrides Pro eligibility</p>
+        <p>✅ Browser Automation<br/>
+        ✅ Web Data APIs (<code>web_data_*</code>)<br/>
+        ✅ Dataset &amp; advanced scraping tools<br/>
+        ✅ Combine tool groups + individual tools<br/>
+        ✅ Or expose the full toolkit</p>
         <br/>
         <code>GROUPS="browser"</code><br/>
-        <code>TOOLS="scrape_as_html"</code>
+        <code>TOOLS="scrape_as_html"</code><br/>
+        <code>ALL_TOOLS=true</code> <sub>(all 60+ tools)</sub>
       </td>
     </tr>
   </table>
@@ -202,12 +194,14 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
 
 > **💡 How the free tier works:** Your account gets **5,000 credits/month**
 > (~$7.50 value), auto-renewed on the 1st with **no credit card required**.
-> MCP requests draw from this shared pool — base tools (`search_engine`,
-> `scrape_as_markdown`, `discover`) cost **1 credit per request**, while
+> MCP requests draw from this shared pool — Base mode tools (`search_engine`,
+> `search_engine_batch`, `scrape_as_markdown`, `scrape_batch`,
+> `scrape_as_html`, `extract`, `discover`) cost **1 credit per request**, while
 > `web_data_*` tools cost **1 credit per record returned**. Unused credits
 > **don't roll over**, and when they run out requests stop (no surprise
-> charges unless you've deposited funds). Pro mode is **not included** in the
-> free tier and incurs additional charges based on usage.
+> charges unless you've deposited funds). Custom mode's web data and browser
+> tools are **not included** in the free tier and incur additional charges
+> based on usage.
 
 ---
 
@@ -216,11 +210,14 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
 - `GROUPS` lets you enable curated tool bundles. Use comma-separated group
   IDs such as `ecommerce,browser`.
 - `TOOLS` adds explicit tool names on top of the selected groups.
-- Mode priority: `PRO_MODE=true` (all tools) → `GROUPS` / `TOOLS`
-  (whitelist) → default rapid mode (base toolkit).
+- Mode priority: `ALL_TOOLS=true` (full toolkit; `PRO_MODE=true` is a
+  backward-compatible alias) → `GROUPS` / `TOOLS` (custom whitelist) →
+  default Base mode (base toolkit).
 - Base tools always enabled: `search_engine`, `search_engine_batch`,
-  `scrape_as_markdown`, `scrape_batch`, `discover`.
-- Group ID `custom` is reserved; use `TOOLS` for bespoke picks.
+  `scrape_as_markdown`, `scrape_batch`, `scrape_as_html`, `extract`,
+  `discover`.
+- Group ID `custom` is reserved (not selectable via `GROUPS`); Custom mode is
+  expressed through `GROUPS` / `TOOLS`, with `TOOLS` for bespoke picks.
 
 
 <table>
@@ -355,7 +352,7 @@ dependencies, and metadata from npm and PyPI without scraping:
     <td>🛡️ <b>Anti-Bot Protection</b><br/>Never get blocked or rate-limited</td>
   </tr>
   <tr>
-    <td>🤖 <b>Browser Automation</b><br/>Control real browsers remotely (Pro)</td>
+    <td>🤖 <b>Browser Automation</b><br/>Control real browsers remotely (Custom mode)</td>
     <td>⚡ <b>Lightning Fast</b><br/>Optimized for minimal latency</td>
   </tr>
 </table>
@@ -395,18 +392,25 @@ https://github.com/user-attachments/assets/61ab0bee-fdfa-4d50-b0de-5fab96b4b91d
 
 ## 🔧 Available Tools
 
-### ⚡ Rapid Mode Tools (Default - Free)
+### ⚡ Base Mode Tools (Default - Free)
 
 | Tool | Description | Use Case |
 |------|-------------|----------|
 | 🔍 `search_engine` | Web search with AI-optimized results | Research, fact-checking, current events |
+| 🔍 `search_engine_batch` | Run multiple search queries in parallel | Bulk research, keyword sweeps |
 | 📄 `scrape_as_markdown` | Convert any webpage to clean markdown | Content extraction, documentation |
+| 📄 `scrape_batch` | Scrape multiple URLs in parallel as markdown | Bulk content extraction |
+| 🧩 `scrape_as_html` | Fetch a webpage as raw HTML | DOM parsing, precise selector work |
+| 🎯 `extract` | Extract structured data from a page with AI | Turning pages into JSON records |
 | 🎯 `discover` | AI-ranked web search with intent-based relevance scoring | Deep research, RAG pipelines, competitive analysis |
 
-### 💎 Pro Mode Tools (60+ Tools)
+### 🔧 Custom Mode Tools (60+ Tools)
 
 <details>
-<summary><b>Click to see all Pro tools</b></summary>
+<summary><b>Click to see all Custom-mode tools</b></summary>
+
+Enable these on top of Base mode via `GROUPS` / `TOOLS`, or expose every tool
+with `ALL_TOOLS=true` (alias: `PRO_MODE=true`).
 
 | Category | Tools | Description |
 |----------|-------|-------------|
@@ -461,7 +465,7 @@ Try the Web MCP without any setup:
       "args": ["@brightdata/mcp"],
       "env": {
         "API_TOKEN": "your-token-here",
-        "PRO_MODE": "true",              // Enable all 60+ tools
+        "ALL_TOOLS": "true",             // Full mode: enable all 60+ tools (PRO_MODE=true is a legacy alias)
         "RATE_LIMIT": "100/1h",          // Custom rate limiting
         "WEB_UNLOCKER_ZONE": "custom",   // Custom unlocker zone
         "BROWSER_ZONE": "custom_browser", // Custom browser zone
@@ -477,7 +481,8 @@ Try the Web MCP without any setup:
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
 | `API_TOKEN` | Your Bright Data API token (required) | - | `your-token-here` |
-| `PRO_MODE` | Enable all 60+ tools | `false` | `true` |
+| `ALL_TOOLS` | Full mode: expose every tool (all 60+) instead of just the Base toolkit | `false` | `true` |
+| `PRO_MODE` | Backward-compatible alias for `ALL_TOOLS` (still supported) | `false` | `true` |
 | `RATE_LIMIT` | Custom rate limiting | unlimited | `100/1h`, `50/30m` |
 | `WEB_UNLOCKER_ZONE` | Custom Web Unlocker zone name | `mcp_unlocker` | `my_custom_zone` |
 | `BROWSER_ZONE` | Custom Browser zone name | `mcp_browser` | `my_browser_zone` |

@@ -86,6 +86,7 @@
     {"name": "web_data_youtube_comments", "description": "Quickly read structured YouTube comments data. Requires a valid YouTube video URL. This can be a cache lookup, so it can be more reliable than scraping."},
     {"name": "web_data_youtube_videos", "description": "Quickly read structured YouTube videos data. Requires a valid YouTube video URL. This can be a cache lookup, so it can be more reliable than scraping."},
     {"name": "web_data_reddit_posts", "description": "Quickly read structured Reddit posts data. Requires a valid Reddit post URL. This can be a cache lookup, so it can be more reliable than scraping."},
+    {"name": "web_data_reddit_comments", "description": "Quickly read structured Reddit comments data. Requires a valid Reddit post or comment thread URL. Accepts an optional days_back parameter to limit results to comments posted within the last N days. This can be a cache lookup, so it can be more reliable than scraping."},
     {"name": "scraping_browser_navigate", "description": "Navigate a scraping browser session to a new URL"},
     {"name": "scraping_browser_go_back", "description": "Go back to the previous page in the browser session"},
     {"name": "scraping_browser_go_forward", "description": "Go forward to the next page in the browser session"},

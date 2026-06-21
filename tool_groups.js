@@ -1,6 +1,9 @@
 'use strict'; /*jslint node:true es9:true*/
 
-const base_tools = ['search_engine', 'scrape_as_markdown', 'discover'];
+// Base mode (default, free tier): all search + extract tools. Every group
+// spreads these so the base toolkit is always available alongside the group.
+const base_tools = ['search_engine', 'search_engine_batch', 'scrape_as_markdown',
+    'scrape_batch', 'scrape_as_html', 'extract', 'discover'];
 
 export const GROUPS = {
     ECOMMERCE: {
@@ -136,11 +139,9 @@ export const GROUPS = {
         name: 'Advanced Scraping',
         description: 'Higher-throughput scraping utilities and batch helpers.',
         tools: [
+            // batch/html/extract helpers are part of base_tools now; this group
+            // adds only the extra utilities on top of the base toolkit.
             ...base_tools,
-            'search_engine_batch',
-            'scrape_batch',
-            'scrape_as_html',
-            'extract',
             'session_stats',
         ],
     },
@@ -167,9 +168,13 @@ export const GROUPS = {
         ],
     },
     CUSTOM: {
+        // Reserved id: not selectable via GROUPS (see get_all_group_ids). Custom
+        // mode is expressed through the GROUPS / TOOLS env vars, which whitelist
+        // any tools beyond the base set on top of base_tools.
         id: 'custom',
         name: 'Custom',
-        description: 'Placeholder for user-defined tool selections.',
+        description: 'Reserved placeholder for user-defined TOOLS/GROUPS '
+        +'selections; not selectable as a group id.',
         tools: [...base_tools],
     },
 };

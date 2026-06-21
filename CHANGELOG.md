@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.12.0] - 2026-06-17
+
+### Changed
+- Restructured the user-facing tool modes from three concepts (Rapid / Pro /
+  Custom) into two: **Base mode** (the new default, formerly "Rapid") and
+  **Custom mode** (everything beyond Base, selected via `GROUPS` / `TOOLS`, or
+  the full toolkit via `ALL_TOOLS` / `PRO_MODE`). "Pro mode" is no longer a
+  distinct third concept — "enable all tools" now lives under Custom mode.
+- **Base mode now includes the full search + extract toolkit**:
+  `search_engine`, `search_engine_batch`, `scrape_as_markdown`, `scrape_batch`,
+  `scrape_as_html`, `extract`, and `discover`. Previously `scrape_as_html` and
+  `extract` were not part of the default/free toolkit — they are now available
+  by default. `base_tools` in `tool_groups.js` and the server's default
+  whitelist are now sourced from a single shared definition.
+- Renamed the misleading `pro_mode_tools` variable in `server.js` to use the
+  shared `base_tools` import, and renamed the internal `pro_mode` flag to
+  `full_mode`. Updated mode-resolution comments to reflect the priority:
+  full mode → custom whitelist (`GROUPS` / `TOOLS`) → Base mode (default).
+
+### Added
+- `ALL_TOOLS=true` environment variable as the clearer name for enabling the
+  full toolkit (all 60+ tools).
+
+### Backward compatibility
+- `PRO_MODE=true` continues to work as a supported alias for `ALL_TOOLS=true`.
+- The `GROUPS` and `TOOLS` whitelist env vars are unchanged.
+
 ## [2.10.0] - 2026-06-04
 
 ### Added

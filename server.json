@@ -39,8 +39,15 @@
           "format": "string"
         },
         {
+          "name": "ALL_TOOLS",
+          "description": "Enable full mode - expose all 60+ tools. Set to true",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "boolean"
+        },
+        {
           "name": "PRO_MODE",
-          "description": "To enable PRO_MODE - set to true",
+          "description": "Backward-compatible alias for ALL_TOOLS (enable all 60+ tools) - set to true",
           "isRequired": false,
           "isSecret": false,
           "format": "boolean"

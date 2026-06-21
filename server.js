@@ -5,7 +5,7 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
-import {GROUPS} from './tool_groups.js';
+import {GROUPS, base_tools} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -17,14 +17,18 @@ const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
-const pro_mode = process.env.PRO_MODE === 'true';
+// Full mode = expose every tool (custom mode's "enable everything" option).
+// ALL_TOOLS is the clearer name; PRO_MODE is kept as a backward-compatible alias
+// so existing configs keep working.
+const full_mode = process.env.ALL_TOOLS === 'true'
+    || process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
-const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
-    'search_engine_batch', 'scrape_batch', 'discover'];
+// base_tools is the default (Base mode) whitelist, imported from tool_groups.js
+// so the default toolkit stays in sync with the group definitions.
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
         .filter(Boolean) : [];
@@ -180,8 +184,12 @@ let server = new FastMCP({
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
+// Mode resolution priority:
+//   1. Full mode (ALL_TOOLS / PRO_MODE) -> expose every tool.
+//   2. Custom mode (GROUPS / TOOLS)     -> expose only the whitelisted tools.
+//   3. Base mode (default, free tier)   -> expose only base_tools.
 const addTool = (tool) => {
-    if (pro_mode)
+    if (full_mode)
     {
         server.addTool(tool);
         return;
@@ -194,7 +202,7 @@ const addTool = (tool) => {
         return;
     }
 
-    if (pro_mode_tools.includes(tool.name))
+    if (base_tools.includes(tool.name))
         server.addTool(tool);
 };
 
