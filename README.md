@@ -339,6 +339,14 @@ dependencies, and metadata from npm and PyPI without scraping:
 }
 ```
 
+For [Autohand Code](https://github.com/autohandai/code-cli/) on macOS, Linux, WSL, or Git Bash, add the same `code` tool group with:
+
+```bash
+autohand mcp add bright-data env API_TOKEN=your-token-here GROUPS=code npx @brightdata/mcp
+```
+
+Add `--scope project` before `bright-data` to save the server in the current project's `.autohand` configuration instead of your user configuration.
+
 ---
 
 ## ✨ Features
