@@ -126,7 +126,7 @@ export class Browser_session {
     async capture_snapshot({filtered=true}={}){
         const page = await this.get_page();
         try {
-            const full_snapshot = await page._snapshotForAI();
+            const full_snapshot = await page.ariaSnapshot({mode: 'ai'});
             if (!filtered)
             {
                 return {
@@ -280,7 +280,7 @@ export class Browser_session {
                 return page.locator(`[data-fastmcp-ref="${ref}"]`)
                     .first().describe(element);
             }
-            const snapshot = await page._snapshotForAI();
+            const snapshot = await page.ariaSnapshot({mode: 'ai'});
             if (!snapshot.includes(`[ref=${ref}]`))
                 throw new Error('Ref '+ref+' not found in the current page '
                     +'snapshot. Try capturing new snapshot.');
