@@ -1,3 +1,5 @@
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.brightdata%2Fbrightdata-mcp.svg)](https://mcptoplist.com/server/io.github.brightdata%2Fbrightdata-mcp)
+
 <div align="center">
   <a href="https://brightdata.com/ai/mcp-server">
     <img src="https://github.com/user-attachments/assets/c21b3f7b-7ff1-40c3-b3d8-66706913d62f" alt="Bright Data Logo">
