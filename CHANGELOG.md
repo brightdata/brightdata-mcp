@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.11.1] - 2026-07-27
+
+### Fixed
+- Fixed compatibility with updated Playwright API: replaced deprecated `page._snapshotForAI()` with `page.ariaSnapshot({ mode: 'ai' })`, restoring correct functionality of `scraping_browser_snapshot` and all ref-based browser automation tools
+
+## [2.11.0] - 2026-07-26
+
+### Added
+- Added `reddit_comments` tool to collect Reddit post comments
+
 ## [2.10.0] - 2026-06-04
 
 ### Added
