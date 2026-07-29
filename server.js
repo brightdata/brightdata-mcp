@@ -9,6 +9,9 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {classify_response, should_retry} from './retry_utils.js';
+import {normalize_geos, parse_unlocker_json, build_geo_entry, summarize_fanout}
+    from './geo_utils.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -21,10 +24,10 @@ const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
-const base_max_retries = Math.min(
-    parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
+const base_max_retries = Math.max(0,
+    Math.min(parseInt(process.env.BASE_MAX_RETRIES || '0', 10) || 0, 3));
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
-    'search_engine_batch', 'scrape_batch', 'discover'];
+    'search_engine_batch', 'scrape_batch', 'discover', 'geo_fanout'];
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
         .filter(Boolean) : [];
@@ -71,21 +74,53 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
+const sleep = ms=>new Promise(resolve=>setTimeout(resolve, ms));
+
+// Backoff knobs (overridable via env) used by base_request and geo_fanout.
+// Issue #104: bursts of MCP calls hit intermittent 502/504 from the gateway and
+// there was no backoff guidance. We now classify each failure and retry only the
+// transient ones with exponential backoff + full jitter, honoring Retry-After.
+const backoff_opts = {
+    base_ms: parseInt(process.env.BASE_BACKOFF_MS || '500', 10),
+    max_ms: parseInt(process.env.MAX_BACKOFF_MS || '30000', 10),
+    factor: 2,
+    jitter: 'full',
+};
+
 async function base_request(config){
     let last_err;
+    let retries = 0;
+    let total_delay_ms = 0;
     for (let attempt = 0; attempt <= base_max_retries; attempt++)
     {
         try {
             return await axios({...config, timeout: base_timeout});
         } catch(e){
             last_err = e;
-            if (e.response?.status && e.response.status >= 400
-                && e.response.status < 500)
+            const classification = classify_response({error: e});
+            const decision = should_retry(classification, attempt,
+                base_max_retries, backoff_opts);
+            if (!decision.retry)
             {
+                // Give up. Emit one concise summary line per request (not one per
+                // attempt: under issue #104's burst of 50-100 calls x up to 3
+                // retries, per-attempt stderr logging floods the transport) and
+                // only when we actually spent at least one retry, so a first-try
+                // non-retryable failure (e.g. a 4xx) stays silent.
+                if (retries)
+                    console.error(`[base_request] gave up after ${retries} retr`
+                        +`${retries==1 ? 'y' : 'ies'} (${total_delay_ms}ms `
+                        +`backoff total, last: ${classification.reason})`);
                 throw e;
             }
+            retries++;
+            total_delay_ms += decision.delay_ms;
+            await sleep(decision.delay_ms);
         }
     }
+    // Unreachable: base_max_retries is clamped to [0,3], so the loop always runs
+    // at least once and either returns on success or throws on give-up. Kept as a
+    // final safeguard rather than falling off the end with an implicit undefined.
     throw last_err;
 }
 
@@ -394,6 +429,86 @@ addTool({
        const results = await Promise.allSettled(scrapePromises);
        return JSON.stringify(results, null, 2);
    }),
+});
+
+addTool({
+    name: 'geo_fanout',
+    description: 'Fetch the SAME url from multiple country exits in parallel and '
+        +'return one structured report. A geo that is blocked (403/451), '
+        +'redirected (3xx to a different host), rate-limited (429) or fails '
+        +'transiently becomes a FIRST-CLASS classified result, not a discarded '
+        +'error. Ideal for detecting geo-gating, regional price/availability '
+        +'differences, and access denial across countries.',
+    annotations: {
+        title: 'Geo Fanout',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        url: z.string().url(),
+        countries: z.array(z.string().length(2))
+            .min(1)
+            .max(10)
+            .describe('2-letter ISO country codes to fan the request across '
+                +'(e.g., ["de", "be", "fr"]). Deduped; max 10.'),
+        data_format: z.enum(['raw', 'markdown'])
+            .optional()
+            .default('markdown')
+            .describe('Response body format per geo (default: markdown).'),
+    }),
+    execute: tool_fn('geo_fanout', async({url, countries, data_format}, ctx)=>{
+        const geos = normalize_geos(countries);
+        const now = Date.now();
+        const want_markdown = data_format=='markdown';
+        const attempts = geos.map(geo=>(async()=>{
+            try {
+                // format:'json' makes the Unlocker return a JSON envelope
+                // {status_code, headers, body} where status_code is the TARGET's
+                // HTTP status and headers are the TARGET's response headers. With
+                // the previous format:'raw' we only ever saw the gateway's 200,
+                // so a target 403/451/3xx was misclassified as ok. We classify on
+                // the real target status here. data_format still controls how the
+                // target body is rendered (markdown vs the raw body) inside the
+                // envelope; the 3xx is surfaced in the envelope WITHOUT the
+                // Unlocker following it, so a redirect keeps its Location header.
+                const response = await base_request({
+                    url: 'https://api.brightdata.com/request',
+                    method: 'POST',
+                    data: {
+                        url,
+                        zone: unlocker_zone,
+                        format: 'json',
+                        ...want_markdown ? {data_format: 'markdown'} : {},
+                        country: geo,
+                    },
+                    headers: api_headers(ctx.clientName, 'geo_fanout'),
+                    responseType: 'json',
+                });
+                const parsed = parse_unlocker_json(response.data);
+                let body = parsed.body;
+                if (want_markdown && typeof body=='string' && body)
+                {
+                    body = (await remark()
+                        .use(strip, {keep: ['link', 'linkReference', 'code',
+                            'inlineCode']})
+                        .process(body)).value;
+                }
+                return build_geo_entry({
+                    geo,
+                    url,
+                    body,
+                    response: {
+                        status: parsed.status,
+                        headers: parsed.headers,
+                    },
+                }, now);
+            } catch(e){
+                return build_geo_entry({geo, url, error: e}, now);
+            }
+        })());
+        const entries = await Promise.all(attempts);
+        return JSON.stringify(summarize_fanout(entries), null, 2);
+    }),
 });
 
 addTool({
