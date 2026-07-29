@@ -9,6 +9,7 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {classify_response, should_retry} from './retry_utils.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -21,8 +22,8 @@ const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
-const base_max_retries = Math.min(
-    parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
+const base_max_retries = Math.max(0,
+    Math.min(parseInt(process.env.BASE_MAX_RETRIES || '0', 10) || 0, 3));
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch', 'discover'];
 const tool_groups = process.env.GROUPS ?
@@ -71,21 +72,53 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
+const sleep = ms=>new Promise(resolve=>setTimeout(resolve, ms));
+
+// Backoff knobs (overridable via env) used by base_request.
+// Issue #104: bursts of MCP calls hit intermittent 502/504 from the gateway and
+// there was no backoff guidance. We now classify each failure and retry only the
+// transient ones with exponential backoff + full jitter, honoring Retry-After.
+const backoff_opts = {
+    base_ms: parseInt(process.env.BASE_BACKOFF_MS || '500', 10),
+    max_ms: parseInt(process.env.MAX_BACKOFF_MS || '30000', 10),
+    factor: 2,
+    jitter: 'full',
+};
+
 async function base_request(config){
     let last_err;
+    let retries = 0;
+    let total_delay_ms = 0;
     for (let attempt = 0; attempt <= base_max_retries; attempt++)
     {
         try {
             return await axios({...config, timeout: base_timeout});
         } catch(e){
             last_err = e;
-            if (e.response?.status && e.response.status >= 400
-                && e.response.status < 500)
+            const classification = classify_response({error: e});
+            const decision = should_retry(classification, attempt,
+                base_max_retries, backoff_opts);
+            if (!decision.retry)
             {
+                // Give up. Emit one concise summary line per request (not one per
+                // attempt: under issue #104's burst of 50-100 calls x up to 3
+                // retries, per-attempt stderr logging floods the transport) and
+                // only when we actually spent at least one retry, so a first-try
+                // non-retryable failure (e.g. a 4xx) stays silent.
+                if (retries)
+                    console.error(`[base_request] gave up after ${retries} retr`
+                        +`${retries==1 ? 'y' : 'ies'} (${total_delay_ms}ms `
+                        +`backoff total, last: ${classification.reason})`);
                 throw e;
             }
+            retries++;
+            total_delay_ms += decision.delay_ms;
+            await sleep(decision.delay_ms);
         }
     }
+    // Unreachable: base_max_retries is clamped to [0,3], so the loop always runs
+    // at least once and either returns on success or throws on give-up. Kept as a
+    // final safeguard rather than falling off the end with an implicit undefined.
     throw last_err;
 }
 
