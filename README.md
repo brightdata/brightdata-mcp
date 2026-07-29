@@ -23,6 +23,10 @@
   </p>
 
   <p>
+    <a href="https://kiro.dev/launch/mcp/add?name=brightdata&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22%40brightdata%2Fmcp%22%5D%2C%22env%22%3A%7B%22API_TOKEN%22%3A%22your-api-token-here%22%7D%7D"><img src="https://kiro.dev/images/add-to-kiro.svg" alt="Add to Kiro"/></a>
+  </p>
+
+  <p>
     <a href="#-quick-start">Quick Start</a> •
     <a href="#-features">Features</a> •
     <a href="#-pricing--modes">Pricing</a> •
@@ -149,6 +153,26 @@ https://mcp.brightdata.com/mcp?token=YOUR_API_TOKEN_HERE
 }
 ```
 
+
+---
+
+#### Kiro
+
+To install in [Kiro](https://kiro.dev), click the badge above or manually add the following to your Kiro MCP config file (`.kiro/settings/mcp.json` or `~/.kiro/settings/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "brightdata": {
+      "command": "npx",
+      "args": ["@brightdata/mcp"],
+      "env": {
+        "API_TOKEN": "your-api-token-here"
+      }
+    }
+  }
+}
+```
 
 ---
 
