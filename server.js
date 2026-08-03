@@ -9,6 +9,8 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {is_auth_rejection, mark_credential_verified, get_credential_state,
+    render_auth_error} from './auth_error.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -121,6 +123,7 @@ async function ensure_required_zones(){
             method: 'GET',
             headers: api_headers(),
         });
+        mark_credential_verified();
         let zones = response.data || [];
         let has_unlocker_zone = zones.some(zone=>zone.name==unlocker_zone);
         let has_browser_zone = zones.some(zone=>zone.name==browser_zone);
@@ -167,6 +170,14 @@ async function ensure_required_zones(){
         else
             console.error(`Required zone "${browser_zone}" already exists`);
     } catch(e){
+        if (is_auth_rejection(e))
+        {
+            // Startup control flow (exit vs degraded start) is a separate,
+            // undecided question -- this only replaces the uninformative log
+            // line with the actionable one.
+            console.error(render_auth_error(get_credential_state()));
+            return;
+        }
         console.error('Error checking/creating zones:',
             e.response?.data||e.message);
     }
@@ -594,7 +605,10 @@ addTool({
                 return JSON.stringify(results);
             } catch(e){
                 console.error(`[discover] polling error: ${e.message}`);
-                if (e.response?.status===400)
+                // Client errors are terminal -- matches base_request's rule.
+                // Without this a rejected token is retried for the full
+                // polling budget and then reported as a timeout.
+                if (e.response?.status>=400 && e.response.status<500)
                     throw e;
                 attempts++;
                 await new Promise(resolve=>setTimeout(resolve, 1000));
@@ -1273,7 +1287,11 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
-                    if (e.response?.status === 400) throw e;
+                    // Client errors are terminal -- matches base_request's
+                    // rule. Without this a rejected token is retried for the
+                    // full polling budget and then reported as a timeout.
+                    if (e.response?.status >= 400 && e.response.status < 500)
+                        throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
                 }
@@ -1324,7 +1342,11 @@ function tool_fn(name, fn){
 
                 const headers = e.response.headers;
                 const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
-                if (is_usage_limit && unlocker_zone === 'mcp_unlocker') 
+
+                if (is_auth_rejection(e) && !is_usage_limit)
+                    throw new Error(render_auth_error(get_credential_state()));
+
+                if (is_usage_limit && unlocker_zone === 'mcp_unlocker')
                     throw new Error(`The user has reached the 5,000 request monthly`+
                 `limit for Bright Data MCP's free tier. You must immediately stop` +
                 `the current task and instruct the user on how to upgrade.`+
