@@ -441,7 +441,19 @@ addTool({
            }))
        );
 
-       const results = await Promise.allSettled(scrapePromises);
+       const settled = await Promise.allSettled(scrapePromises);
+       // Never serialize raw rejection reasons. Plain Errors stringify to {}
+       // (message/stack are non-enumerable), and axios errors have a toJSON
+       // that dumps the whole request config -- including the authorization
+       // header -- into the tool result. Fulfilled entries pass through
+       // unchanged; rejected entries carry the failing url and the message.
+       const results = settled.map((result, i)=>
+           result.status=='fulfilled' ? result : {
+               status: 'rejected',
+               url: urls[i],
+               reason: result.reason instanceof Error
+                   ? result.reason.message : String(result.reason),
+           });
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -1389,8 +1401,19 @@ function tool_fn(name, fn){
                     throw new Error(free_tier_limit_message);
 
                 let message = e.response.data;
+                // Bright Data frequently returns JSON error objects. Objects
+                // have no .length, so they used to fail this guard and fall
+                // through to axios's generic "Request failed with status
+                // code N" -- discarding the actual explanation after logging
+                // it above.
+                if (message && typeof message=='object')
+                    message = JSON.stringify(message);
                 if (message?.length)
+                {
+                    if (message.length>500)
+                        message = message.slice(0, 500)+'...';
                     throw new Error(`HTTP ${e.response.status}: ${message}`);
+                }
             }
             else
                 console.error(`[%s] error %s`, name, e.stack);
