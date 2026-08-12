@@ -20,11 +20,26 @@ const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
-const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
-const base_timeout = process.env.BASE_TIMEOUT
-    ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
-const base_max_retries = Math.min(
-    parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
+// parseInt returns NaN on malformed input, and NaN poisons the loops these
+// values bound: 0 <= NaN is false, so base_request would make ZERO attempts
+// and throw undefined, and the dataset poll loops would time out instantly.
+// Warn and fall back instead of letting NaN through.
+const parse_int_env = (name, fallback)=>{
+    const raw = process.env[name];
+    if (raw===undefined || raw==='')
+        return fallback;
+    const parsed = parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed<0)
+    {
+        console.error(`[config] Ignoring ${name}="${raw}": expected a `
+            +`non-negative integer. Using ${fallback}.`);
+        return fallback;
+    }
+    return parsed;
+};
+const polling_timeout = parse_int_env('POLLING_TIMEOUT', 600);
+const base_timeout = parse_int_env('BASE_TIMEOUT', 0) * 1000;
+const base_max_retries = Math.min(parse_int_env('BASE_MAX_RETRIES', 0), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch', 'discover'];
 const tool_groups = process.env.GROUPS ?
@@ -110,7 +125,9 @@ async function base_request(config){
             }
         }
     }
-    throw last_err;
+    // last_err can only be unset if the loop made no attempts; never throw a
+    // bare undefined (it carries no message at any layer).
+    throw last_err ?? new Error('base_request made no attempts');
 }
 
 const api_headers = (clientName=null, tool_name=null)=>({
