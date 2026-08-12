@@ -1329,6 +1329,23 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                         await new Promise(resolve=>setTimeout(resolve, 1000));
                         continue;
                     }
+                    // A ready snapshot is the records payload -- a JSON
+                    // array, which has no status field. A response still
+                    // carrying a status string past the pending check above
+                    // is a terminal non-success state (failed, canceled...),
+                    // not data; returning it would hand the model an error
+                    // payload as records. Tagged so the catch below rethrows
+                    // it instead of retrying it into a misleading timeout.
+                    if (typeof snapshot_response.data?.status=='string')
+                    {
+                        const failure = new Error(`Dataset collection did `
+                            +`not complete (status `
+                            +`"${snapshot_response.data.status}"): `
+                            +JSON.stringify(snapshot_response.data)
+                                .slice(0, 500));
+                        failure.terminal = true;
+                        throw failure;
+                    }
                     console.error(`[${tool_name}] snapshot data received `
                         +`after ${attempts + 1} attempts`);
                     const data = JSON.parse(JSON.stringify(
@@ -1338,10 +1355,12 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
-                    // Client errors are terminal -- matches base_request's
-                    // rule. Without this a rejected token is retried for the
-                    // full polling budget and then reported as a timeout.
-                    if (e.response?.status >= 400 && e.response.status < 500)
+                    // A terminal collection failure or a client error is not
+                    // going to recover by polling again -- rethrow rather
+                    // than burn the budget and report a misleading timeout.
+                    if (e.terminal
+                        || (e.response?.status >= 400
+                            && e.response.status < 500))
                         throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
