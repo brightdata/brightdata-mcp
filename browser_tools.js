@@ -151,10 +151,13 @@ let scraping_browser_snapshot = {
     },
     parameters: z.object({
         filtered: z.boolean().optional().describe(
-            'Whether to apply filtering/compaction (default: false). '
-            +'Set to true to get a compacted version of the snapshot.'),
+            'Whether to apply filtering/compaction (default: true). The '
+            +'filtered snapshot is compact and includes a DOM fallback scan '
+            +'that catches interactive elements missing from the '
+            +'accessibility tree. Set to false for the raw, unfiltered ARIA '
+            +'snapshot.'),
     }),
-    execute: async({filtered=false})=>{
+    execute: async({filtered=true})=>{
         const browser_session = await require_browser();
         const page = await browser_session.get_page();
         try {

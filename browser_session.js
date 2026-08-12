@@ -125,6 +125,11 @@ export class Browser_session {
 
     async capture_snapshot({filtered=true}={}){
         const page = await this.get_page();
+        // Refs are only valid against the most recent snapshot. Reset the
+        // registry so a dom-* ref from an older capture can no longer
+        // dispatch to the DOM branch of ref_locator; the filtered path
+        // repopulates it below.
+        this._dom_refs = new Set();
         try {
             const full_snapshot = await page.ariaSnapshot({mode: 'ai'});
             if (!filtered)
@@ -247,8 +252,12 @@ export class Browser_session {
 
                     if (!name && !url)
                         continue;
-                    if (!el.dataset.fastmcpRef)
-                        el.dataset.fastmcpRef = `dom-${++counter}`;
+                    // Always renumber: the counter restarts on every capture,
+                    // so preserving tags from a previous capture would let two
+                    // elements share one ref and .first() would click the
+                    // wrong one. A ref means "position in the most recent
+                    // snapshot", nothing longer-lived.
+                    el.dataset.fastmcpRef = `dom-${++counter}`;
                     elements.push({
                         ref: el.dataset.fastmcpRef,
                         role: el.getAttribute('role')
@@ -277,8 +286,16 @@ export class Browser_session {
         try {
             if (this._dom_refs.has(ref))
             {
-                return page.locator(`[data-fastmcp-ref="${ref}"]`)
+                const locator = page.locator(`[data-fastmcp-ref="${ref}"]`)
                     .first().describe(element);
+                // Navigation wipes the data-fastmcp-ref attributes but not
+                // this registry; without this check a stale ref fails later
+                // with an uninformative interaction timeout.
+                if (!await locator.count())
+                    throw new Error('Ref '+ref+' is stale — the page has '
+                        +'navigated or changed since it was captured. Try '
+                        +'capturing new snapshot.');
+                return locator;
             }
             const snapshot = await page.ariaSnapshot({mode: 'ai'});
             if (!snapshot.includes(`[ref=${ref}]`))
