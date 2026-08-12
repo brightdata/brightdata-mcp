@@ -40,7 +40,6 @@
     {"name": "scrape_batch", "description": "Scrape multiple webpage URLs with advanced options for content extraction and get back the results in Markdown. This tool can unlock any webpage even if it uses bot detection or CAPTCHA. Processes up to 10 URLs."},
     {"name": "scrape_as_html", "description": "Scrape a single webpage URL with advanced options for content extraction and get back the results in HTML. This tool can unlock any webpage even if it uses bot detection or CAPTCHA."},
     {"name": "extract", "description": "Scrape a webpage and extract structured data as JSON. First scrapes the page as markdown, then uses AI sampling to convert it to structured JSON format. This tool can unlock any webpage even if it uses bot detection or CAPTCHA."},
-    {"name": "discover", "description": "Search the web and rank results by AI-driven relevance. Returns scored results with title, description, and URL. Supports intent-based ranking, geo-targeting, date filtering, and keyword filtering."},
     {"name": "session_stats", "description": "Tell the user about the tool usage during this session"},
     {"name": "web_data_amazon_product", "description": "Quickly read structured amazon product data. Requires a valid product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping."},
     {"name": "web_data_amazon_product_reviews", "description": "Quickly read structured amazon product review data. Requires a valid product URL with /dp/ in it. This can be a cache lookup, so it can be more reliable than scraping."},

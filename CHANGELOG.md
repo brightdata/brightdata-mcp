@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2026-08-12
+
+### Removed
+- **BREAKING**: Removed the `discover` tool and its Bright Data Discover API integration. `discover` was part of `base_tools`, so it was included in every tool group, and it was also in the default tool set served when neither `GROUPS` nor `TOOLS` is configured; it is no longer exposed by the server in any configuration. For research workflows that relied on relevance-ranked discovery, use `search_engine` (or `search_engine_batch`) to find sources and `scrape_as_markdown` (or `scrape_batch`) to read them.
+
 ## [2.11.1] - 2026-07-27
 
 ### Fixed

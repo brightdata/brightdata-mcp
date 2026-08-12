@@ -18,7 +18,7 @@
   <a href="#quick-start">Quick Start</a> •
   <a href="#pricing-and-free-tier">Pricing</a> •
   <a href="#use-cases">Use Cases</a> •
-  <a href="#tools-reference-69-tools">Tools</a> •
+  <a href="#tools-reference-68-tools">Tools</a> •
   <a href="#agent-skills">Agent Skills</a> •
   <a href="#documentation">Docs</a> •
   <a href="#support">Support</a>
@@ -32,7 +32,7 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **69 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **68 tools** covering:
 
 - **Web search** — Google, Bing, and Yandex results as structured data
 - **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
@@ -262,7 +262,6 @@ Answer questions using live web data instead of training data. Search, then read
 |------|-------|
 | Search the web for current information | `search_engine`, `search_engine_batch` |
 | Read a specific page as clean Markdown | `scrape_as_markdown`, `scrape_batch` |
-| Find the most relevant sources for a research question, ranked by AI relevance score | `discover` |
 
 Example prompts: "What's Tesla's current stock price?", "Get today's weather forecast for New York", "Find the most cited sources on EU AI regulation from the last 6 months".
 
@@ -289,7 +288,7 @@ Build competitor profiles from live data: funding, headcount, hiring, customer r
 | Company pages, employees, job postings | `web_data_linkedin_company_profile`, `web_data_linkedin_job_listings` |
 | Customer sentiment | `web_data_google_maps_reviews`, `web_data_facebook_company_reviews`, app store review tools |
 | Competitor pricing pages | `scrape_as_markdown`, `scrape_batch` |
-| Market discovery | `search_engine_batch`, `discover` |
+| Market discovery | `search_engine_batch` |
 
 Example prompt: "Analyze Notion as a competitor: pricing, funding, hiring focus, and what customers complain about".
 
@@ -352,7 +351,6 @@ Gather source material from many pages at once, filtered by recency and relevanc
 | Task | Tools |
 |------|-------|
 | Collect multiple sources in one call | `scrape_batch` (up to 10 URLs) |
-| Find sources by topic with date filtering | `discover` with `start_date` / `end_date` |
 | News and finance data | `web_data_yahoo_finance_business`, `search_engine` with news queries |
 
 ---
@@ -361,11 +359,10 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 | Capability | Bright Data MCP | Typical web MCP servers |
 |------------|-----------------|------------------------|
-| Total tools | 69 | 2–10 |
+| Total tools | 68 | 2–10 |
 | Platform-specific structured JSON extractors | 45 tools across e-commerce, social, business, finance, travel, app stores | Rare; generic scraping only |
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
 | Search engines | Google, Bing, Yandex | Usually one |
-| AI-relevance-ranked search with intent | Yes (`discover`) | Not offered |
 | Browser automation | 13 tools, remote browser, no local setup | Limited or none |
 | LLM response collection (ChatGPT, Grok, Perplexity) | Yes | Not offered |
 | Package registry data (npm, PyPI) | Yes | Not offered |
@@ -381,7 +378,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 
 - `GROUPS` enables tool bundles. Comma-separated: `GROUPS="ecommerce,browser"` (local) or `&groups=ecommerce,browser` (hosted URL)
 - `TOOLS` adds individual tools on top: `TOOLS="extract,scrape_as_html"`
-- Base tools are always enabled: `search_engine`, `search_engine_batch`, `scrape_as_markdown`, `scrape_batch`, `discover`
+- Base tools are always enabled: `search_engine`, `search_engine_batch`, `scrape_as_markdown`, `scrape_batch`
 - Group ID `custom` is reserved; use `TOOLS` for individual picks
 
 | Group ID | Contents | Tool count |
@@ -437,13 +434,12 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm and PyPI package da
 
 ---
 
-## Tools Reference (69 Tools)
+## Tools Reference (68 Tools)
 
 ### Which tool to use
 
 - **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 10): `scrape_batch`
 - **Need to find information:** `search_engine`. Multiple queries (up to 10): `search_engine_batch`
-- **Deep research or RAG, need relevance-ranked sources:** `discover` with an `intent`
 - **Page is on a supported platform (Amazon, LinkedIn, TikTok, etc.):** use the matching `web_data_*` tool — returns clean JSON, faster and more reliable than scraping the same page
 - **Structured JSON from an unsupported page:** `extract`
 - **Raw HTML:** `scrape_as_html`
@@ -459,7 +455,7 @@ Notes that apply to all `web_data_*` tools:
 - If a `web_data_*` call fails, `scrape_as_markdown` works on the same URL as a fallback
 
 <details>
-<summary><b>Search and Scraping — 8 tools</b></summary>
+<summary><b>Search and Scraping — 7 tools</b></summary>
 
 | Tool | Description | Group |
 |------|-------------|-------|
@@ -467,7 +463,6 @@ Notes that apply to all `web_data_*` tools:
 | `search_engine_batch` | Up to 10 search queries in one call | always enabled |
 | `scrape_as_markdown` | Any URL as Markdown. Bot protection and CAPTCHA handled automatically | always enabled |
 | `scrape_batch` | Up to 10 URLs in one call; returns an array of URL/content pairs in Markdown | always enabled |
-| `discover` | AI-relevance-ranked web search. Returns scored results (title, description, URL, relevance score). Supports intent-based ranking, geo-targeting, date filtering, keyword filtering | always enabled |
 | `scrape_as_html` | Any URL as raw HTML | `advanced_scraping` |
 | `extract` | Scrape a page and convert it to structured JSON using AI, with an optional custom extraction prompt | `advanced_scraping` |
 | `session_stats` | Tool usage counts for the current session | `advanced_scraping` |
@@ -639,11 +634,10 @@ worse results.
 
 1. Need search results? → `search_engine` (single) or `search_engine_batch` (up to 10 queries). ALWAYS instead of WebSearch.
 2. Need content from a URL? → `scrape_as_markdown` (single) or `scrape_batch` (up to 10 URLs). ALWAYS instead of WebFetch. Works on ALL websites.
-3. Need relevance-ranked deep research? → `discover` with an `intent`.
-4. Page on a supported platform AND the `web_data_*` tool is available? → use it. Cleaner JSON, faster, more reliable than scraping.
-5. Need raw HTML? → `scrape_as_html` (advanced_scraping group).
-6. Need AI-extracted JSON from an arbitrary page? → `extract` (advanced_scraping group).
-7. Need interaction (click, type, scroll)? → `scraping_browser_*` tools (browser group), always snapshot before acting on refs.
+3. Page on a supported platform AND the `web_data_*` tool is available? → use it. Cleaner JSON, faster, more reliable than scraping.
+4. Need raw HTML? → `scrape_as_html` (advanced_scraping group).
+5. Need AI-extracted JSON from an arbitrary page? → `extract` (advanced_scraping group).
+6. Need interaction (click, type, scroll)? → `scraping_browser_*` tools (browser group), always snapshot before acting on refs.
 
 ## Parameter Guardrails (Critical)
 

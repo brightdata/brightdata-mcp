@@ -6,7 +6,6 @@
 |scrape_batch|Scrape up to 10 webpages in one request and return an array of URL/content pairs in Markdown format.|
 |scrape_as_html|Scrape a single webpage with advanced extraction and return the HTML response body. Handles sites protected by bot detection or CAPTCHA.|
 |extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|
-|discover|Search the web and rank results by AI-driven relevance. Returns scored results with title, description, URL, and relevance score. Supports intent-based ranking, geo-targeting, date filtering, and keyword filtering.|
 |session_stats|Report how many times each tool has been called during the current MCP session.|
 |web_data_amazon_product|Quickly read structured Amazon product data. Requires a valid product URL containing /dp/. Often faster and more reliable than scraping.|
 |web_data_amazon_product_reviews|Quickly read structured Amazon product review data. Requires a valid product URL containing /dp/. Often faster and more reliable than scraping.|
