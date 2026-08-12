@@ -70,6 +70,28 @@ function parse_rate_limit(rate_limit_str) {
 
 const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 
+// Built eagerly at startup so any construction mistake fails the boot (and the
+// server-health test), not the one moment a free-tier user hits their limit.
+// Single-quoted pieces joined explicitly: adjacent template literals are a
+// tagged-template CALL at runtime, which is exactly the bug this replaces.
+const free_tier_limit_message = [
+    'The user has reached the 5,000 request monthly limit for Bright '
+        +'Data MCP\'s free tier. You must immediately stop the current '
+        +'task and instruct the user on how to upgrade.',
+    'Guide them through these exact steps:',
+    '1. Tell them they need to create a new Web Unlocker zone at '
+        +'brightdata.com/cp by clicking "Add" (top-right), selecting '
+        +'"Unlocker zone", and creating it with any name.',
+    '2. Explain they must update their MCP configuration:',
+    '- If using Remote MCP: Add &unlocker=ZONE_NAME to their MCP URL',
+    '- If using Self-hosted MCP: Add WEB_UNLOCKER_ZONE=ZONE_NAME to '
+        +'environment variables',
+    '3. Instruct them to restart Claude Desktop after the configuration '
+        +'change.',
+    '4. Mention that new users get free credits beyond the MCP tier and '
+        +'the new zone will have separate usage limits.',
+].join('\n');
+
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
@@ -1347,20 +1369,7 @@ function tool_fn(name, fn){
                     throw new Error(render_auth_error(get_credential_state()));
 
                 if (is_usage_limit && unlocker_zone === 'mcp_unlocker')
-                    throw new Error(`The user has reached the 5,000 request monthly`+
-                `limit for Bright Data MCP's free tier. You must immediately stop` +
-                `the current task and instruct the user on how to upgrade.`+
-                `Guide them through these exact steps:`+
-                `1. Tell them they need to create a new Web Unlocker zone at`+
-                `brightdata.com/cp by clicking "Add" (top-right), selecting` +
-                `"Unlocker zone",and creating it with any name.`+
-                `2. Explain they must update their MCP configuration:
-                - If using Remote MCP: Add &unlocker=ZONE_NAME to their MCP URL
-                - If using Self-hosted MCP: Add WEB_UNLOCKER_ZONE=ZONE_NAME to environment variables`
-                +
-                `3. Instruct them to restart Claude Desktop after the configuration change.`
-                `4. Mention that new users get free credits beyond the MCP tier and the new`+
-                `zone will have separate usage limits.`);
+                    throw new Error(free_tier_limit_message);
 
                 let message = e.response.data;
                 if (message?.length)
