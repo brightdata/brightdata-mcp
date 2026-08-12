@@ -3,6 +3,8 @@ import {UserError, imageContent as image_content} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {Browser_session} from './browser_session.js';
+import {is_auth_rejection, get_credential_state, render_auth_error}
+    from './auth_error.js';
 let browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 
 let open_session;
@@ -43,6 +45,8 @@ const calculate_cdp_endpoint = async country=>{
         return `wss://brd-customer-${customer}-zone-${browser_zone}`
             +`${country_suffix}:${password}@brd.superproxy.io:9222`;
     } catch(e){
+        if (is_auth_rejection(e))
+            throw new Error(render_auth_error(get_credential_state()));
         if (e.response?.status===422)
             throw new Error(`Browser zone '${browser_zone}' does not exist`);
         throw new Error(`Error retrieving browser credentials: ${e.message}`);
@@ -147,10 +151,13 @@ let scraping_browser_snapshot = {
     },
     parameters: z.object({
         filtered: z.boolean().optional().describe(
-            'Whether to apply filtering/compaction (default: false). '
-            +'Set to true to get a compacted version of the snapshot.'),
+            'Whether to apply filtering/compaction (default: true). The '
+            +'filtered snapshot is compact and includes a DOM fallback scan '
+            +'that catches interactive elements missing from the '
+            +'accessibility tree. Set to false for the raw, unfiltered ARIA '
+            +'snapshot.'),
     }),
-    execute: async({filtered=false})=>{
+    execute: async({filtered=true})=>{
         const browser_session = await require_browser();
         const page = await browser_session.get_page();
         try {

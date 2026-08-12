@@ -9,6 +9,8 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {is_auth_rejection, mark_credential_verified, get_credential_state,
+    render_auth_error} from './auth_error.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -18,11 +20,26 @@ const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
-const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
-const base_timeout = process.env.BASE_TIMEOUT
-    ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
-const base_max_retries = Math.min(
-    parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
+// parseInt returns NaN on malformed input, and NaN poisons the loops these
+// values bound: 0 <= NaN is false, so base_request would make ZERO attempts
+// and throw undefined, and the dataset poll loops would time out instantly.
+// Warn and fall back instead of letting NaN through.
+const parse_int_env = (name, fallback)=>{
+    const raw = process.env[name];
+    if (raw===undefined || raw==='')
+        return fallback;
+    const parsed = parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed<0)
+    {
+        console.error(`[config] Ignoring ${name}="${raw}": expected a `
+            +`non-negative integer. Using ${fallback}.`);
+        return fallback;
+    }
+    return parsed;
+};
+const polling_timeout = parse_int_env('POLLING_TIMEOUT', 600);
+const base_timeout = parse_int_env('BASE_TIMEOUT', 0) * 1000;
+const base_max_retries = Math.min(parse_int_env('BASE_MAX_RETRIES', 0), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch', 'discover'];
 const tool_groups = process.env.GROUPS ?
@@ -68,6 +85,28 @@ function parse_rate_limit(rate_limit_str) {
 
 const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 
+// Built eagerly at startup so any construction mistake fails the boot (and the
+// server-health test), not the one moment a free-tier user hits their limit.
+// Single-quoted pieces joined explicitly: adjacent template literals are a
+// tagged-template CALL at runtime, which is exactly the bug this replaces.
+const free_tier_limit_message = [
+    'The user has reached the 5,000 request monthly limit for Bright '
+        +'Data MCP\'s free tier. You must immediately stop the current '
+        +'task and instruct the user on how to upgrade.',
+    'Guide them through these exact steps:',
+    '1. Tell them they need to create a new Web Unlocker zone at '
+        +'brightdata.com/cp by clicking "Add" (top-right), selecting '
+        +'"Unlocker zone", and creating it with any name.',
+    '2. Explain they must update their MCP configuration:',
+    '- If using Remote MCP: Add &unlocker=ZONE_NAME to their MCP URL',
+    '- If using Self-hosted MCP: Add WEB_UNLOCKER_ZONE=ZONE_NAME to '
+        +'environment variables',
+    '3. Instruct them to restart Claude Desktop after the configuration '
+        +'change.',
+    '4. Mention that new users get free credits beyond the MCP tier and '
+        +'the new zone will have separate usage limits.',
+].join('\n');
+
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
@@ -86,7 +125,9 @@ async function base_request(config){
             }
         }
     }
-    throw last_err;
+    // last_err can only be unset if the loop made no attempts; never throw a
+    // bare undefined (it carries no message at any layer).
+    throw last_err ?? new Error('base_request made no attempts');
 }
 
 const api_headers = (clientName=null, tool_name=null)=>({
@@ -121,6 +162,7 @@ async function ensure_required_zones(){
             method: 'GET',
             headers: api_headers(),
         });
+        mark_credential_verified();
         let zones = response.data || [];
         let has_unlocker_zone = zones.some(zone=>zone.name==unlocker_zone);
         let has_browser_zone = zones.some(zone=>zone.name==browser_zone);
@@ -167,6 +209,14 @@ async function ensure_required_zones(){
         else
             console.error(`Required zone "${browser_zone}" already exists`);
     } catch(e){
+        if (is_auth_rejection(e))
+        {
+            // Startup control flow (exit vs degraded start) is a separate,
+            // undecided question -- this only replaces the uninformative log
+            // line with the actionable one.
+            console.error(render_auth_error(get_credential_state()));
+            return;
+        }
         console.error('Error checking/creating zones:',
             e.response?.data||e.message);
     }
@@ -391,7 +441,19 @@ addTool({
            }))
        );
 
-       const results = await Promise.allSettled(scrapePromises);
+       const settled = await Promise.allSettled(scrapePromises);
+       // Never serialize raw rejection reasons. Plain Errors stringify to {}
+       // (message/stack are non-enumerable), and axios errors have a toJSON
+       // that dumps the whole request config -- including the authorization
+       // header -- into the tool result. Fulfilled entries pass through
+       // unchanged; rejected entries carry the failing url and the message.
+       const results = settled.map((result, i)=>
+           result.status=='fulfilled' ? result : {
+               status: 'rejected',
+               url: urls[i],
+               reason: result.reason instanceof Error
+                   ? result.reason.message : String(result.reason),
+           });
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -594,7 +656,10 @@ addTool({
                 return JSON.stringify(results);
             } catch(e){
                 console.error(`[discover] polling error: ${e.message}`);
-                if (e.response?.status===400)
+                // Client errors are terminal -- matches base_request's rule.
+                // Without this a rejected token is retried for the full
+                // polling budget and then reported as a timeout.
+                if (e.response?.status>=400 && e.response.status<500)
                     throw e;
                 attempts++;
                 await new Promise(resolve=>setTimeout(resolve, 1000));
@@ -1264,6 +1329,23 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                         await new Promise(resolve=>setTimeout(resolve, 1000));
                         continue;
                     }
+                    // A ready snapshot is the records payload -- a JSON
+                    // array, which has no status field. A response still
+                    // carrying a status string past the pending check above
+                    // is a terminal non-success state (failed, canceled...),
+                    // not data; returning it would hand the model an error
+                    // payload as records. Tagged so the catch below rethrows
+                    // it instead of retrying it into a misleading timeout.
+                    if (typeof snapshot_response.data?.status=='string')
+                    {
+                        const failure = new Error(`Dataset collection did `
+                            +`not complete (status `
+                            +`"${snapshot_response.data.status}"): `
+                            +JSON.stringify(snapshot_response.data)
+                                .slice(0, 500));
+                        failure.terminal = true;
+                        throw failure;
+                    }
                     console.error(`[${tool_name}] snapshot data received `
                         +`after ${attempts + 1} attempts`);
                     const data = JSON.parse(JSON.stringify(
@@ -1273,7 +1355,13 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
-                    if (e.response?.status === 400) throw e;
+                    // A terminal collection failure or a client error is not
+                    // going to recover by polling again -- rethrow rather
+                    // than burn the budget and report a misleading timeout.
+                    if (e.terminal
+                        || (e.response?.status >= 400
+                            && e.response.status < 500))
+                        throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
                 }
@@ -1324,25 +1412,27 @@ function tool_fn(name, fn){
 
                 const headers = e.response.headers;
                 const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
-                if (is_usage_limit && unlocker_zone === 'mcp_unlocker') 
-                    throw new Error(`The user has reached the 5,000 request monthly`+
-                `limit for Bright Data MCP's free tier. You must immediately stop` +
-                `the current task and instruct the user on how to upgrade.`+
-                `Guide them through these exact steps:`+
-                `1. Tell them they need to create a new Web Unlocker zone at`+
-                `brightdata.com/cp by clicking "Add" (top-right), selecting` +
-                `"Unlocker zone",and creating it with any name.`+
-                `2. Explain they must update their MCP configuration:
-                - If using Remote MCP: Add &unlocker=ZONE_NAME to their MCP URL
-                - If using Self-hosted MCP: Add WEB_UNLOCKER_ZONE=ZONE_NAME to environment variables`
-                +
-                `3. Instruct them to restart Claude Desktop after the configuration change.`
-                `4. Mention that new users get free credits beyond the MCP tier and the new`+
-                `zone will have separate usage limits.`);
+
+                if (is_auth_rejection(e) && !is_usage_limit)
+                    throw new Error(render_auth_error(get_credential_state()));
+
+                if (is_usage_limit && unlocker_zone === 'mcp_unlocker')
+                    throw new Error(free_tier_limit_message);
 
                 let message = e.response.data;
+                // Bright Data frequently returns JSON error objects. Objects
+                // have no .length, so they used to fail this guard and fall
+                // through to axios's generic "Request failed with status
+                // code N" -- discarding the actual explanation after logging
+                // it above.
+                if (message && typeof message=='object')
+                    message = JSON.stringify(message);
                 if (message?.length)
+                {
+                    if (message.length>500)
+                        message = message.slice(0, 500)+'...';
                     throw new Error(`HTTP ${e.response.status}: ${message}`);
+                }
             }
             else
                 console.error(`[%s] error %s`, name, e.stack);
