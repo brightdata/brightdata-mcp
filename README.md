@@ -12,6 +12,7 @@
   <a href="https://www.npmjs.com/package/@brightdata/mcp"><img src="https://img.shields.io/npm/v/@brightdata/mcp?style=flat-square" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/@brightdata/mcp"><img src="https://img.shields.io/npm/dw/@brightdata/mcp?style=flat-square" alt="npm downloads"></a>
   <a href="https://github.com/brightdata-com/brightdata-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
+  <a href="https://athakur3.github.io/mcp-context-cost/METHODOLOGY"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fathakur3%2Fmcp-context-cost%2Fmain%2Fbadges%2Fbright-data.json&style=flat-square" alt="context cost"></a>
 </p>
 
 <p>
