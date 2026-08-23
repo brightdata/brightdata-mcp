@@ -9,6 +9,7 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {select_sampling_session} from './sampling_session.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -443,6 +444,19 @@ addTool({
         ),
     }),
     execute: tool_fn('extract', async ({ url, extraction_prompt }, ctx) => {
+        // Resolve the calling session and confirm it can sample BEFORE paying
+        // for a scrape. A client we can't route to, or that doesn't support
+        // sampling, should fail for free -- not after a billed Web Unlocker
+        // call. select_sampling_session routes by ctx.sessionId on multi-client
+        // transports and refuses to guess rather than sampling from the wrong
+        // client (server.sessions[0] was a cross-tenant leak).
+        let session = select_sampling_session(server.sessions, ctx.sessionId);
+        if (!session.clientCapabilities?.sampling)
+        {
+            throw new Error('The connected MCP client does not support '
+                +'sampling, which the extract tool requires.');
+        }
+
         let scrape_response = await axios({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
@@ -464,9 +478,6 @@ addTool({
 
         let user_prompt = extraction_prompt ||
             'Extract the requested information from this markdown content and return ONLY a JSON object:';
-
-        let session = server.sessions[0]; // Get the first active session
-        if (!session) throw new Error('No active session available for sampling');
 
         let sampling_response = await session.requestSampling({
             messages: [
