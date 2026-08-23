@@ -181,21 +181,29 @@ let server = new FastMCP({
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
 const addTool = (tool) => {
+    // Single registration chokepoint: wrap every tool's execute with tool_fn
+    // here so tools defined without a manual wrapper -- notably the browser
+    // tools from browser_tools.js -- still get rate-limiting, logging, and
+    // session_stats counting. tool_fn is idempotent, so a tool already wrapped
+    // at its definition is returned unchanged (no double count, no second
+    // rate-limit check).
+    const registered = {...tool,
+        execute: tool_fn(tool.name, tool.execute)};
     if (pro_mode)
     {
-        server.addTool(tool);
+        server.addTool(registered);
         return;
     }
 
     if (allowed_tools.size>0)
     {
         if (allowed_tools.has(tool.name))
-            server.addTool(tool);
+            server.addTool(registered);
         return;
     }
 
     if (pro_mode_tools.includes(tool.name))
-        server.addTool(tool);
+        server.addTool(registered);
 };
 
 addTool({
@@ -1300,7 +1308,12 @@ server.on('connect', (event)=>{
 
 server.start({transportType: 'stdio'});
 function tool_fn(name, fn){
-    return async(data, ctx)=>{
+    // Idempotent: wrapping an already-wrapped function returns it unchanged, so
+    // calling tool_fn again in addTool never double-wraps a tool that was also
+    // wrapped at its definition site.
+    if (fn && fn.__tool_fn_wrapped)
+        return fn;
+    const wrapped = async(data, ctx)=>{
         check_rate_limit();
         const clientInfo = global.mcpClientInfo;
         const clientName = clientInfo?.name || 'unknown-client';
@@ -1352,6 +1365,8 @@ function tool_fn(name, fn){
             console.error(`[%s] tool finished in %sms`, name, dur);
         }
     };
+    wrapped.__tool_fn_wrapped = true;
+    return wrapped;
 }
 
 function search_url(engine, query, cursor, geo_location){
