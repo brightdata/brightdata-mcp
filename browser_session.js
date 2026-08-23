@@ -2,6 +2,16 @@
 import * as playwright from 'playwright';
 import {Aria_snapshot_filter} from './aria_snapshot_filter.js';
 
+// Bright Data CDP endpoints embed the zone password in the URL userinfo
+// (wss://<customer-zone>:<password>@brd.superproxy.io). Playwright quotes the
+// endpoint verbatim in connection errors, so any text derived from such an
+// error must be scrubbed before it is logged or thrown. This format-based net
+// replaces the password with *** while keeping the host and customer/zone id
+// for debugging; Browser_session._sanitize pairs it with the session's exact
+// password so a password containing '/' or '@' can't leave a fragment.
+export const redact_credentials = text => String(text ?? '')
+    .replace(/(wss?:\/\/[^\s:@/]+):[^\s@/]+@/gi, '$1:***@');
+
 export class Browser_session {
     constructor({cdp_endpoint}){
         this.cdp_endpoint = cdp_endpoint;
@@ -10,12 +20,39 @@ export class Browser_session {
         this._dom_refs = new Set();
     }
 
+    // Pull this session's exact zone password out of its own CDP endpoint using
+    // the URL structure (…://<user>:<password>@brd.superproxy.io…), not the
+    // password's characters -- correct even if the password contains '/' or '@'
+    // (lastIndexOf('@') is the userinfo/host delimiter; the host has no '@').
+    _endpoint_password(){
+        const ep = this.cdp_endpoint || '';
+        const scheme = ep.indexOf('://');
+        const at = ep.lastIndexOf('@');
+        if (scheme<0 || at<0 || at<scheme)
+            return '';
+        const userinfo = ep.slice(scheme+3, at);
+        const colon = userinfo.indexOf(':');
+        return colon<0 ? '' : userinfo.slice(colon+1);
+    }
+
+    // Scrub any secret from text before it is logged or thrown: the format-based
+    // net (any wss://user:pass@) plus this session's exact password (airtight
+    // regardless of the password's character set).
+    _sanitize(text){
+        let out = redact_credentials(text);
+        const pw = this._endpoint_password();
+        if (pw)
+            out = out.split(pw).join('***');
+        return out;
+    }
+
     _getDomain(url){
         try {
             const urlObj = new URL(url);
             return urlObj.hostname;
         } catch(e){
-            console.error(`Error extracting domain from ${url}:`, e);
+            console.error(`Error extracting domain from ${url}:`,
+                this._sanitize(e?.stack || e?.message || String(e)));
             return 'default';
         }
     }
@@ -40,8 +77,8 @@ export class Browser_session {
             {
                 try { await session.browser.contexts(); }
                 catch(e){
-                    log?.(`Browser connection lost for domain ${domain} (${e.message}), `
-                        +`reconnecting...`);
+                    log?.(`Browser connection lost for domain ${domain} `
+                        +`(${this._sanitize(e.message)}), reconnecting...`);
                     session.browser = null;
                     session.page = null;
                     session.browserClosed = true;
@@ -63,15 +100,19 @@ export class Browser_session {
             }
             return session.browser;
         } catch(e){
-            console.error(`Error connecting to browser for domain ${domain}:`, e);
+            console.error(`Error connecting to browser for domain ${domain}:`,
+                this._sanitize(e?.stack || e?.message || String(e)));
             const session = this._domainSessions.get(domain);
-            if (session) 
+            if (session)
             {
                 session.browser = null;
                 session.page = null;
                 session.browserClosed = true;
             }
-            throw e;
+            // Throw a fresh Error, not the Playwright one: its .message/.stack
+            // AND its enumerable `log` array quote the endpoint (password). A new
+            // Error carries none of those to tool_fn / fastmcp / the client.
+            throw new Error(this._sanitize(e?.message ?? String(e)));
         }
     }
 
@@ -111,15 +152,16 @@ export class Browser_session {
             }
             return session.page;
         } catch(e){
-            console.error(`Error getting page for domain ${domain}:`, e);
+            console.error(`Error getting page for domain ${domain}:`,
+                this._sanitize(e?.stack || e?.message || String(e)));
             const session = this._domainSessions.get(domain);
-            if (session) 
+            if (session)
             {
                 session.browser = null;
                 session.page = null;
                 session.browserClosed = true;
             }
-            throw e;
+            throw new Error(this._sanitize(e?.message ?? String(e)));
         }
     }
 
@@ -308,7 +350,10 @@ export class Browser_session {
             if (session && session.browser) 
             {
                 try { await session.browser.close(); }
-                catch(e){ console.error(`Error closing browser for domain ${domain}:`, e); }
+                catch(e){
+                    console.error(`Error closing browser for domain ${domain}:`,
+                        this._sanitize(e?.stack || e?.message || String(e)));
+                }
                 session.browser = null;
                 session.page = null;
                 session.browserClosed = true;
@@ -321,7 +366,10 @@ export class Browser_session {
                 if (session.browser) 
                 {
                     try { await session.browser.close(); }
-                    catch(e){ console.error(`Error closing browser for domain ${domain}:`, e); }
+                    catch(e){
+                        console.error(`Error closing browser for domain ${domain}:`,
+                            this._sanitize(e?.stack || e?.message || String(e)));
+                    }
                     session.browser = null;
                     session.page = null;
                     session.browserClosed = true;
