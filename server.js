@@ -409,7 +409,7 @@ addTool({
     },
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
-        let response = await axios({
+        let response = await base_request({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
@@ -443,7 +443,7 @@ addTool({
         ),
     }),
     execute: tool_fn('extract', async ({ url, extraction_prompt }, ctx) => {
-        let scrape_response = await axios({
+        let scrape_response = await base_request({
             url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
