@@ -6,6 +6,7 @@ import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
+import {DATASET_INPUT_DESCRIPTIONS} from './dataset_inputs.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -1207,6 +1208,12 @@ for (let {dataset_id, id, description, inputs, defaults = {},
     for (let input of inputs)
     {
         let param_schema = input=='url' ? z.string().url() : z.string();
+        // Descriptions are keyed by input name; a name with no entry ships
+        // undescribed (the old behaviour) and is caught by the consistency
+        // check in test/dataset-inputs.test.js, not at runtime.
+        const description = DATASET_INPUT_DESCRIPTIONS[input];
+        if (description)
+            param_schema = param_schema.describe(description);
         parameters[input] = defaults[input] !== undefined ?
             param_schema.default(defaults[input]) : param_schema;
     }
