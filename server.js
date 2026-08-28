@@ -9,6 +9,8 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {MARKETPLACE_DATASETS} from './marketplace_datasets.js';
+import {start_query, collect_query} from './marketplace_query.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -612,19 +614,39 @@ const SEARCHABLE_DATASETS_DESC = [
     '- gd_l1vikfnt1wgvvqz95w: LinkedIn company information',
 ].join('\n');
 
+// Dataset ids are validated at runtime rather than with a z.enum: an enum of
+// every marketplace dataset would sit in the tool's inputSchema, which every
+// client keeps in context for the whole session. list_marketplace_datasets
+// serves the catalog on demand instead.
+const searchable_ids = new Set(dataset_id_schema.options);
+const is_searchable_dataset = id=>searchable_ids.has(id);
+function assert_known_dataset(dataset_id){
+    if (!is_searchable_dataset(dataset_id)
+        && !Object.prototype.hasOwnProperty.call(MARKETPLACE_DATASETS,
+            dataset_id))
+    {
+        throw new Error(`Unknown dataset_id "${dataset_id}". Call `
+            +`list_marketplace_datasets to see the available datasets.`);
+    }
+}
+
 addTool({
     name: 'list_dataset_fields',
-    description: 'List the filterable fields of a searchable dataset '
-        +'(field name, type, and description). Call this before '
-        +'search_dataset to learn which field names and types you can '
-        +'filter on.\n'+SEARCHABLE_DATASETS_DESC,
+    description: 'List the filterable fields of a dataset (field name, type, '
+        +'and description). Call this before query_dataset or search_dataset '
+        +'to learn which field names and types you can filter on. Accepts any '
+        +'id from list_marketplace_datasets as well as the search_dataset '
+        +'ones.',
     annotations: {
         title: 'List Dataset Fields',
         readOnlyHint: true,
         openWorldHint: true,
     },
-    parameters: z.object({dataset_id: dataset_id_schema}),
+    parameters: z.object({dataset_id: z.string()
+        .describe('Dataset id from list_marketplace_datasets, or one of the '
+            +'search_dataset ids.')}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
+        assert_known_dataset(dataset_id);
         let response = await base_request({
             url: `https://api.brightdata.com/datasets/${dataset_id}`
                 +`/metadata`,
@@ -645,6 +667,8 @@ addTool({
         +'A filter is a tree: a group {operator:"and"|"or", filters:[...]} '
         +'or a leaf {name, value, operator}. Max nesting depth 3.\n'
         +'Leaf operators: '+FILTER_OPERATORS.join(', ')+'.\n'
+        +'Only the datasets below are supported here; for any other dataset '
+        +'use query_dataset.\n'
         +SEARCHABLE_DATASETS_DESC,
     annotations: {
         title: 'Search Dataset',
@@ -688,6 +712,153 @@ addTool({
         let result = {hits, total_hits, took};
         if (next_cursor!==undefined)
             result.search_after = next_cursor;
+        return JSON.stringify(result);
+    }),
+});
+
+addTool({
+    name: 'list_marketplace_datasets',
+    description: 'List the Bright Data marketplace datasets that query_dataset '
+        +'can search (id and description). Call this first to find a dataset, '
+        +'then list_dataset_fields for its field names, then query_dataset.',
+    annotations: {
+        title: 'List Marketplace Datasets',
+        readOnlyHint: true,
+    },
+    parameters: z.object({
+        search: z.string().optional()
+            .describe('Optional substring to filter the list, e.g. "amazon", '
+                +'"reviews", "linkedin".'),
+    }),
+    execute: tool_fn('list_marketplace_datasets', async({search})=>{
+        const needle = (search||'').trim().toLowerCase();
+        const matches = Object.entries(MARKETPLACE_DATASETS)
+            .filter(([id, label])=>!needle
+                || label.toLowerCase().includes(needle)
+                || id.toLowerCase().includes(needle))
+            .map(([dataset_id, description])=>({dataset_id, description}));
+        return JSON.stringify({total: matches.length, datasets: matches});
+    }),
+});
+
+addTool({
+    name: 'query_dataset',
+    description: 'Search any Bright Data dataset by filter criteria and get '
+        +'matching records. Use this to FIND MANY records by criteria, as '
+        +'opposed to the web_data_* tools which fetch ONE record by URL.\n'
+        +'Call list_marketplace_datasets for dataset ids, then '
+        +'list_dataset_fields for valid field names.\n'
+        +'A filter is a tree: a group {operator:"and"|"or", filters:[...]} or '
+        +'a leaf {name, value, operator}. Max nesting depth 3.\n'
+        +'Leaf operators: '+FILTER_OPERATORS.join(', ')+'.\n'
+        +'Most datasets run an async collection job: this returns a '
+        +'snapshot_id immediately, and you call collect_dataset to get the '
+        +'records. A few datasets answer instantly and return records here.',
+    annotations: {
+        title: 'Query Dataset',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        dataset_id: z.string()
+            .describe('Dataset id from list_marketplace_datasets.'),
+        filter: filter_schema.describe('Filter tree describing which records '
+            +'to match. Required, cannot be empty.'),
+        records_limit: z.number().int().positive().max(25)
+            .describe('Maximum records to return. REQUIRED. Records are large '
+                +'(a company record can be ~2,700 tokens) and bigger requests '
+                +'are slower (roughly 75s plus 2s per record), so 5-10 is '
+                +'usually right. Use `fields` to keep only what you need.'),
+        fields: z.array(z.string()).optional()
+            .describe('Only keep these fields from each record (names from '
+                +'list_dataset_fields). Strongly recommended: without it every '
+                +'field is returned.'),
+    }),
+    execute: tool_fn('query_dataset', async({dataset_id, filter, records_limit,
+        fields}, ctx)=>
+    {
+        assert_known_dataset(dataset_id);
+        const result = await start_query({
+            dataset_id, filter, records_limit, fields,
+            is_searchable: is_searchable_dataset,
+            sync_search: async({dataset_id, filter, records_limit})=>{
+                const response = await base_request({
+                    url: `https://api.brightdata.com/datasets/search/`
+                        +`${dataset_id}`,
+                    method: 'POST',
+                    data: {mode: 'sync', filter, size: records_limit},
+                    headers: {
+                        ...api_headers(ctx.clientName, 'query_dataset'),
+                        'Content-Type': 'application/json',
+                    },
+                });
+                return response.data?.hits || [];
+            },
+            create: async({dataset_id, filter, records_limit})=>{
+                const response = await base_request({
+                    url: 'https://api.brightdata.com/datasets/filter',
+                    method: 'POST',
+                    data: {dataset_id, filter, records_limit},
+                    headers: {
+                        ...api_headers(ctx.clientName, 'query_dataset'),
+                        'Content-Type': 'application/json',
+                    },
+                });
+                return response.data?.snapshot_id;
+            },
+        });
+        return JSON.stringify(result);
+    }),
+});
+
+addTool({
+    name: 'collect_dataset',
+    description: 'Get the records from a query_dataset collection job. Pass '
+        +'the snapshot_id from query_dataset\'s response. If the job is still '
+        +'running this returns status "pending" -- call again with the same '
+        +'snapshot_id.',
+    annotations: {
+        title: 'Collect Dataset Records',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        snapshot_id: z.string()
+            .describe('The snapshot_id from query_dataset\'s response.'),
+        fields: z.array(z.string()).optional()
+            .describe('Only keep these fields from each record.'),
+        // Capped well below the MCP client's default 60s request timeout
+        // (DEFAULT_REQUEST_TIMEOUT_MSEC) -- waiting longer inside one call
+        // gets the request cancelled by the client, not answered.
+        wait_seconds: z.number().int().min(0).max(45).optional().default(25)
+            .describe('How long to wait for the job before reporting back '
+                +'(default 25, max 45). If it is still running, call again.'),
+    }),
+    execute: tool_fn('collect_dataset', async({snapshot_id, fields,
+        wait_seconds}, ctx)=>
+    {
+        const result = await collect_query({
+            snapshot_id, fields, wait_seconds,
+            poll: async id=>{
+                const response = await base_request({
+                    url: `https://api.brightdata.com/datasets/snapshots/${id}`,
+                    method: 'GET',
+                    headers: api_headers(ctx.clientName, 'collect_dataset'),
+                });
+                return response.data;
+            },
+            download: async id=>{
+                const response = await base_request({
+                    url: `https://api.brightdata.com/datasets/snapshots/${id}`
+                        +`/download`,
+                    method: 'GET',
+                    params: {format: 'json'},
+                    headers: api_headers(ctx.clientName, 'collect_dataset'),
+                });
+                const data = response.data;
+                return Array.isArray(data) ? data : (data?.data ?? []);
+            },
+        });
         return JSON.stringify(result);
     }),
 });
