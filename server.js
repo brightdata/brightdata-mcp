@@ -18,7 +18,21 @@ const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
-const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
+// Reads a whole positive integer or falls back, and is strict on purpose.
+// parseInt takes the leading digits of anything, so "45s" is not the NaN it
+// looks like, it is 45, and a 45ms wait budget expires before the first poll
+// can answer: the collection is triggered and billed and the caller is told
+// it is still running without a single poll ever having been made. "0" and
+// "-1" end the same way, with a deadline already in the past. A value that is
+// not simply a number has to fall back to the default, never silently
+// disable the wait.
+const positive_int_env = (raw, fallback)=>{
+    if (!/^\s*\d+\s*$/.test(raw||''))
+        return fallback;
+    let parsed = parseInt(raw, 10);
+    return parsed>0 ? parsed : fallback;
+};
+const polling_timeout = positive_int_env(process.env.POLLING_TIMEOUT, 600);
 // How long the server blocks waiting for a dataset collection before it
 // hands the caller a snapshot ID instead of the records. This is a server
 // setting and not a tool parameter on purpose: the same input can take 3x to
@@ -29,8 +43,8 @@ const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 // notifications do not reset it, so the server has to be the one to stop
 // waiting. 45s is what Buildkite chose for the same reason: it leaves
 // headroom inside a 60s client budget.
-const dataset_wait_budget_ms = parseInt(
-    process.env.DATASET_WAIT_BUDGET_MS || '45000', 10);
+const dataset_wait_budget_ms = positive_int_env(
+    process.env.DATASET_WAIT_BUDGET_MS, 45000);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
 const base_max_retries = Math.min(
@@ -1224,10 +1238,13 @@ const snapshot_wait_budget_ms = Math.min(dataset_wait_budget_ms,
 // pending envelope. Everything else, including every error, is an error.
 const snapshot_pending_statuses = ['running', 'building', 'starting',
     'closing'];
-// Errors that never resolve themselves inside a wait budget: a snapshot ID
-// that is malformed, unknown, or not ours. Retrying them only burns the
-// budget and hides the reason from the caller.
-const snapshot_fatal_statuses = [400, 401, 403, 404];
+// The one status that never resolves itself inside a wait budget: a snapshot
+// ID the API will not even parse. Retrying it only burns the budget and hides
+// the reason from the caller. 401, 403 and 404 deliberately stay out: a
+// snapshot the trigger created seconds ago is routinely not readable yet, and
+// the loop before this change retried all three, so treating them as terminal
+// would abandon a collection that is already billed.
+const snapshot_fatal_statuses = [400];
 // fastmcp emits a progress notification whether or not the client asked for
 // one, and the hosted server keeps every one of them in a bounded event
 // store, so report on a timer rather than once per poll.
@@ -1239,31 +1256,53 @@ const request_timeout = deadline=>Math.max(1000, deadline-Date.now());
 // already long-polls for the whole budget, so this only matters to a caller
 // that wants to go do something else in between.
 const snapshot_polling_interval_seconds = 15;
-// snapshot_id -> when its collection was triggered, so a later
-// web_data_snapshot call can report the time since the collection started
-// and not just the time it spent in the current call. Best effort: an entry
-// is dropped once the records are delivered, and the map is capped so
-// snapshots that are never collected cannot grow it without bound.
+// snapshot_id -> {started_at, label} for the collection behind it, so a later
+// web_data_snapshot call can report the time since the collection started and
+// not just the time it spent in the current call, and can say what the opaque
+// ID is collecting. Only the triggering call knows either of those; the
+// collecting call is handed nothing but the ID. Best effort: an entry is
+// dropped once the records are delivered, and the map is capped so snapshots
+// that are never collected cannot grow it without bound.
 const snapshot_started_at = new Map();
 const snapshot_started_at_max = 1000;
+// Long enough for a tool name and a recognisable URL, short enough that one
+// pathological input cannot bloat every envelope that follows it.
+const snapshot_label_max = 200;
 const elapsed_s = started_at=>Math.round((Date.now()-started_at)/1000);
 
-function remember_snapshot(snapshot_id, started_at){
+// Turns the tool call into something an agent can read back later, because
+// "sd_mtsosz7n1fexitzavy" on its own says nothing about what was asked for.
+// data has fixed_values already merged in, so this is the input that was
+// actually sent.
+function snapshot_label(tool_name, data){
+    let input = data.url ?? Object.values(data)[0];
+    // A tool whose inputs are all fixed still gets a useful label: the tool
+    // name alone says what is being collected.
+    let label = input==null || `${input}`=='' ? tool_name
+        : `${tool_name} for ${input}`;
+    // Marked when cut, never silently shortened. A truncated URL that still
+    // looks whole is one an agent will copy back out as the real input.
+    return label.length>snapshot_label_max ?
+        `${label.slice(0, snapshot_label_max-3)}...` : label;
+}
+
+function remember_snapshot(snapshot_id, started_at, label){
     if (snapshot_started_at.size>=snapshot_started_at_max)
         snapshot_started_at.delete(snapshot_started_at.keys().next().value);
-    snapshot_started_at.set(snapshot_id, started_at);
+    snapshot_started_at.set(snapshot_id, {started_at, label});
 }
 
 // Polls a dataset snapshot until the records are ready or the deadline
 // passes. Returns {records} as a JSON string once they are ready, else
 // {last_error} where last_error is null when the collection was observed to
-// be pending. Not throwing on the deadline is the whole point: the
-// collection is billed the moment it is triggered and keeps running after
-// the client hangs up, so the caller has to be left holding a way back to
-// it. last_error is set only when the last poll of the window failed and no
-// poll after it saw a pending status, which is the one case where "still
-// running" would be a guess rather than an observation. The caller decides
-// what to do with it; an error is never dressed up as a pending envelope.
+// be pending. Never throws, and that is the whole point: the collection is
+// billed the moment it is triggered and keeps running after the client hangs
+// up, so the caller has to be left holding a way back to it, and the caller
+// is the only place that still knows the snapshot ID. last_error is set only
+// when the last poll of the window failed and no poll after it saw a pending
+// status, which is the one case where "still running" would be a guess
+// rather than an observation. The caller decides what to do with it; an
+// error is never dressed up as a pending envelope.
 async function poll_snapshot(snapshot_id, tool_name, ctx, deadline){
     let started_at = Date.now();
     let budget_s = Math.round((deadline-started_at)/1000);
@@ -1302,6 +1341,17 @@ async function poll_snapshot(snapshot_id, tool_name, ctx, deadline){
                     snapshot_poll_interval_ms));
                 continue;
             }
+            // An empty body must not reach the null stripper below.
+            // JSON.stringify of a top-level null with that replacer returns
+            // undefined, not a string, and JSON.parse of undefined throws a
+            // SyntaxError that the catch would file as a transient network
+            // hiccup and retry until the whole budget is gone, on a
+            // snapshot that is answering instantly.
+            if (snapshot_response.data==null)
+            {
+                return {last_error: new Error(`Snapshot ${snapshot_id} `
+                    +`returned an empty body`)};
+            }
             console.error(`[${tool_name}] snapshot data received `
                 +`after ${elapsed_s(started_at)}s`);
             const data = JSON.parse(JSON.stringify(
@@ -1311,8 +1361,13 @@ async function poll_snapshot(snapshot_id, tool_name, ctx, deadline){
         } catch(e){
             console.error(`[${tool_name}] polling error: `
                 +`${e.message}`);
+            // Return, never throw. The caller is the only place that still
+            // knows the snapshot ID is worth keeping, and its error message
+            // is what puts that ID back in front of the agent; a throw from
+            // in here walks straight past it and the billed collection is
+            // lost.
             if (snapshot_fatal_statuses.includes(e.response?.status))
-                throw e;
+                return {last_error: e};
             last_error = e;
             await new Promise(resolve=>setTimeout(resolve,
                 snapshot_poll_interval_ms));
@@ -1331,13 +1386,22 @@ async function poll_snapshot(snapshot_id, tool_name, ctx, deadline){
 // re-trigger a billable collection because it lost the history saying not
 // to. The three contract fields are short; the records they stand in for
 // are not.
-function snapshot_pending_result(snapshot_id, started_at){
+function snapshot_pending_result(snapshot_id, started_at, label){
     return JSON.stringify({
         status: 'running',
         snapshot_id,
+        // What that opaque ID is collecting, sitting right next to it so the
+        // two read together. An agent running two collections at once holds
+        // two "sd_..." strings it cannot tell apart, and an agent whose
+        // context was compacted has no history left saying what it asked
+        // for. That second one is exactly the agent that re-triggers and
+        // pays twice.
+        ...label ? {collecting: label} : {},
         // Omitted rather than guessed when the trigger time is unknown, for
         // instance after a restart or an eviction from snapshot_started_at.
         // A missing field can be ignored; a wrong number gets reasoned from.
+        // The label is unknown in those same cases and is left out for the
+        // same reason: a guessed URL is worse than no URL.
         ...started_at ? {elapsed_s: elapsed_s(started_at)} : {},
         polling_interval_seconds: snapshot_polling_interval_seconds,
         next: 'Call web_data_snapshot with this snapshot_id to collect the '
@@ -1393,7 +1457,11 @@ addTool({
                 +'as it was given.'),
     }),
     execute: tool_fn('web_data_snapshot', async({snapshot_id}, ctx)=>{
-        let started_at = snapshot_started_at.get(snapshot_id) || null;
+        // Both are unknown for an ID this process did not trigger, which is
+        // a real flow: a restart, an eviction, or an ID pasted in by hand.
+        let remembered = snapshot_started_at.get(snapshot_id) || null;
+        let started_at = remembered?.started_at || null;
+        let label = remembered?.label || null;
         let poll = await poll_snapshot(snapshot_id, 'web_data_snapshot', ctx,
             Date.now()+snapshot_wait_budget_ms);
         if (poll.records!==undefined)
@@ -1403,10 +1471,16 @@ addTool({
         }
         // The last poll of the window failed, so "running" would be a guess.
         // Reporting it as pending would send the caller round an endless
-        // polling loop on an ID that is most likely wrong or expired.
+        // polling loop on an ID that is most likely wrong or expired. The
+        // raw axios message is "Request failed with status code 404" and
+        // names nothing, so say which snapshot it was: an agent waiting on
+        // two collections cannot otherwise tell which one it just lost.
         if (poll.last_error)
-            throw poll.last_error;
-        return snapshot_pending_result(snapshot_id, started_at);
+        {
+            throw new Error(`Polling snapshot ${snapshot_id} failed: `
+                +`${poll.last_error.message}`);
+        }
+        return snapshot_pending_result(snapshot_id, started_at, label);
     }),
 });
 
@@ -1433,18 +1507,26 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
             let started_at = Date.now();
+            let label = snapshot_label(tool_name, data);
+            // Deliberately no timeout on this POST. The snapshot ID exists
+            // in exactly one place, this response body, and the collection
+            // is billed as soon as Bright Data accepts the request. Aborting
+            // the read loses the ID while the charge stands, and nothing on
+            // our side ever learns what to collect, so waiting for the
+            // answer is always cheaper than giving up on it. Do not add a
+            // timeout back: the wait budget bounds the polling that follows,
+            // which is the part that can legitimately run long.
             let trigger_response = await axios({
                 url: 'https://api.brightdata.com/datasets/v3/trigger',
                 params: {dataset_id, include_errors: true, ...trigger_params},
                 method: 'POST',
                 data: [data],
                 headers: api_headers(ctx.clientName, tool_name),
-                timeout: snapshot_wait_budget_ms,
             });
             if (!trigger_response.data?.snapshot_id)
                 throw new Error('No snapshot ID returned from request');
             let snapshot_id = trigger_response.data.snapshot_id;
-            remember_snapshot(snapshot_id, started_at);
+            remember_snapshot(snapshot_id, started_at, label);
             console.error(`[${tool_name}] triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
             let poll = await poll_snapshot(snapshot_id, tool_name, ctx,
@@ -1457,7 +1539,9 @@ for (let {dataset_id, id, description, inputs, defaults = {},
             // A failed poll is an error and never a pending envelope, but
             // the trigger succeeded, so this collection exists and is billed:
             // the snapshot ID has to survive the error or the records are
-            // lost for good.
+            // lost for good. A terminal status lands here too: poll_snapshot
+            // returns it as last_error rather than throwing, precisely so
+            // this message can name the ID.
             if (poll.last_error)
             {
                 throw new Error(`Polling snapshot ${snapshot_id} failed: `
@@ -1468,7 +1552,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
             }
             // Out of budget, not out of luck: the collection is running and
             // billed, so hand back the snapshot ID rather than dropping it.
-            return snapshot_pending_result(snapshot_id, started_at);
+            return snapshot_pending_result(snapshot_id, started_at, label);
         }),
     });
 }
