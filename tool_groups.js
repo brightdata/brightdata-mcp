@@ -1,6 +1,10 @@
 'use strict'; /*jslint node:true es9:true*/
 
-const base_tools = ['search_engine', 'scrape_as_markdown', 'discover'];
+// web_data_snapshot is here because any group that can trigger a snapshot
+// must also be able to collect one: a snapshot ID the caller has no tool to
+// spend is the same lost, billed collection as never getting an ID at all.
+const base_tools = ['search_engine', 'scrape_as_markdown', 'discover',
+    'web_data_snapshot'];
 
 export const GROUPS = {
     ECOMMERCE: {

@@ -19,6 +19,18 @@ const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
+// How long the server blocks waiting for a dataset collection before it
+// hands the caller a snapshot ID instead of the records. This is a server
+// setting and not a tool parameter on purpose: the same input can take 3x to
+// 8x longer from one run to the next, so a caller cannot pick a sensible
+// number, and a big one only walks back into the client timeout. The
+// portable MCP client tool call budget is 60s (the TypeScript SDK's
+// DEFAULT_REQUEST_TIMEOUT_MSEC, matched by Cursor and Continue) and progress
+// notifications do not reset it, so the server has to be the one to stop
+// waiting. 45s is what Buildkite chose for the same reason: it leaves
+// headroom inside a 60s client budget.
+const dataset_wait_budget_ms = parseInt(
+    process.env.DATASET_WAIT_BUDGET_MS || '45000', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
 const base_max_retries = Math.min(
@@ -556,6 +568,7 @@ addTool({
         console.error(`[discover] triggered with task ID: ${task_id}`);
         let max_attempts = polling_timeout;
         let attempts = 0;
+        let started_at = Date.now();
         while (attempts<max_attempts)
         {
             try {
@@ -600,7 +613,10 @@ addTool({
                 await new Promise(resolve=>setTimeout(resolve, 1000));
             }
         }
-        throw new Error(`Timeout after ${max_attempts} seconds waiting `
+        // max_attempts counts polls of about a second plus latency each, so
+        // it is not the elapsed time; report what actually elapsed.
+        throw new Error(`Timeout after `
+            +`${Math.round((Date.now()-started_at)/1000)} seconds waiting `
             +`for discover results`);
     }),
 });
@@ -1199,6 +1215,201 @@ const dataset_id_to_title = id=>{
         .join(' ');
 };
 
+const snapshot_poll_interval_ms = 1000;
+// POLLING_TIMEOUT stays an upper bound in seconds for anyone who lowered it,
+// but the wait budget is what normally decides when we stop blocking.
+const snapshot_wait_budget_ms = Math.min(dataset_wait_budget_ms,
+    polling_timeout*1000);
+// The upstream statuses that mean "not finished yet". Only these produce a
+// pending envelope. Everything else, including every error, is an error.
+const snapshot_pending_statuses = ['running', 'building', 'starting',
+    'closing'];
+// Errors that never resolve themselves inside a wait budget: a snapshot ID
+// that is malformed, unknown, or not ours. Retrying them only burns the
+// budget and hides the reason from the caller.
+const snapshot_fatal_statuses = [400, 401, 403, 404];
+// fastmcp emits a progress notification whether or not the client asked for
+// one, and the hosted server keeps every one of them in a bounded event
+// store, so report on a timer rather than once per poll.
+const snapshot_progress_interval_ms = 10000;
+// axios reads a timeout of 0 as "wait forever", so never let the remaining
+// budget floor out to zero.
+const request_timeout = deadline=>Math.max(1000, deadline-Date.now());
+// How long to suggest waiting between web_data_snapshot calls. Each call
+// already long-polls for the whole budget, so this only matters to a caller
+// that wants to go do something else in between.
+const snapshot_polling_interval_seconds = 15;
+// snapshot_id -> when its collection was triggered, so a later
+// web_data_snapshot call can report the time since the collection started
+// and not just the time it spent in the current call. Best effort: an entry
+// is dropped once the records are delivered, and the map is capped so
+// snapshots that are never collected cannot grow it without bound.
+const snapshot_started_at = new Map();
+const snapshot_started_at_max = 1000;
+const elapsed_s = started_at=>Math.round((Date.now()-started_at)/1000);
+
+function remember_snapshot(snapshot_id, started_at){
+    if (snapshot_started_at.size>=snapshot_started_at_max)
+        snapshot_started_at.delete(snapshot_started_at.keys().next().value);
+    snapshot_started_at.set(snapshot_id, started_at);
+}
+
+// Polls a dataset snapshot until the records are ready or the deadline
+// passes. Returns {records} as a JSON string once they are ready, else
+// {last_error} where last_error is null when the collection was observed to
+// be pending. Not throwing on the deadline is the whole point: the
+// collection is billed the moment it is triggered and keeps running after
+// the client hangs up, so the caller has to be left holding a way back to
+// it. last_error is set only when the last poll of the window failed and no
+// poll after it saw a pending status, which is the one case where "still
+// running" would be a guess rather than an observation. The caller decides
+// what to do with it; an error is never dressed up as a pending envelope.
+async function poll_snapshot(snapshot_id, tool_name, ctx, deadline){
+    let started_at = Date.now();
+    let budget_s = Math.round((deadline-started_at)/1000);
+    let last_progress_at = started_at;
+    let last_error = null;
+    while (Date.now()<deadline)
+    {
+        try {
+            if (ctx && ctx.reportProgress
+                && Date.now()-last_progress_at>=snapshot_progress_interval_ms)
+            {
+                last_progress_at = Date.now();
+                await ctx.reportProgress({
+                    progress: elapsed_s(started_at),
+                    total: budget_s,
+                    message: `Polling for data (${elapsed_s(started_at)}s `
+                        +`of ${budget_s}s)`,
+                });
+            }
+            let snapshot_response = await axios({
+                url: `https://api.brightdata.com/datasets/v3`
+                    +`/snapshot/${encodeURIComponent(snapshot_id)}`,
+                params: {format: 'json'},
+                method: 'GET',
+                headers: api_headers(ctx.clientName, tool_name),
+                timeout: request_timeout(deadline),
+            });
+            last_error = null;
+            if (snapshot_pending_statuses.includes(
+                snapshot_response.data?.status))
+            {
+                console.error(`[${tool_name}] snapshot not ready, `
+                    +`polling again (${elapsed_s(started_at)}s of `
+                    +`${budget_s}s)`);
+                await new Promise(resolve=>setTimeout(resolve,
+                    snapshot_poll_interval_ms));
+                continue;
+            }
+            console.error(`[${tool_name}] snapshot data received `
+                +`after ${elapsed_s(started_at)}s`);
+            const data = JSON.parse(JSON.stringify(
+                    snapshot_response.data,
+                    (_k, v)=>v==null ? undefined : v));
+            return {records: JSON.stringify(data)};
+        } catch(e){
+            console.error(`[${tool_name}] polling error: `
+                +`${e.message}`);
+            if (snapshot_fatal_statuses.includes(e.response?.status))
+                throw e;
+            last_error = e;
+            await new Promise(resolve=>setTimeout(resolve,
+                snapshot_poll_interval_ms));
+        }
+    }
+    console.error(`[${tool_name}] wait budget of ${budget_s}s spent, `
+        +`handing back snapshot ID ${snapshot_id}`);
+    return {last_error};
+}
+
+// The pending hand-off, returned both by a web_data_* tool that spent its
+// budget and by web_data_snapshot on a follow-up poll. Both carry the whole
+// polling contract rather than only the fields that changed: an agent whose
+// context was compacted between the two, or one simply handed a snapshot_id,
+// sees only this response, and that is exactly the agent most likely to
+// re-trigger a billable collection because it lost the history saying not
+// to. The three contract fields are short; the records they stand in for
+// are not.
+function snapshot_pending_result(snapshot_id, started_at){
+    return JSON.stringify({
+        status: 'running',
+        snapshot_id,
+        // Omitted rather than guessed when the trigger time is unknown, for
+        // instance after a restart or an eviction from snapshot_started_at.
+        // A missing field can be ignored; a wrong number gets reasoned from.
+        ...started_at ? {elapsed_s: elapsed_s(started_at)} : {},
+        polling_interval_seconds: snapshot_polling_interval_seconds,
+        next: 'Call web_data_snapshot with this snapshot_id to collect the '
+            +'records.',
+        warning: 'Do NOT re-trigger the web_data_* tool for the same input. '
+            +'Every trigger starts a second billable collection. Use this '
+            +'snapshot_id.',
+    });
+}
+
+// web_data_snapshot is the only way back to a collection any web_data_* tool
+// started, so it has to be enabled wherever those are. pro_mode adds every
+// tool anyway; an explicit GROUPS/TOOLS selection has to pull it in.
+if ([...allowed_tools].some(name=>name.startsWith('web_data_')))
+    allowed_tools.add('web_data_snapshot');
+
+addTool({
+    name: 'web_data_snapshot',
+    description: 'Collect the records of a dataset collection that a '
+        +'web_data_* tool already triggered but could not finish in time '
+        +'(its result was {"status":"running","snapshot_id":...} instead of '
+        +'the records).\n'
+        +'The collection keeps running on Bright Data and is already paid '
+        +'for, so this is how you get the data you were billed for. Waits '
+        +'server-side and returns the records as soon as they are ready.\n'
+        +'If the result is still "status":"running", just call this again '
+        +'with the same snapshot_id, as many times as it takes. NEVER re-run '
+        +'the original web_data_* tool to retry: that starts a second '
+        +'billable collection and abandons this one.\n'
+        +'Example: web_data_amazon_product returned {"status":"running",'
+        +'"snapshot_id":"sd_mtsosz7n1fexitzavy","elapsed_s":45,...}, so call '
+        +'web_data_snapshot with snapshot_id "sd_mtsosz7n1fexitzavy".',
+    annotations: {
+        title: 'Web Data Snapshot',
+        readOnlyHint: true,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        // A positive allowlist, not a blocklist, and enforced by the schema
+        // so a bad value never reaches execute(). This ID is interpolated
+        // into the snapshot URL path, and both dot segments and their
+        // percent-encoded spellings normalise away ("%2e%2e/" is "../"), so
+        // any character outside this set would turn the tool into an
+        // authenticated GET against any Bright Data endpoint. That matters
+        // here because the value can come from scraped, attacker-controlled
+        // text sitting in the caller's context.
+        snapshot_id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/,
+            'snapshot_id must be 1 to 64 characters of letters, digits, '
+            +'underscore or hyphen')
+            .describe('The snapshot_id from the "status":"running" result '
+                +'of a web_data_* tool or of an earlier web_data_snapshot '
+                +'call (e.g. "sd_mtsosz7n1fexitzavy"). Pass it back exactly '
+                +'as it was given.'),
+    }),
+    execute: tool_fn('web_data_snapshot', async({snapshot_id}, ctx)=>{
+        let started_at = snapshot_started_at.get(snapshot_id) || null;
+        let poll = await poll_snapshot(snapshot_id, 'web_data_snapshot', ctx,
+            Date.now()+snapshot_wait_budget_ms);
+        if (poll.records!==undefined)
+        {
+            snapshot_started_at.delete(snapshot_id);
+            return poll.records;
+        }
+        // The last poll of the window failed, so "running" would be a guess.
+        // Reporting it as pending would send the caller round an endless
+        // polling loop on an ID that is most likely wrong or expired.
+        if (poll.last_error)
+            throw poll.last_error;
+        return snapshot_pending_result(snapshot_id, started_at);
+    }),
+});
+
 for (let {dataset_id, id, description, inputs, defaults = {},
     fixed_values = {}, trigger_params = {}} of datasets)
 {
@@ -1221,65 +1432,43 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         parameters: z.object(parameters),
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
+            let started_at = Date.now();
             let trigger_response = await axios({
                 url: 'https://api.brightdata.com/datasets/v3/trigger',
                 params: {dataset_id, include_errors: true, ...trigger_params},
                 method: 'POST',
                 data: [data],
                 headers: api_headers(ctx.clientName, tool_name),
+                timeout: snapshot_wait_budget_ms,
             });
             if (!trigger_response.data?.snapshot_id)
                 throw new Error('No snapshot ID returned from request');
             let snapshot_id = trigger_response.data.snapshot_id;
+            remember_snapshot(snapshot_id, started_at);
             console.error(`[${tool_name}] triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
-            let max_attempts = polling_timeout;
-            let attempts = 0;
-            while (attempts < max_attempts)
+            let poll = await poll_snapshot(snapshot_id, tool_name, ctx,
+                started_at+snapshot_wait_budget_ms);
+            if (poll.records!==undefined)
             {
-                try {
-                    if (ctx && ctx.reportProgress)
-                    {
-                        await ctx.reportProgress({
-                            progress: attempts,
-                            total: max_attempts,
-                            message: `Polling for data (attempt `
-                                +`${attempts + 1}/${max_attempts})`,
-                        });
-                    }
-                    let snapshot_response = await axios({
-                        url: `https://api.brightdata.com/datasets/v3`
-                            +`/snapshot/${snapshot_id}`,
-                        params: {format: 'json'},
-                        method: 'GET',
-                        headers: api_headers(ctx.clientName, tool_name),
-                    });
-                    if (['running', 'building', 'starting'].includes(
-                        snapshot_response.data?.status))
-                    {
-                        console.error(`[${tool_name}] snapshot not ready, `
-                            +`polling again (attempt `
-                            +`${attempts + 1}/${max_attempts})`);
-                        attempts++;
-                        await new Promise(resolve=>setTimeout(resolve, 1000));
-                        continue;
-                    }
-                    console.error(`[${tool_name}] snapshot data received `
-                        +`after ${attempts + 1} attempts`);
-                    const data = JSON.parse(JSON.stringify(
-                            snapshot_response.data,
-                            (_k, v)=>v==null ? undefined : v));
-                    return JSON.stringify(data);
-                } catch(e){
-                    console.error(`[${tool_name}] polling error: `
-                        +`${e.message}`);
-                    if (e.response?.status === 400) throw e;
-                    attempts++;
-                    await new Promise(resolve=>setTimeout(resolve, 1000));
-                }
+                snapshot_started_at.delete(snapshot_id);
+                return poll.records;
             }
-            throw new Error(`Timeout after ${max_attempts} seconds waiting `
-                +`for data`);
+            // A failed poll is an error and never a pending envelope, but
+            // the trigger succeeded, so this collection exists and is billed:
+            // the snapshot ID has to survive the error or the records are
+            // lost for good.
+            if (poll.last_error)
+            {
+                throw new Error(`Polling snapshot ${snapshot_id} failed: `
+                    +`${poll.last_error.message}. The collection was `
+                    +`triggered and is already billed, so retry with `
+                    +`web_data_snapshot and snapshot_id ${snapshot_id} `
+                    +`instead of triggering it again.`);
+            }
+            // Out of budget, not out of luck: the collection is running and
+            // billed, so hand back the snapshot ID rather than dropping it.
+            return snapshot_pending_result(snapshot_id, started_at);
         }),
     });
 }
@@ -1336,7 +1525,7 @@ function tool_fn(name, fn){
                 - If using Remote MCP: Add &unlocker=ZONE_NAME to their MCP URL
                 - If using Self-hosted MCP: Add WEB_UNLOCKER_ZONE=ZONE_NAME to environment variables`
                 +
-                `3. Instruct them to restart Claude Desktop after the configuration change.`
+                `3. Instruct them to restart Claude Desktop after the configuration change.`+
                 `4. Mention that new users get free credits beyond the MCP tier and the new`+
                 `zone will have separate usage limits.`);
 

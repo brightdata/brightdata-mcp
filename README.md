@@ -853,7 +853,8 @@ Full skill with offer schema and ranking rules: [skills/price-comparison](https:
 | `RATE_LIMIT` | Custom rate limiting | unlimited | `100/1h`, `50/30m` |
 | `WEB_UNLOCKER_ZONE` | Custom Web Unlocker zone name | `mcp_unlocker` | `my_custom_zone` |
 | `BROWSER_ZONE` | Custom Browser zone name | `mcp_browser` | `my_browser_zone` |
-| `POLLING_TIMEOUT` | Timeout for `web_data_*` tools polling (seconds). Each second = 1 polling attempt | `600` | `300`, `1200` |
+| `POLLING_TIMEOUT` | Upper bound for `web_data_*` tools polling (seconds). Each second = 1 polling attempt | `600` | `300`, `1200` |
+| `DATASET_WAIT_BUDGET_MS` | How long a `web_data_*` tool blocks before returning a `snapshot_id` to collect with `web_data_snapshot` instead of the records. Keep it under the client tool call timeout, which is 60s in most clients | `45000` | `30000`, `55000` |
 | `BASE_TIMEOUT` | Request timeout for base tools in seconds (search and scrape) | No limit | `60`, `120` |
 | `BASE_MAX_RETRIES` | Max retries for base tools on transient errors (0-3) | `0` | `1`, `3` |
 | `GROUPS` | Comma-separated tool group IDs | - | `ecommerce,browser` |

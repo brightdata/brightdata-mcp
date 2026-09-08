@@ -8,6 +8,7 @@
 |extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|
 |discover|Search the web and rank results by AI-driven relevance. Returns scored results with title, description, URL, and relevance score. Supports intent-based ranking, geo-targeting, date filtering, and keyword filtering.|
 |session_stats|Report how many times each tool has been called during the current MCP session.|
+|web_data_snapshot|Collect the records of a dataset collection that a web_data_* tool already triggered but could not finish in time. Takes the snapshot_id from a "status":"running" result, waits server-side, and returns the records once they are ready.|
 |web_data_amazon_product|Quickly read structured Amazon product data. Requires a valid product URL containing /dp/. Often faster and more reliable than scraping.|
 |web_data_amazon_product_reviews|Quickly read structured Amazon product review data. Requires a valid product URL containing /dp/. Often faster and more reliable than scraping.|
 |web_data_amazon_product_search|Retrieve structured Amazon search results. Requires a search keyword and Amazon domain URL; limited to the first page of results.|
