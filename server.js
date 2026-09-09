@@ -9,6 +9,7 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {log} from './logger.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -38,6 +39,14 @@ const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
+// The zone bootstrap below runs before the MCP handshake; a hung API call
+// there freezes startup with no diagnosable cause on the client side. Bound
+// it: honor BASE_TIMEOUT when configured, else a 10s default -- unlike tool
+// calls, "no timeout" is never an acceptable setting for startup (the bound
+// applies even when BASE_TIMEOUT=0).
+const zone_check_timeout = base_timeout || 10*1000;
+const zone_log = log('zone');
+const server_log = log('server');
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
@@ -132,11 +141,12 @@ function check_rate_limit(){
 
 async function ensure_required_zones(){
     try {
-        console.error('Checking for required zones...');
+        zone_log.info('Checking for required zones...');
         let response = await axios({
             url: 'https://api.brightdata.com/zone/get_active_zones',
             method: 'GET',
             headers: api_headers(),
+            timeout: zone_check_timeout,
         });
         let zones = response.data || [];
         let has_unlocker_zone = zones.some(zone=>zone.name==unlocker_zone);
@@ -144,7 +154,7 @@ async function ensure_required_zones(){
         
         if (!has_unlocker_zone)
         {
-            console.error(`Required zone "${unlocker_zone}" not found, `
+            zone_log.info(`Required zone "${unlocker_zone}" not found, `
                 +`creating it...`);
             await axios({
                 url: 'https://api.brightdata.com/zone',
@@ -157,15 +167,16 @@ async function ensure_required_zones(){
                     zone: {name: unlocker_zone, type: 'unblocker'},
                     plan: {type: 'unblocker', ub_premium: true},
                 },
+                timeout: zone_check_timeout,
             });
-            console.error(`Zone "${unlocker_zone}" created successfully`);
+            zone_log.info(`Zone "${unlocker_zone}" created successfully`);
         }
         else
-            console.error(`Required zone "${unlocker_zone}" already exists`);
+            zone_log.info(`Required zone "${unlocker_zone}" already exists`);
             
         if (!has_browser_zone)
         {
-            console.error(`Required zone "${browser_zone}" not found, `
+            zone_log.info(`Required zone "${browser_zone}" not found, `
                 +`creating it...`);
             await axios({
                 url: 'https://api.brightdata.com/zone',
@@ -178,13 +189,14 @@ async function ensure_required_zones(){
                     zone: {name: browser_zone, type: 'browser_api'},
                     plan: {type: 'browser_api'},
                 },
+                timeout: zone_check_timeout,
             });
-            console.error(`Zone "${browser_zone}" created successfully`);
+            zone_log.info(`Zone "${browser_zone}" created successfully`);
         }
         else
-            console.error(`Required zone "${browser_zone}" already exists`);
+            zone_log.info(`Required zone "${browser_zone}" already exists`);
     } catch(e){
-        console.error('Error checking/creating zones:',
+        zone_log.error('Error checking/creating zones:',
             e.response?.data||e.message);
     }
 }
@@ -573,7 +585,8 @@ addTool({
         let task_id = trigger_response.data?.task_id;
         if (!task_id)
             throw new Error('No task_id returned from discover request');
-        console.error(`[discover] triggered with task ID: ${task_id}`);
+        const discover_log = log('discover');
+        discover_log.info(`triggered with task ID: ${task_id}`);
         let max_attempts = polling_timeout;
         let attempts = 0;
         while (attempts<max_attempts)
@@ -596,13 +609,13 @@ addTool({
                 });
                 if (poll_response.data?.status==='processing')
                 {
-                    console.error(`[discover] still processing, polling `
+                    discover_log.info(`still processing, polling `
                         +`again (attempt ${attempts+1}/${max_attempts})`);
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
                     continue;
                 }
-                console.error(`[discover] results received after `
+                discover_log.info(`results received after `
                     +`${attempts+1} attempts`);
                 let results = poll_response.data?.results || [];
                 results = results.map(r=>({
@@ -613,7 +626,7 @@ addTool({
                 }));
                 return JSON.stringify(results);
             } catch(e){
-                console.error(`[discover] polling error: ${e.message}`);
+                discover_log.warn(`polling error: ${e.message}`);
                 if (e.response?.status===400)
                     throw e;
                 attempts++;
@@ -1251,7 +1264,8 @@ for (let {dataset_id, id, description, inputs, defaults = {},
             if (!trigger_response.data?.snapshot_id)
                 throw new Error('No snapshot ID returned from request');
             let snapshot_id = trigger_response.data.snapshot_id;
-            console.error(`[${tool_name}] triggered collection with `
+            const dataset_log = log(tool_name);
+            dataset_log.info(`triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
             let max_attempts = polling_timeout;
             let attempts = 0;
@@ -1277,21 +1291,21 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                     if (['running', 'building', 'starting'].includes(
                         snapshot_response.data?.status))
                     {
-                        console.error(`[${tool_name}] snapshot not ready, `
+                        dataset_log.info(`snapshot not ready, `
                             +`polling again (attempt `
                             +`${attempts + 1}/${max_attempts})`);
                         attempts++;
                         await new Promise(resolve=>setTimeout(resolve, 1000));
                         continue;
                     }
-                    console.error(`[${tool_name}] snapshot data received `
+                    dataset_log.info(`snapshot data received `
                         +`after ${attempts + 1} attempts`);
                     const data = JSON.parse(JSON.stringify(
                             snapshot_response.data,
                             (_k, v)=>v==null ? undefined : v));
                     return JSON.stringify(data);
                 } catch(e){
-                    console.error(`[${tool_name}] polling error: `
+                    dataset_log.warn(`polling error: `
                         +`${e.message}`);
                     if (e.response?.status === 400) throw e;
                     attempts++;
@@ -1309,7 +1323,7 @@ server.addPrompts(prompts);
 for (let tool of browser_tools)
     addTool(tool);
 
-console.error('Starting server...');
+server_log.info('Starting server...');
 
 server.on('connect', (event)=>{
     const session = event.session;
@@ -1324,7 +1338,8 @@ function tool_fn(name, fn){
         check_rate_limit();
         const clientInfo = global.mcpClientInfo;
         const clientName = clientInfo?.name || 'unknown-client';
-        console.error(`[%s] executing (client=%s) %s`, name, clientName,
+        const tool_log = log(name);
+        tool_log.info(`executing (client=%s) %s`, clientName,
             JSON.stringify(data));
         debug_stats.tool_calls[name] = debug_stats.tool_calls[name]||0;
         debug_stats.tool_calls[name]++;
@@ -1339,7 +1354,7 @@ function tool_fn(name, fn){
         catch(e){
         if (e.response)
             {
-                console.error(`[%s] error %s %s: %s`, name, e.response.status,
+                tool_log.error(`error %s %s: %s`, e.response.status,
                     e.response.statusText, e.response.data);
 
                 const headers = e.response.headers;
@@ -1366,11 +1381,11 @@ function tool_fn(name, fn){
                         +redact_token(message));
             }
             else
-                console.error(`[%s] error %s`, name, e.stack);
+                tool_log.error(`error %s`, e.stack);
             throw new Error(safe_error(e));
         } finally {
             let dur = Date.now()-ts;
-            console.error(`[%s] tool finished in %sms`, name, dur);
+            tool_log.info(`tool finished in %sms`, dur);
         }
     };
 }
