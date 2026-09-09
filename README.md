@@ -18,7 +18,7 @@
   <a href="#quick-start">Quick Start</a> •
   <a href="#pricing-and-free-tier">Pricing</a> •
   <a href="#use-cases">Use Cases</a> •
-  <a href="#tools-reference-69-tools">Tools</a> •
+  <a href="#tools-reference-67-tools">Tools</a> •
   <a href="#agent-skills">Agent Skills</a> •
   <a href="#documentation">Docs</a> •
   <a href="#support">Support</a>
@@ -32,13 +32,13 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **69 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **67 tools** covering:
 
 - **Web search** — Google, Bing, and Yandex results as structured data
 - **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
 - **Structured data extraction** — clean JSON from Amazon, LinkedIn, Instagram, TikTok, YouTube, X, Reddit, Facebook, Crunchbase, Zillow, and other major platforms, without parsing HTML
 - **Browser automation** — navigate, click, type, screenshot, and read pages in a remote browser session
-- **LLM response collection** — send prompts to ChatGPT, Grok, and Perplexity and get their answers back as structured data
+- **LLM response collection** — send prompts to ChatGPT and Perplexity and get their answers back as structured data
 - **Package registry data** — npm and PyPI package versions, READMEs, dependencies, and metadata
 
 Every request is routed through Bright Data's unblocking infrastructure, so pages that block ordinary HTTP clients (bot detection, CAPTCHAs, rate limits, geo-restrictions) return normally. No proxy setup, no headless browser maintenance, no retry logic to write.
@@ -273,7 +273,7 @@ Read product data as structured JSON: price, availability, rating, review count,
 | Task | Tools |
 |------|-------|
 | Amazon product details, reviews, search results | `web_data_amazon_product`, `web_data_amazon_product_reviews`, `web_data_amazon_product_search` |
-| Walmart, eBay, Best Buy, Etsy, Home Depot, Zara products | `web_data_walmart_product`, `web_data_ebay_product`, `web_data_bestbuy_products`, `web_data_etsy_products`, `web_data_homedepot_products`, `web_data_zara_products` |
+| Walmart, eBay, Best Buy, Etsy, Home Depot products | `web_data_walmart_product`, `web_data_ebay_product`, `web_data_bestbuy_products`, `web_data_etsy_products`, `web_data_homedepot_products` |
 | Cross-retailer price view | `web_data_google_shopping` |
 | Seller profiles | `web_data_walmart_seller` |
 
@@ -324,10 +324,9 @@ Send prompts to major LLMs and get their answers back as structured data. Measur
 | Task | Tools |
 |------|-------|
 | ChatGPT answers with citations and recommendations | `web_data_chatgpt_ai_insights` |
-| Grok answers | `web_data_grok_ai_insights` |
 | Perplexity answers with sources | `web_data_perplexity_ai_insights` |
 
-Example prompt: "Ask ChatGPT, Grok, and Perplexity 'what is the best proxy provider' and compare how each one ranks us".
+Example prompt: "Ask ChatGPT and Perplexity 'what is the best proxy provider' and compare how each one ranks us".
 
 ### Social media monitoring
 
@@ -361,13 +360,13 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 | Capability | Bright Data MCP | Typical web MCP servers |
 |------------|-----------------|------------------------|
-| Total tools | 69 | 2–10 |
-| Platform-specific structured JSON extractors | 45 tools across e-commerce, social, business, finance, travel, app stores | Rare; generic scraping only |
+| Total tools | 67 | 2–10 |
+| Platform-specific structured JSON extractors | 44 tools across e-commerce, social, business, finance, travel, app stores | Rare; generic scraping only |
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
 | Search engines | Google, Bing, Yandex | Usually one |
 | AI-relevance-ranked search with intent | Yes (`discover`) | Not offered |
 | Browser automation | 13 tools, remote browser, no local setup | Limited or none |
-| LLM response collection (ChatGPT, Grok, Perplexity) | Yes | Not offered |
+| LLM response collection (ChatGPT, Perplexity) | Yes | Not offered |
 | Package registry data (npm, PyPI) | Yes | Not offered |
 | Batch operations | 10 searches or 10 scrapes per call | Usually single-request only |
 | Geo-targeting | Yes | Limited or none |
@@ -386,7 +385,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 
 | Group ID | Contents | Tool count |
 |----------|----------|-----------|
-| `ecommerce` | Amazon, Walmart, eBay, Best Buy, Etsy, Home Depot, Zara, Google Shopping | 11 |
+| `ecommerce` | Amazon, Walmart, eBay, Best Buy, Etsy, Home Depot, Google Shopping | 10 |
 | `social` | LinkedIn, Instagram, Facebook, TikTok, YouTube, X, Reddit | 23 |
 | `browser` | Remote browser automation | 13 |
 | `business` | Crunchbase, ZoomInfo, Google Maps reviews, Zillow | 4 |
@@ -394,7 +393,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 | `research` | GitHub repository files | 1 |
 | `app_stores` | Google Play, Apple App Store | 2 |
 | `travel` | Booking.com | 1 |
-| `geo` | ChatGPT, Grok, Perplexity response collection | 3 |
+| `geo` | ChatGPT, Perplexity response collection | 2 |
 | `code` | npm, PyPI package data | 2 |
 | `advanced_scraping` | Batch tools, HTML scraping, AI extraction, session stats | 5 |
 
@@ -437,7 +436,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm and PyPI package da
 
 ---
 
-## Tools Reference (69 Tools)
+## Tools Reference (67 Tools)
 
 ### Which tool to use
 
@@ -449,7 +448,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm and PyPI package da
 - **Raw HTML:** `scrape_as_html`
 - **Page requires interaction (click, type, scroll, login):** `scraping_browser_*` tools
 - **npm/PyPI package info:** `web_data_npm_package` / `web_data_pypi_package` — never scrape package registries
-- **How ChatGPT/Grok/Perplexity answer a prompt:** `web_data_chatgpt_ai_insights` / `web_data_grok_ai_insights` / `web_data_perplexity_ai_insights`
+- **How ChatGPT/Perplexity answer a prompt:** `web_data_chatgpt_ai_insights` / `web_data_perplexity_ai_insights`
 
 Notes that apply to all `web_data_*` tools:
 
@@ -475,7 +474,7 @@ Notes that apply to all `web_data_*` tools:
 </details>
 
 <details>
-<summary><b>E-commerce — 11 tools</b></summary>
+<summary><b>E-commerce — 10 tools</b></summary>
 
 | Tool | Input requirement | Returns |
 |------|-------------------|---------|
@@ -486,7 +485,6 @@ Notes that apply to all `web_data_*` tools:
 | `web_data_walmart_seller` | Walmart seller URL | Seller data |
 | `web_data_ebay_product` | eBay product URL | Listing data |
 | `web_data_homedepot_products` | homedepot.com product URL | Product data |
-| `web_data_zara_products` | Zara product URL | Product data |
 | `web_data_etsy_products` | Etsy product URL | Listing data |
 | `web_data_bestbuy_products` | Best Buy product URL | Product data |
 | `web_data_google_shopping` | Google Shopping product URL | Multi-seller product data |
@@ -562,12 +560,11 @@ Refs come from the latest snapshot. If the page changes after a click or navigat
 </details>
 
 <details>
-<summary><b>GEO and LLM Visibility — 3 tools</b></summary>
+<summary><b>GEO and LLM Visibility — 2 tools</b></summary>
 
 | Tool | Input | Returns |
 |------|-------|---------|
 | `web_data_chatgpt_ai_insights` | Prompt | ChatGPT's answer: structured text, citations, recommendations, Markdown |
-| `web_data_grok_ai_insights` | Prompt | Grok's answer as structured Markdown |
 | `web_data_perplexity_ai_insights` | Prompt | Perplexity's answer with sources, as structured Markdown |
 
 Use for Generative Engine Optimization (tracking how LLMs describe your brand) and LLM-as-a-judge workflows.

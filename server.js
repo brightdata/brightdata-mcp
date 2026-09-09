@@ -774,15 +774,6 @@ const datasets = [{
     ].join('\n'),
     inputs: ['url'],
 }, {
-    id: 'zara_products',
-    dataset_id: 'gd_lct4vafw1tgx27d4o0',
-    description: [
-        'Quickly read structured zara product data.',
-        'Requires a valid zara product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
     id: 'etsy_products',
     dataset_id: 'gd_ltppk0jdv1jqz25mz',
     description: [
@@ -1013,15 +1004,6 @@ const datasets = [{
     ].join('\n'),
     inputs: ['url'],
 }, {
-    id: 'reuter_news',
-    dataset_id: 'gd_lyptx9h74wtlvpnfu',
-    description: [
-        'Quickly read structured reuter news data.',
-        'Requires a valid reuter news report URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
     id: 'github_repository_file',
     dataset_id: 'gd_lyrexgxc24b3d4imjt',
     description: [
@@ -1151,17 +1133,6 @@ const datasets = [{
         web_search: false,
         additional_prompt: '',
     },
-    trigger_params: {custom_output_fields: 'answer_text_markdown'},
-}, {
-    id: 'grok_ai_insights',
-    dataset_id: 'gd_m8ve0u141icu75ae74',
-    description: [
-        'Send a prompt to Grok and get back AI-generated insights.',
-        'Returns structured answer text in markdown format.',
-        'Useful for GEO and LLM as a judge.',
-    ].join('\n'),
-    inputs: ['prompt'],
-    fixed_values: {url: 'https://grok.com/', index: ''},
     trigger_params: {custom_output_fields: 'answer_text_markdown'},
 }, {
     id: 'perplexity_ai_insights',

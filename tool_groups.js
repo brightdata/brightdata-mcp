@@ -16,7 +16,6 @@ export const GROUPS = {
             'web_data_walmart_seller',
             'web_data_ebay_product',
             'web_data_homedepot_products',
-            'web_data_zara_products',
             'web_data_etsy_products',
             'web_data_bestbuy_products',
             'web_data_google_shopping',
@@ -105,11 +104,10 @@ export const GROUPS = {
     RESEARCH: {
         id: 'research',
         name: 'Research',
-        description: 'App stores, news, and developer data feeds.',
+        description: 'App stores and developer data feeds.',
         tools: [
             ...base_tools,
             'web_data_github_repository_file',
-            'web_data_reuter_news',
         ],
     },
     APP_STORES: {
@@ -152,7 +150,6 @@ export const GROUPS = {
         tools: [
             ...base_tools,
             'web_data_chatgpt_ai_insights',
-            'web_data_grok_ai_insights',
             'web_data_perplexity_ai_insights',
         ],
     },

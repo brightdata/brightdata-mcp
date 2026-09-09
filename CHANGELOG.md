@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Removed
+- `web_data_reuter_news` tool. A live trigger returns `Crawler error: Navigation failed ... Target reuters.com is blocked by Bright Data. Please try again in 7 days.` with `error_code: proxy`. The block is not transient: the platform-wide performance sheet shows 0 records from 1,231 inputs over 30 days, and `GET /datasets/v3/scrapers?dataset_id=` returns `[]` for its dataset
+- `web_data_zara_products` tool. The platform-wide performance sheet shows 0 records from 591 customer inputs over 30 days, and 7 of 7 captured runs failed, 4 of them with `Cannot destructure property 'offers' of 'json'`, the scraper failing internally rather than rejecting the input URL
+- `web_data_grok_ai_insights` tool. A live call with a one-sentence factual prompt returned no records and timed out after 141.8s, while a same-process control call to `web_data_chatgpt_ai_insights` with the identical prompt and budget returned an answer in 139.0s, so the tool shape and the AI-search pipeline work and Grok specifically does not. `GET /datasets/v3/scrapers?dataset_id=gd_m8ve0u141icu75ae74` returns `[]`, and the performance sheet shows 26 records against 2,926,828 inputs over 30 days. `web_data_chatgpt_ai_insights` and `web_data_perplexity_ai_insights` are unaffected
+
 ## [2.11.1] - 2026-07-27
 
 ### Fixed

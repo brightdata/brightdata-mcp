@@ -15,7 +15,6 @@
 |web_data_walmart_seller|Quickly read structured Walmart seller data. Requires a valid Walmart seller URL. Often faster and more reliable than scraping.|
 |web_data_ebay_product|Quickly read structured eBay product data. Requires a valid eBay product URL. Often faster and more reliable than scraping.|
 |web_data_homedepot_products|Quickly read structured Home Depot product data. Requires a valid homedepot.com product URL. Often faster and more reliable than scraping.|
-|web_data_zara_products|Quickly read structured Zara product data. Requires a valid Zara product URL. Often faster and more reliable than scraping.|
 |web_data_etsy_products|Quickly read structured Etsy product data. Requires a valid Etsy product URL. Often faster and more reliable than scraping.|
 |web_data_bestbuy_products|Quickly read structured Best Buy product data. Requires a valid Best Buy product URL. Often faster and more reliable than scraping.|
 |web_data_linkedin_person_profile|Quickly read structured LinkedIn people profile data. Requires a valid LinkedIn profile URL. Often faster and more reliable than scraping.|
@@ -41,7 +40,6 @@
 |web_data_google_shopping|Quickly read structured Google Shopping product data. Requires a valid Google Shopping product URL. Often faster and more reliable than scraping.|
 |web_data_google_play_store|Quickly read structured Google Play Store app data. Requires a valid Play Store app URL. Often faster and more reliable than scraping.|
 |web_data_apple_app_store|Quickly read structured Apple App Store app data. Requires a valid App Store app URL. Often faster and more reliable than scraping.|
-|web_data_reuter_news|Quickly read structured Reuters news data. Requires a valid Reuters news article URL. Often faster and more reliable than scraping.|
 |web_data_github_repository_file|Quickly read structured GitHub repository file data. Requires a valid GitHub file URL. Often faster and more reliable than scraping.|
 |web_data_yahoo_finance_business|Quickly read structured Yahoo Finance company profile data. Requires a valid Yahoo Finance business URL. Often faster and more reliable than scraping.|
 |web_data_x_posts|Quickly read structured X (Twitter) post data. Requires a valid X post URL. Often faster and more reliable than scraping.|

@@ -189,7 +189,7 @@ mcpjam evals run \
 | Tool Group | Description | Example Tools |
 |------------|-------------|---------------|
 | **ecommerce** | E-commerce platforms (Amazon, Walmart, Best Buy) | `web_data_amazon_product_search` |
-| **research** | Research platforms (GitHub, Reuters, academic) | `web_data_github_repository_file`, `web_data_reuter_news` |
+| **research** | Research platforms (GitHub, academic) | `web_data_github_repository_file` |
 | **finance** | Financial data sources | Stock data, market info |
 | **social** | Social media platforms | Twitter, LinkedIn, Instagram |
 | **business** | Business data and tools | Company information, B2B data |
