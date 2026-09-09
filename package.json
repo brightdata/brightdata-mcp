@@ -45,7 +45,8 @@
         "aria_snapshot_filter.js",
         "tool_groups.js",
         "prompts.js",
-        "logger.js"
+        "logger.js",
+        "tool_annotations.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"
 }

@@ -10,6 +10,7 @@ import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
 import {log} from './logger.js';
+import {annotate} from './tool_annotations.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -232,11 +233,7 @@ addTool({
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
         +'SERP results in JSON or Markdown (URL, title, description),Ideal for'
         +'gathering current information, news, and detailed search results.',
-    annotations: {
-        title: 'Search Engine',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Search Engine'),
     parameters: z.object({
         query: z.string(),
         engine: z.enum(['google', 'bing', 'yandex'])
@@ -281,11 +278,7 @@ addTool({
     +'content extraction and get back the results in MarkDown language. '
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
-    annotations: {
-        title: 'Scrape as Markdown',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Scrape as Markdown'),
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
         let response = await base_request({
@@ -312,11 +305,7 @@ addTool({
     name: 'search_engine_batch',
     description: 'Run multiple search queries simultaneously. Returns '
     +'JSON for Google, Markdown for Bing/Yandex.',
-    annotations: {
-        title: 'Search Engine Batch',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Search Engine Batch'),
     parameters: z.object({
         queries: z.array(z.object({
             query: z.string(),
@@ -390,11 +379,7 @@ addTool({
         +'content extraction and get back the results in MarkDown language. '
         +'This tool can unlock any webpage even if it uses bot detection or '
         +'CAPTCHA.',
-   annotations: {
-       title: 'Scrape Batch',
-       readOnlyHint: true,
-       openWorldHint: true,
-   },
+   annotations: annotate('sync_fetch', 'Scrape Batch'),
    parameters: z.object({
        urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
    }),
@@ -434,11 +419,7 @@ addTool({
     +'content extraction and get back the results in HTML. '
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
-    annotations: {
-        title: 'Scrape as HTML',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Scrape as HTML'),
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
         let response = await axios({
@@ -462,11 +443,7 @@ addTool({
         + 'First scrapes the page as markdown, then uses AI sampling to convert '
         + 'it to structured JSON format. This tool can unlock any webpage even '
         + 'if it uses bot detection or CAPTCHA.',
-    annotations: {
-        title: 'Extract Structured Data',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Extract Structured Data'),
     parameters: z.object({
         url: z.string().url(),
         extraction_prompt: z.string().optional().describe(
@@ -524,11 +501,7 @@ addTool({
         +'Returns scored results with title, description, and URL. Supports '
         +'intent-based ranking, geo-targeting, date filtering, and keyword '
         +'filtering.',
-    annotations: {
-        title: 'Discover',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('job_start', 'Discover'),
     parameters: z.object({
         query: z.string().describe('The search query'),
         intent: z.string().optional().describe('Describes the specific goal '
@@ -651,11 +624,7 @@ addTool({
         +'(field name, type, and description). Call this before '
         +'search_dataset to learn which field names and types you can '
         +'filter on.\n'+SEARCHABLE_DATASETS_DESC,
-    annotations: {
-        title: 'List Dataset Fields',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('closed_read', 'List Dataset Fields'),
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
         let response = await base_request({
@@ -679,11 +648,7 @@ addTool({
         +'or a leaf {name, value, operator}. Max nesting depth 3.\n'
         +'Leaf operators: '+FILTER_OPERATORS.join(', ')+'.\n'
         +SEARCHABLE_DATASETS_DESC,
-    annotations: {
-        title: 'Search Dataset',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('closed_read', 'Search Dataset'),
     parameters: z.object({
         dataset_id: dataset_id_schema,
         filter: filter_schema.describe('Filter tree describing which '
@@ -728,10 +693,7 @@ addTool({
 addTool({
     name: 'session_stats',
     description: 'Tell the user about the tool usage during this session',
-    annotations: {
-        title: 'Session Stats',
-        readOnlyHint: true,
-    },
+    annotations: annotate('closed_read', 'Session Stats'),
     parameters: z.object({}),
     execute: tool_fn('session_stats', async()=>{
         let used_tools = Object.entries(debug_stats.tool_calls);
@@ -1246,11 +1208,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
     addTool({
         name: tool_name,
         description,
-        annotations: {
-            title: dataset_id_to_title(id),
-            readOnlyHint: true,
-            openWorldHint: true,
-        },
+        annotations: annotate('job_start', dataset_id_to_title(id)),
         parameters: z.object(parameters),
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
