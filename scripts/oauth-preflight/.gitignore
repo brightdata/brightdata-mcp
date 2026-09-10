@@ -1,0 +1,8 @@
+# Everything a run produces. Some of it is credentials, all of it is transient.
+evidence/
+rehearsal/
+clients.json
+tokens.json
+oauth_preflight_draft.md
+.rat-*
+node_modules
