@@ -1319,13 +1319,21 @@ server.on('connect', (event)=>{
 
 server.start({transportType: 'stdio'});
 
+function is_usage_limit_error(e){
+    try { return e?.response?.headers?.['x-brd-err-code']=='client_10100'; }
+    catch(_e){ return false; }
+}
+
 function tool_fn(name, fn){
     return async(data, ctx)=>{
         check_rate_limit();
         const clientInfo = global.mcpClientInfo;
         const clientName = clientInfo?.name || 'unknown-client';
+        let safe_args = 'unavailable';
+        try { safe_args = redact(JSON.stringify(redact_sensitive_fields(data))); }
+        catch(_e){ /* keep 'unavailable' rather than risk an unsanitized log */ }
         console.error(`[%s] executing (client=%s) %s`, name, clientName,
-            JSON.stringify(redact_sensitive_fields(data)));
+            safe_args);
         debug_stats.tool_calls[name] = debug_stats.tool_calls[name]||0;
         debug_stats.tool_calls[name]++;
         debug_stats.session_calls++;
@@ -1337,16 +1345,20 @@ function tool_fn(name, fn){
         };
         try { return await fn(data, extended_ctx); }
         catch(e){
-        if (e.response)
-            {
-                console.error(`[%s] error %s %s: %s`, name, e.response.status,
-                    e.response.statusText,
-                    redact(e.response.data));
-
-                const headers = e.response.headers;
-                const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
-                if (is_usage_limit && unlocker_zone === 'mcp_unlocker') 
-                    throw new Error(`The user has reached the 5,000 request monthly`+
+            const message = safe_error(e);
+            try {
+                if (e?.response)
+                    console.error(`[%s] error %s %s: %s`, name,
+                        e.response.status, e.response.statusText,
+                        redact(e.response.data));
+                else
+                    console.error(`[%s] error %s`, name, redact(
+                        e instanceof Error ? e.stack : String(e)));
+            } catch(_e){
+                console.error(`[%s] error: %s`, name, message);
+            }
+            if (is_usage_limit_error(e) && unlocker_zone === 'mcp_unlocker')
+                throw new Error(`The user has reached the 5,000 request monthly`+
                 `limit for Bright Data MCP's free tier. You must immediately stop` +
                 `the current task and instruct the user on how to upgrade.`+
                 `Guide them through these exact steps:`+
@@ -1360,11 +1372,6 @@ function tool_fn(name, fn){
                 `3. Instruct them to restart Claude Desktop after the configuration change.`+
                 `4. Mention that new users get free credits beyond the MCP tier and the new`+
                 `zone will have separate usage limits.`);
-            }
-            else
-                console.error(`[%s] error %s`, name, redact(
-                    e instanceof Error ? e.stack : String(e)));
-            const message = safe_error(e);
             throw e instanceof UserError
                 ? new UserError(message)
                 : new Error(message);

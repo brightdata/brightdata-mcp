@@ -1,8 +1,8 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sanitize_error, redact_sensitive_headers, redact_secrets}
-    from '../error_sanitizer.js';
+import {sanitize_error, redact_sensitive_headers, redact_secrets,
+    redact_sensitive_fields} from '../error_sanitizer.js';
 
 const SECRET = 'Bearer SECRET_TOKEN_CANARY_should_never_leak';
 
@@ -159,6 +159,78 @@ test('sanitize_error ignores falsy/empty secrets without throwing', ()=>{
     assert.equal(sanitize_error(e, ['', null, undefined]), 'plain failure');
     assert.equal(sanitize_error(e), 'plain failure');
 });
+
+test('sanitize_error fails closed when reading e.response throws '
+    +'(malicious/broken getter)', ()=>{
+        const e = {};
+        Object.defineProperty(e, 'response', {
+            get(){ throw new Error('getter failed'); },
+        });
+        assert.equal(sanitize_error(e), 'Tool execution failed');
+    });
+
+test('sanitize_error fails closed when e.response.data throws', ()=>{
+    const e = {response: {status: 400, statusText: 'Bad Request'}};
+    Object.defineProperty(e.response, 'data', {
+        get(){ throw new Error('data getter failed'); },
+    });
+    assert.equal(sanitize_error(e), 'Tool execution failed');
+});
+
+test('redact_sensitive_fields redacts known sensitive keys at the top '
+    +'level without touching harmless keys', ()=>{
+        const input = {
+            text: 'my password is hunter2',
+            password: 'hunter2',
+            token: SECRET,
+            url: 'https://example.com/',
+            query: 'weather in Paris',
+        };
+        assert.deepEqual(redact_sensitive_fields(input), {
+            text: '[REDACTED]',
+            password: '[REDACTED]',
+            token: '[REDACTED]',
+            url: 'https://example.com/',
+            query: 'weather in Paris',
+        });
+    });
+
+test('redact_sensitive_fields redacts sensitive keys nested inside '
+    +'arrays of objects (e.g. fill_form fields[].value)', ()=>{
+        const input = {
+            fields: [
+                {name: 'Username', ref: 'e1', value: 'alice'},
+                {name: 'Password', ref: 'e2', value: 'super-secret'},
+            ],
+        };
+        assert.deepEqual(redact_sensitive_fields(input), {
+            fields: [
+                {name: 'Username', ref: 'e1', value: '[REDACTED]'},
+                {name: 'Password', ref: 'e2', value: '[REDACTED]'},
+            ],
+        });
+    });
+
+test('redact_sensitive_fields does not mutate the original input', ()=>{
+    const input = {
+        text: 'secret text',
+        fields: [{name: 'Password', value: 'secret value'}],
+    };
+    const original = JSON.parse(JSON.stringify(input));
+    redact_sensitive_fields(input);
+    assert.deepEqual(input, original,
+        'redact_sensitive_fields must return a new structure, not mutate '
+        +'the caller\'s data');
+});
+
+test('redact_sensitive_fields passes through primitives, arrays and '
+    +'null/undefined unchanged', ()=>{
+        assert.equal(redact_sensitive_fields('hello'), 'hello');
+        assert.equal(redact_sensitive_fields(42), 42);
+        assert.equal(redact_sensitive_fields(null), null);
+        assert.equal(redact_sensitive_fields(undefined), undefined);
+        assert.deepEqual(redact_sensitive_fields(['a', 'b']), ['a', 'b']);
+    });
 
 test('redact_secrets replaces every occurrence of every provided secret',
     ()=>{
