@@ -5,11 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [2.11.2] - 2026-09-10
 
 ### Security
-- `scrape_batch` now returns a sanitized per-URL error message on failure instead of serializing the raw rejection reason, matching the existing pattern in `search_engine_batch`.
+- `scrape_batch` and `search_engine_batch` now route every per-item failure through the shared `sanitize_error()` boundary instead of using `e.message`/`String(e)` locally, so batch tools benefit from the same centralized sanitization as the rest of the codebase.
+- `scrape_batch`'s response keeps its original `Promise.allSettled` shape (`{status, value|reason}`), but a rejected item's `reason` is now always a sanitized string instead of a raw `Error`/`AxiosError`.
 - Added a centralized error-sanitization boundary in `tool_fn` so no tool can propagate an unsanitized exception object out of a tool call.
 - Added a defense-in-depth Axios interceptor that redacts sensitive request headers on errors.
 - Extracted the sanitization helpers into a standalone, unit-tested `error_sanitizer.js` module.
 - Removed an internal stack trace from the ARIA snapshot filter's error output.
+- Added a fully offline, deterministic regression test (local HTTP stub, no `PRO_MODE`) covering a partial `scrape_batch` batch (one success, one failure) and confirming no token/header/config leakage.
 
 
 ## [2.11.1] - 2026-07-27

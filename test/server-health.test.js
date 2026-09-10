@@ -92,10 +92,6 @@ test('tool_fn boundary never leaks the API token for any failing tool '
         });
         try {
             await client.connect(transport);
-            // scrape_as_markdown has no per-tool try/catch of its own, so a
-            // failure here can only be sanitized by the shared tool_fn
-            // error boundary. This proves the fix is centralized, not just
-            // local to scrape_batch.
             const result = await client.callTool({name: 'scrape_as_markdown',
                 arguments: {url: 'https://example.invalid/'}});
             assert.equal(result.isError, true,

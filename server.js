@@ -16,6 +16,8 @@ import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
+const brightdata_api_url = process.env.BRIGHTDATA_API_URL
+    || 'https://api.brightdata.com';
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
@@ -72,12 +74,6 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
-// Defense in depth: if any code path (current or future) ever logs or
-// serializes a raw AxiosError directly, strip credentials from its
-// request/response config first so a bug elsewhere can't turn into a token
-// leak. This must never be the only safeguard, see sanitize_error() (in
-// error_sanitizer.js), which is the primary boundary that keeps raw errors
-// out of tool results.
 axios.interceptors.response.use(response=>response, error=>{
     if (error?.config?.headers)
         redact_sensitive_headers(error.config.headers);
@@ -132,7 +128,7 @@ async function ensure_required_zones(){
     try {
         console.error('Checking for required zones...');
         let response = await axios({
-            url: 'https://api.brightdata.com/zone/get_active_zones',
+            url: `${brightdata_api_url}/zone/get_active_zones`,
             method: 'GET',
             headers: api_headers(),
         });
@@ -145,7 +141,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${unlocker_zone}" not found, `
                 +`creating it...`);
             await axios({
-                url: 'https://api.brightdata.com/zone',
+                url: `${brightdata_api_url}/zone`,
                 method: 'POST',
                 headers: {
                     ...api_headers(),
@@ -166,7 +162,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${browser_zone}" not found, `
                 +`creating it...`);
             await axios({
-                url: 'https://api.brightdata.com/zone',
+                url: `${brightdata_api_url}/zone`,
                 method: 'POST',
                 headers: {
                     ...api_headers(),
@@ -243,7 +239,7 @@ addTool({
         const is_google = engine=='google';
         const url = search_url(engine, query, cursor, geo_location);
         let response = await base_request({
-            url: 'https://api.brightdata.com/request',
+            url: `${brightdata_api_url}/request`,
             method: 'POST',
             data: {
                 url: is_google ? `${url}&brd_json=1` : url,
@@ -275,7 +271,7 @@ addTool({
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
         let response = await base_request({
-            url: 'https://api.brightdata.com/request',
+            url: `${brightdata_api_url}/request`,
             method: 'POST',
             data: {
                 url,
@@ -328,7 +324,7 @@ addTool({
             return (async()=>{
                 try {
                     const response = await base_request({
-                        url: 'https://api.brightdata.com/request',
+                        url: `${brightdata_api_url}/request`,
                         method: 'POST',
                         data: {
                             url: is_google ? `${url}&brd_json=1` : url,
@@ -359,7 +355,7 @@ addTool({
                     return {
                         query,
                         engine: normalized_engine,
-                        error: e instanceof Error ? e.message : String(e),
+                        error: sanitize_error(e),
                     };
                 }
             })();
@@ -385,34 +381,31 @@ addTool({
        urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
    }),
    execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
-       const scrapePromises = urls.map(url => (async()=>{
-           try {
-               const response = await base_request({
-                   url: 'https://api.brightdata.com/request',
-                   method: 'POST',
-                   data: {
-                       url,
-                       zone: unlocker_zone,
-                       format: 'raw',
-                       data_format: 'markdown',
-                   },
-                   headers: api_headers(ctx.clientName, 'scrape_batch'),
-                   responseType: 'text',
-               });
-               const content = (await remark()
+       const scrapePromises = urls.map(url =>
+           base_request({
+               url: `${brightdata_api_url}/request`,
+               method: 'POST',
+               data: {
+                   url,
+                   zone: unlocker_zone,
+                   format: 'raw',
+                   data_format: 'markdown',
+               },
+               headers: api_headers(ctx.clientName, 'scrape_batch'),
+               responseType: 'text',
+           }).then(async response=>({
+               url,
+               content: (await remark()
                    .use(strip, {keep: ['link', 'linkReference', 'code',
                        'inlineCode']})
-                   .process(response.data)).value;
-               return {url, content};
-           } catch(e){
-               return {
-                   url,
-                   error: e instanceof Error ? e.message : String(e),
-               };
-           }
-       })());
+                   .process(response.data)).value,
+           }))
+       );
 
-       const results = await Promise.all(scrapePromises);
+       const settled = await Promise.allSettled(scrapePromises);
+       const results = settled.map(result=>result.status === 'fulfilled'
+           ? result
+           : {status: 'rejected', reason: sanitize_error(result.reason)});
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -431,7 +424,7 @@ addTool({
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
         let response = await axios({
-            url: 'https://api.brightdata.com/request',
+            url: `${brightdata_api_url}/request`,
             method: 'POST',
             data: {
                 url,
@@ -465,7 +458,7 @@ addTool({
     }),
     execute: tool_fn('extract', async ({ url, extraction_prompt }, ctx) => {
         let scrape_response = await axios({
-            url: 'https://api.brightdata.com/request',
+            url: `${brightdata_api_url}/request`,
             method: 'POST',
             data: {
                 url,
@@ -563,7 +556,7 @@ addTool({
         if (data.end_date)
             body.end_date = data.end_date;
         let trigger_response = await axios({
-            url: 'https://api.brightdata.com/discover',
+            url: `${brightdata_api_url}/discover`,
             method: 'POST',
             data: body,
             headers: {
@@ -590,7 +583,7 @@ addTool({
                     });
                 }
                 let poll_response = await axios({
-                    url: 'https://api.brightdata.com/discover',
+                    url: `${brightdata_api_url}/discover`,
                     params: {task_id},
                     method: 'GET',
                     headers: api_headers(ctx.clientName, 'discover'),
@@ -647,7 +640,7 @@ addTool({
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
         let response = await base_request({
-            url: `https://api.brightdata.com/datasets/${dataset_id}`
+            url: `${brightdata_api_url}/datasets/${dataset_id}`
                 +`/metadata`,
             method: 'GET',
             headers: api_headers(ctx.clientName, 'list_dataset_fields'),
@@ -696,7 +689,7 @@ addTool({
         if (search_after!==undefined)
             body.search_after = search_after;
         let response = await base_request({
-            url: `https://api.brightdata.com/datasets/search/${dataset_id}`,
+            url: `${brightdata_api_url}/datasets/search/${dataset_id}`,
             method: 'POST',
             data: body,
             headers: {
@@ -1243,7 +1236,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
             let trigger_response = await axios({
-                url: 'https://api.brightdata.com/datasets/v3/trigger',
+                url: `${brightdata_api_url}/datasets/v3/trigger`,
                 params: {dataset_id, include_errors: true, ...trigger_params},
                 method: 'POST',
                 data: [data],
@@ -1269,7 +1262,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                         });
                     }
                     let snapshot_response = await axios({
-                        url: `https://api.brightdata.com/datasets/v3`
+                        url: `${brightdata_api_url}/datasets/v3`
                             +`/snapshot/${snapshot_id}`,
                         params: {format: 'json'},
                         method: 'GET',

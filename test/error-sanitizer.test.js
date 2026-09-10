@@ -6,9 +6,6 @@ import {sanitize_error, redact_sensitive_headers}
 
 const SECRET = 'Bearer SECRET_TOKEN_CANARY_should_never_leak';
 
-// Builds an object shaped like an AxiosError: a real Error instance with
-// the extra axios-specific properties (code, config, request, response)
-// attached, mirroring what axios actually throws.
 function make_axios_error({message, code, status, statusText, data,
     responseHeaders}={}){
     const err = new Error(message || 'Request failed');
@@ -114,10 +111,6 @@ test('sanitize_error ignores a malicious custom toJSON() instead of '
     +'invoking it', ()=>{
         const e = make_axios_error({message: 'Request failed',
             status: 400, statusText: 'Bad Request', data: ''});
-        // An attacker-controlled or buggy error object could define
-        // toJSON() to smuggle the token past a naive JSON.stringify(e).
-        // sanitize_error must never call JSON.stringify(e) or rely on
-        // toJSON() at all.
         e.toJSON = ()=>({leaked: SECRET});
         const result = sanitize_error(e);
         assert.doesNotMatch(result, new RegExp(SECRET));
