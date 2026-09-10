@@ -9,6 +9,7 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {sanitize_error, redact_sensitive_headers} from './error_sanitizer.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -70,6 +71,20 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
+
+// Defense in depth: if any code path (current or future) ever logs or
+// serializes a raw AxiosError directly, strip credentials from its
+// request/response config first so a bug elsewhere can't turn into a token
+// leak. This must never be the only safeguard, see sanitize_error() (in
+// error_sanitizer.js), which is the primary boundary that keeps raw errors
+// out of tool results.
+axios.interceptors.response.use(response=>response, error=>{
+    if (error?.config?.headers)
+        redact_sensitive_headers(error.config.headers);
+    if (error?.request?.headers)
+        redact_sensitive_headers(error.request.headers);
+    return Promise.reject(error);
+});
 
 async function base_request(config){
     let last_err;
@@ -370,28 +385,34 @@ addTool({
        urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
    }),
    execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
-       const scrapePromises = urls.map(url =>
-           base_request({
-               url: 'https://api.brightdata.com/request',
-               method: 'POST',
-               data: {
-                   url,
-                   zone: unlocker_zone,
-                   format: 'raw',
-                   data_format: 'markdown',
-               },
-               headers: api_headers(ctx.clientName, 'scrape_batch'),
-               responseType: 'text',
-           }).then(async response=>({
-               url,
-               content: (await remark()
+       const scrapePromises = urls.map(url => (async()=>{
+           try {
+               const response = await base_request({
+                   url: 'https://api.brightdata.com/request',
+                   method: 'POST',
+                   data: {
+                       url,
+                       zone: unlocker_zone,
+                       format: 'raw',
+                       data_format: 'markdown',
+                   },
+                   headers: api_headers(ctx.clientName, 'scrape_batch'),
+                   responseType: 'text',
+               });
+               const content = (await remark()
                    .use(strip, {keep: ['link', 'linkReference', 'code',
                        'inlineCode']})
-                   .process(response.data)).value,
-           }))
-       );
+                   .process(response.data)).value;
+               return {url, content};
+           } catch(e){
+               return {
+                   url,
+                   error: e instanceof Error ? e.message : String(e),
+               };
+           }
+       })());
 
-       const results = await Promise.allSettled(scrapePromises);
+       const results = await Promise.all(scrapePromises);
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -1299,6 +1320,7 @@ server.on('connect', (event)=>{
 });
 
 server.start({transportType: 'stdio'});
+
 function tool_fn(name, fn){
     return async(data, ctx)=>{
         check_rate_limit();
@@ -1339,14 +1361,11 @@ function tool_fn(name, fn){
                 `3. Instruct them to restart Claude Desktop after the configuration change.`
                 `4. Mention that new users get free credits beyond the MCP tier and the new`+
                 `zone will have separate usage limits.`);
-
-                let message = e.response.data;
-                if (message?.length)
-                    throw new Error(`HTTP ${e.response.status}: ${message}`);
             }
             else
-                console.error(`[%s] error %s`, name, e.stack);
-            throw e;
+                console.error(`[%s] error %s`, name,
+                    e instanceof Error ? e.stack : String(e));
+            throw new Error(sanitize_error(e));
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);

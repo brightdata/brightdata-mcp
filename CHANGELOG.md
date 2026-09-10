@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.11.2] - 2026-09-10
+
+### Security
+- `scrape_batch` now returns a sanitized per-URL error message on failure instead of serializing the raw rejection reason, matching the existing pattern in `search_engine_batch`.
+- Added a centralized error-sanitization boundary in `tool_fn` so no tool can propagate an unsanitized exception object out of a tool call.
+- Added a defense-in-depth Axios interceptor that redacts sensitive request headers on errors.
+- Extracted the sanitization helpers into a standalone, unit-tested `error_sanitizer.js` module.
+- Removed an internal stack trace from the ARIA snapshot filter's error output.
+
+
 ## [2.11.1] - 2026-07-27
 
 ### Fixed
