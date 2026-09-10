@@ -9,8 +9,8 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
-import {sanitize_error, redact_sensitive_headers, redact_secrets}
-    from './error_sanitizer.js';
+import {sanitize_error, redact_sensitive_headers, redact_secrets,
+    redact_sensitive_fields} from './error_sanitizer.js';
 import {get_brightdata_api_url} from './config.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
@@ -1325,7 +1325,7 @@ function tool_fn(name, fn){
         const clientInfo = global.mcpClientInfo;
         const clientName = clientInfo?.name || 'unknown-client';
         console.error(`[%s] executing (client=%s) %s`, name, clientName,
-            JSON.stringify(data));
+            JSON.stringify(redact_sensitive_fields(data)));
         debug_stats.tool_calls[name] = debug_stats.tool_calls[name]||0;
         debug_stats.tool_calls[name]++;
         debug_stats.session_calls++;

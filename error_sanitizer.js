@@ -26,24 +26,48 @@ export function redact_secrets(text, secrets=[]){
 }
 
 export function sanitize_error(e, secrets=[]){
-    let message;
-    if (e?.response)
-    {
-        const status = e.response.status;
-        const body = typeof e.response.data == 'string'
-            ? e.response.data : '';
-        if (body)
-            message = `HTTP ${status}: ${body}`;
-        else
+    try {
+        let message;
+        if (e?.response)
         {
-            const status_text = e.response.statusText;
-            message = `HTTP ${status}${status_text ? `: ${status_text}` : ''}`;
+            const status = e.response.status;
+            const body = typeof e.response.data == 'string'
+                ? e.response.data : '';
+            if (body)
+                message = `HTTP ${status}: ${body}`;
+            else
+            {
+                const status_text = e.response.statusText;
+                message = `HTTP ${status}`
+                    +`${status_text ? `: ${status_text}` : ''}`;
+            }
         }
+        else if (e instanceof Error && typeof e.message == 'string')
+            message = e.message;
+        else
+            message = 'Tool execution failed';
+        return redact_secrets(message, secrets).slice(0, MAX_ERROR_LENGTH);
+    } catch(_e){
+        return 'Tool execution failed';
     }
-    else if (e instanceof Error && typeof e.message == 'string')
-        message = e.message;
-    else
-        message = 'Tool execution failed';
-    return redact_secrets(message, secrets).slice(0, MAX_ERROR_LENGTH);
+}
+
+const SENSITIVE_ARG_KEY_PATTERN =
+    /^(text|value|password|token|secret|credential|cookie|cookies|authorization|prompt|extraction_prompt)$/i;
+
+export function redact_sensitive_fields(data){
+    if (Array.isArray(data))
+        return data.map(redact_sensitive_fields);
+    if (data && typeof data == 'object')
+    {
+        const out = {};
+        for (const [key, value] of Object.entries(data))
+        {
+            out[key] = SENSITIVE_ARG_KEY_PATTERN.test(key)
+                ? '[REDACTED]' : redact_sensitive_fields(value);
+        }
+        return out;
+    }
+    return data;
 }
 

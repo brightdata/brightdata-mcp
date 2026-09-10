@@ -29,7 +29,8 @@ export class Browser_session {
             const urlObj = new URL(url);
             return urlObj.hostname;
         } catch(e){
-            console.error(`Error extracting domain from ${url}:`, e);
+            console.error(`Error extracting domain from ${url}:`,
+                redact_endpoint(e?.message ?? String(e), this.cdp_endpoint));
             return 'default';
         }
     }
@@ -288,7 +289,8 @@ export class Browser_session {
                     dom_snapshot),
             };
         } catch(e){
-            throw new Error(`Error capturing ARIA snapshot: ${e.message}`);
+            throw new Error(`Error capturing ARIA snapshot: `
+                +redact_endpoint(e.message, this.cdp_endpoint));
         }
     }
 
@@ -306,7 +308,9 @@ export class Browser_session {
                     +'snapshot. Try capturing new snapshot.');
             return page.locator(`aria-ref=${ref}`).describe(element);
         } catch(e){
-            throw new Error(`Error creating ref locator for ${element} with ref ${ref}: ${e.message}`);
+            throw new Error(`Error creating ref locator for ${element} `
+                +`with ref ${ref}: `
+                +redact_endpoint(e.message, this.cdp_endpoint));
         }
     }
 
