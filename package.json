@@ -9,7 +9,7 @@
     },
     "scripts": {
         "start": "node server.js",
-        "test": "node --test test/*.test.js"
+        "test": "node --test"
     },
     "keywords": [
         "mcp",
@@ -41,6 +41,7 @@
         "search_utils.js",
         "search_dataset_schema.js",
         "error_sanitizer.js",
+        "config.js",
         "browser_tools.js",
         "browser_session.js",
         "aria_snapshot_filter.js",

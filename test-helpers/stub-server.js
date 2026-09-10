@@ -2,6 +2,7 @@
 import http from 'node:http';
 
 export function start_stub_server(){
+    const observed_requests = [];
     return new Promise(done=>{
         const server = http.createServer((req, res)=>{
             let body = '';
@@ -24,6 +25,8 @@ export function start_stub_server(){
                 {
                     let parsed = {};
                     try { parsed = JSON.parse(body); } catch(e){ /* ignore */ }
+                    observed_requests.push({headers: req.headers,
+                        body: parsed});
                     const target_url = parsed.url || '';
                     if (target_url.includes('bad.example'))
                     {
@@ -39,6 +42,7 @@ export function start_stub_server(){
                 res.end();
             });
         });
+        server.observed_requests = observed_requests;
         server.listen(0, '127.0.0.1', ()=>done(server));
     });
 }
@@ -51,4 +55,10 @@ export function stub_env(stub, overrides={}){
         BRIGHTDATA_API_URL: `http://127.0.0.1:${port}`,
         ...overrides,
     };
+}
+
+export function close_stub_server(server){
+    return new Promise((resolve, reject)=>{
+        server.close(error=>error ? reject(error) : resolve());
+    });
 }

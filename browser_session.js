@@ -2,6 +2,20 @@
 import * as playwright from 'playwright';
 import {Aria_snapshot_filter} from './aria_snapshot_filter.js';
 
+export function redact_endpoint(text, endpoint){
+    text = String(text);
+    if (!endpoint)
+        return text;
+    try {
+        const {username, password} = new URL(endpoint);
+        if (password)
+            text = text.split(password).join('[REDACTED]');
+        if (username)
+            text = text.split(username).join('[REDACTED]');
+    } catch(e){ /* malformed endpoint, nothing to redact */ }
+    return text;
+}
+
 export class Browser_session {
     constructor({cdp_endpoint}){
         this.cdp_endpoint = cdp_endpoint;
@@ -40,7 +54,8 @@ export class Browser_session {
             {
                 try { await session.browser.contexts(); }
                 catch(e){
-                    log?.(`Browser connection lost for domain ${domain} (${e.message}), `
+                    log?.(`Browser connection lost for domain ${domain} (`
+                        +`${redact_endpoint(e.message, this.cdp_endpoint)}), `
                         +`reconnecting...`);
                     session.browser = null;
                     session.page = null;
@@ -63,7 +78,10 @@ export class Browser_session {
             }
             return session.browser;
         } catch(e){
-            console.error(`Error connecting to browser for domain ${domain}:`, e);
+            const message = redact_endpoint(e?.message ?? String(e),
+                this.cdp_endpoint);
+            console.error(`Error connecting to browser for domain ${domain}: `
+                +message);
             const session = this._domainSessions.get(domain);
             if (session) 
             {
@@ -71,7 +89,7 @@ export class Browser_session {
                 session.page = null;
                 session.browserClosed = true;
             }
-            throw e;
+            throw new Error(message);
         }
     }
 
@@ -111,7 +129,9 @@ export class Browser_session {
             }
             return session.page;
         } catch(e){
-            console.error(`Error getting page for domain ${domain}:`, e);
+            const message = redact_endpoint(e?.message ?? String(e),
+                this.cdp_endpoint);
+            console.error(`Error getting page for domain ${domain}: `+message);
             const session = this._domainSessions.get(domain);
             if (session) 
             {
@@ -119,7 +139,7 @@ export class Browser_session {
                 session.page = null;
                 session.browserClosed = true;
             }
-            throw e;
+            throw new Error(message);
         }
     }
 
@@ -308,7 +328,7 @@ export class Browser_session {
             if (session && session.browser) 
             {
                 try { await session.browser.close(); }
-                catch(e){ console.error(`Error closing browser for domain ${domain}:`, e); }
+                catch(e){ console.error(`Error closing browser for domain ${domain}:`, redact_endpoint(e?.message ?? String(e), this.cdp_endpoint)); }
                 session.browser = null;
                 session.page = null;
                 session.browserClosed = true;
@@ -321,7 +341,7 @@ export class Browser_session {
                 if (session.browser) 
                 {
                     try { await session.browser.close(); }
-                    catch(e){ console.error(`Error closing browser for domain ${domain}:`, e); }
+                    catch(e){ console.error(`Error closing browser for domain ${domain}:`, redact_endpoint(e?.message ?? String(e), this.cdp_endpoint)); }
                     session.browser = null;
                     session.page = null;
                     session.browserClosed = true;

@@ -2,6 +2,7 @@
 
 const SENSITIVE_HEADER_PATTERN =
     /^(authorization|proxy-authorization|cookie|set-cookie|x-api-key)$/i;
+const MAX_ERROR_LENGTH = 4096;
 
 export function redact_sensitive_headers(headers){
     if (!headers || typeof headers != 'object')
@@ -29,8 +30,9 @@ export function sanitize_error(e, secrets=[]){
     if (e?.response)
     {
         const status = e.response.status;
-        const body = e.response.data;
-        if (body?.length)
+        const body = typeof e.response.data == 'string'
+            ? e.response.data : '';
+        if (body)
             message = `HTTP ${status}: ${body}`;
         else
         {
@@ -42,6 +44,6 @@ export function sanitize_error(e, secrets=[]){
         message = e.message;
     else
         message = 'Tool execution failed';
-    return redact_secrets(message, secrets);
+    return redact_secrets(message, secrets).slice(0, MAX_ERROR_LENGTH);
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'; /*jslint node:true es9:true*/
-import {FastMCP} from 'fastmcp';
+import {FastMCP, UserError} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
@@ -11,26 +11,16 @@ import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
 import {sanitize_error, redact_sensitive_headers, redact_secrets}
     from './error_sanitizer.js';
+import {get_brightdata_api_url} from './config.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
-
-function get_brightdata_api_url(){
-    const default_url = 'https://api.brightdata.com';
-    if (process.env.NODE_ENV != 'test')
-        return default_url;
-    const value = process.env.BRIGHTDATA_API_URL;
-    if (!value)
-        return default_url;
-    const url = new URL(value);
-    if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname))
-        throw new Error('BRIGHTDATA_API_URL must point to loopback');
-    return url.origin;
-}
-
+const sensitive_values = [api_token];
+const redact = value=>redact_secrets(value, sensitive_values);
+const safe_error = e=>sanitize_error(e, sensitive_values);
 const brightdata_api_url = get_brightdata_api_url();
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
@@ -193,7 +183,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${browser_zone}" already exists`);
     } catch(e){
         console.error('Error checking/creating zones:',
-            redact_secrets(e.response?.data||e.message, [api_token]));
+            redact(e.response?.data||e.message));
     }
 }
 
@@ -369,7 +359,7 @@ addTool({
                     return {
                         query,
                         engine: normalized_engine,
-                        error: sanitize_error(e, [api_token]),
+                        error: safe_error(e),
                     };
                 }
             })();
@@ -419,8 +409,7 @@ addTool({
        const settled = await Promise.allSettled(scrapePromises);
        const results = settled.map(result=>result.status === 'fulfilled'
            ? result
-           : {status: 'rejected', reason: sanitize_error(result.reason,
-               [api_token])});
+           : {status: 'rejected', reason: safe_error(result.reason)});
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -623,7 +612,7 @@ addTool({
                 return JSON.stringify(results);
             } catch(e){
                 console.error(`[discover] polling error: `
-                    +redact_secrets(e.message, [api_token]));
+                    +redact(e.message));
                 if (e.response?.status===400)
                     throw e;
                 attempts++;
@@ -1302,7 +1291,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                     return JSON.stringify(data);
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
-                        +redact_secrets(e.message, [api_token]));
+                        +redact(e.message));
                     if (e.response?.status === 400) throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
@@ -1317,7 +1306,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
 server.addPrompts(prompts);
 
 for (let tool of browser_tools)
-    addTool(tool);
+    addTool({...tool, execute: tool_fn(tool.name, tool.execute)});
 
 console.error('Starting server...');
 
@@ -1352,7 +1341,7 @@ function tool_fn(name, fn){
             {
                 console.error(`[%s] error %s %s: %s`, name, e.response.status,
                     e.response.statusText,
-                    redact_secrets(e.response.data, [api_token]));
+                    redact(e.response.data));
 
                 const headers = e.response.headers;
                 const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
@@ -1368,14 +1357,17 @@ function tool_fn(name, fn){
                 - If using Remote MCP: Add &unlocker=ZONE_NAME to their MCP URL
                 - If using Self-hosted MCP: Add WEB_UNLOCKER_ZONE=ZONE_NAME to environment variables`
                 +
-                `3. Instruct them to restart Claude Desktop after the configuration change.`
+                `3. Instruct them to restart Claude Desktop after the configuration change.`+
                 `4. Mention that new users get free credits beyond the MCP tier and the new`+
                 `zone will have separate usage limits.`);
             }
             else
-                console.error(`[%s] error %s`, name, redact_secrets(
-                    e instanceof Error ? e.stack : String(e), [api_token]));
-            throw new Error(sanitize_error(e, [api_token]));
+                console.error(`[%s] error %s`, name, redact(
+                    e instanceof Error ? e.stack : String(e)));
+            const message = safe_error(e);
+            throw e instanceof UserError
+                ? new UserError(message)
+                : new Error(message);
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);

@@ -5,14 +5,16 @@ import {fileURLToPath} from 'node:url';
 import {dirname, resolve} from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
-import {start_stub_server, stub_env} from './helpers/stub-server.js';
+import {start_stub_server, stub_env, close_stub_server}
+    from '../test-helpers/stub-server.js';
 
 const test_dir = dirname(fileURLToPath(import.meta.url));
 const repo_root = resolve(test_dir, '..');
 
 test('scrape_batch is available without PRO_MODE and sanitizes a partial '
-    +'batch (one success, one failure) fully offline', async()=>{
+    +'batch (one success, one failure) fully offline', async(t)=>{
         const stub = await start_stub_server();
+        t.after(()=>close_stub_server(stub));
         const secret_token = 'offline-canary-token-should-not-leak';
         const env = stub_env(stub, {API_TOKEN: secret_token});
         delete env.PRO_MODE;
@@ -57,6 +59,13 @@ test('scrape_batch is available without PRO_MODE and sanitizes a partial '
             assert.equal('request' in rejected, false,
                 'rejected entry must not carry a raw axios request');
 
+            assert.equal(stub.observed_requests.length, 2,
+                'the stub actually received both requests');
+            assert.ok(stub.observed_requests.every(
+                req=>req.headers.authorization==`Bearer ${secret_token}`),
+                'the tool really sent the API token upstream, proving the '
+                +'redaction is meaningful and not just an empty header');
+
             assert.doesNotMatch(text_block.text, new RegExp(secret_token),
                 'result must never contain the API token');
             assert.doesNotMatch(text_block.text, /authorization/i,
@@ -67,7 +76,6 @@ test('scrape_batch is available without PRO_MODE and sanitizes a partial '
                 'result must never contain a raw axios request object');
         } finally {
             await client.close();
-            stub.close();
         }
     });
 

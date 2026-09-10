@@ -5,13 +5,15 @@ import {fileURLToPath} from 'node:url';
 import {dirname, resolve} from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
-import {start_stub_server, stub_env} from './helpers/stub-server.js';
+import {start_stub_server, stub_env, close_stub_server}
+    from '../test-helpers/stub-server.js';
 
 const test_dir = dirname(fileURLToPath(import.meta.url));
 const repo_root = resolve(test_dir, '..');
 
-test('MCP serves session_stats tool over stdio', async()=>{
+test('MCP serves session_stats tool over stdio', async(t)=>{
     const stub = await start_stub_server();
+    t.after(()=>close_stub_server(stub));
     const env = stub_env(stub, {API_TOKEN: 'dummy-token', PRO_MODE: 'true'});
     const client = new Client(
         {name: 'server-health-test', version: '0.0.1'},
@@ -35,13 +37,13 @@ test('MCP serves session_stats tool over stdio', async()=>{
             'session_stats responded with usage summary');
     } finally {
         await client.close();
-        stub.close();
     }
 });
 
 test('tool_fn boundary never leaks the API token for any failing tool '
-    +'(centralized protection)', async()=>{
+    +'(centralized protection)', async(t)=>{
         const stub = await start_stub_server();
+        t.after(()=>close_stub_server(stub));
         const secret_token = 'super-secret-boundary-token-should-not-leak';
         const env = stub_env(stub, {API_TOKEN: secret_token,
             PRO_MODE: 'true'});
@@ -71,7 +73,6 @@ test('tool_fn boundary never leaks the API token for any failing tool '
                 'tool error text must never contain raw axios config');
         } finally {
             await client.close();
-            stub.close();
         }
     });
 

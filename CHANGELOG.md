@@ -5,17 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [2.11.2] - 2026-09-10
 
 ### Security
-- `scrape_batch` and `search_engine_batch` now route every per-item failure through the shared `sanitize_error()` boundary instead of using `e.message`/`String(e)` locally, so batch tools benefit from the same centralized sanitization as the rest of the codebase.
-- `scrape_batch`'s response keeps its original `Promise.allSettled` shape (`{status, value|reason}`), but a rejected item's `reason` is now always a sanitized string instead of a raw `Error`/`AxiosError`.
-- Added a centralized error-sanitization boundary in `tool_fn` so no tool can propagate an unsanitized exception object out of a tool call.
-- Added a defense-in-depth Axios interceptor that redacts sensitive request headers on errors.
-- Extracted the sanitization helpers into a standalone, unit-tested `error_sanitizer.js` module.
-- Removed an internal stack trace from the ARIA snapshot filter's error output.
-- Added a fully offline, deterministic regression test (local HTTP stub, no `PRO_MODE`) covering a partial `scrape_batch` batch (one success, one failure) and confirming no token/header/config leakage.
-- The test-only API base URL override is now restricted to `NODE_ENV=test` and loopback addresses only, so it cannot be used to redirect the API token to an arbitrary endpoint in production via an environment variable.
-- `sanitize_error()` now also takes an explicit list of secrets (the API token) and scrubs them from the final message as a last line of defense, in case a token were ever reflected in an error message, HTTP response body, or status text.
-- Every remaining `console.error` call that logs error details (zone setup, `discover`/dataset polling, `tool_fn`) now redacts the API token as well, so the "never reaches a tool result or a log line" guarantee also covers stderr/application logs, not just the model-visible tool output.
-- Test suite is now fully deterministic and offline: the local HTTP stub is shared via `test/helpers/stub-server.js` and reused by the `session_stats` and centralized-protection tests, removing their dependency on the live Bright Data API. Also strengthened the partial-batch test to assert the rejected entry's `reason` is a plain sanitized string (`HTTP 400: ...`) rather than just checking it exists, and to assert it carries no `config`/`request` properties.
+- `scrape_batch` no longer serializes raw request/response errors in its result; failures are reported as a sanitized message.
+- Added a centralized error-sanitization boundary applied to every tool, including the browser automation tools, so a raw exception (and any credentials it might carry) can no longer reach a tool result.
+- Added defense-in-depth redaction of sensitive headers and known secrets (API token, browser zone credentials) in error messages and logs.
+- Added offline, deterministic regression coverage for the above.
+
 
 
 ## [2.11.1] - 2026-07-27
