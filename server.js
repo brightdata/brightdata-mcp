@@ -9,15 +9,29 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
-import {sanitize_error, redact_sensitive_headers} from './error_sanitizer.js';
+import {sanitize_error, redact_sensitive_headers, redact_secrets}
+    from './error_sanitizer.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
-const brightdata_api_url = process.env.BRIGHTDATA_API_URL
-    || 'https://api.brightdata.com';
+
+function get_brightdata_api_url(){
+    const default_url = 'https://api.brightdata.com';
+    if (process.env.NODE_ENV != 'test')
+        return default_url;
+    const value = process.env.BRIGHTDATA_API_URL;
+    if (!value)
+        return default_url;
+    const url = new URL(value);
+    if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname))
+        throw new Error('BRIGHTDATA_API_URL must point to loopback');
+    return url.origin;
+}
+
+const brightdata_api_url = get_brightdata_api_url();
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
@@ -179,7 +193,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${browser_zone}" already exists`);
     } catch(e){
         console.error('Error checking/creating zones:',
-            e.response?.data||e.message);
+            redact_secrets(e.response?.data||e.message, [api_token]));
     }
 }
 
@@ -355,7 +369,7 @@ addTool({
                     return {
                         query,
                         engine: normalized_engine,
-                        error: sanitize_error(e),
+                        error: sanitize_error(e, [api_token]),
                     };
                 }
             })();
@@ -405,7 +419,8 @@ addTool({
        const settled = await Promise.allSettled(scrapePromises);
        const results = settled.map(result=>result.status === 'fulfilled'
            ? result
-           : {status: 'rejected', reason: sanitize_error(result.reason)});
+           : {status: 'rejected', reason: sanitize_error(result.reason,
+               [api_token])});
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -607,7 +622,8 @@ addTool({
                 }));
                 return JSON.stringify(results);
             } catch(e){
-                console.error(`[discover] polling error: ${e.message}`);
+                console.error(`[discover] polling error: `
+                    +redact_secrets(e.message, [api_token]));
                 if (e.response?.status===400)
                     throw e;
                 attempts++;
@@ -1286,7 +1302,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                     return JSON.stringify(data);
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
-                        +`${e.message}`);
+                        +redact_secrets(e.message, [api_token]));
                     if (e.response?.status === 400) throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
@@ -1335,7 +1351,8 @@ function tool_fn(name, fn){
         if (e.response)
             {
                 console.error(`[%s] error %s %s: %s`, name, e.response.status,
-                    e.response.statusText, e.response.data);
+                    e.response.statusText,
+                    redact_secrets(e.response.data, [api_token]));
 
                 const headers = e.response.headers;
                 const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
@@ -1356,9 +1373,9 @@ function tool_fn(name, fn){
                 `zone will have separate usage limits.`);
             }
             else
-                console.error(`[%s] error %s`, name,
-                    e instanceof Error ? e.stack : String(e));
-            throw new Error(sanitize_error(e));
+                console.error(`[%s] error %s`, name, redact_secrets(
+                    e instanceof Error ? e.stack : String(e), [api_token]));
+            throw new Error(sanitize_error(e, [api_token]));
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);

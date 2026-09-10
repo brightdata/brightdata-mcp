@@ -14,17 +14,34 @@ export function redact_sensitive_headers(headers){
     return headers;
 }
 
-export function sanitize_error(e){
+export function redact_secrets(text, secrets=[]){
+    text = String(text);
+    for (const secret of secrets)
+    {
+        if (secret)
+            text = text.split(secret).join('[REDACTED]');
+    }
+    return text;
+}
+
+export function sanitize_error(e, secrets=[]){
+    let message;
     if (e?.response)
     {
         const status = e.response.status;
         const body = e.response.data;
         if (body?.length)
-            return `HTTP ${status}: ${body}`;
-        const status_text = e.response.statusText;
-        return `HTTP ${status}${status_text ? `: ${status_text}` : ''}`;
+            message = `HTTP ${status}: ${body}`;
+        else
+        {
+            const status_text = e.response.statusText;
+            message = `HTTP ${status}${status_text ? `: ${status_text}` : ''}`;
+        }
     }
-    if (e instanceof Error && typeof e.message == 'string')
-        return e.message;
-    return 'Tool execution failed';
+    else if (e instanceof Error && typeof e.message == 'string')
+        message = e.message;
+    else
+        message = 'Tool execution failed';
+    return redact_secrets(message, secrets);
 }
+

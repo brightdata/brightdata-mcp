@@ -1,67 +1,20 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import http from 'node:http';
 import {fileURLToPath} from 'node:url';
 import {dirname, resolve} from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
+import {start_stub_server, stub_env} from './helpers/stub-server.js';
 
 const test_dir = dirname(fileURLToPath(import.meta.url));
 const repo_root = resolve(test_dir, '..');
 
-function start_stub_server(){
-    return new Promise(done=>{
-        const server = http.createServer((req, res)=>{
-            let body = '';
-            req.on('data', chunk=>{ body += chunk; });
-            req.on('end', ()=>{
-                if (req.method=='GET'
-                    && req.url.startsWith('/zone/get_active_zones'))
-                {
-                    res.writeHead(200, {'Content-Type': 'application/json'});
-                    res.end('[]');
-                    return;
-                }
-                if (req.method=='POST' && req.url=='/zone')
-                {
-                    res.writeHead(200, {'Content-Type': 'application/json'});
-                    res.end('{}');
-                    return;
-                }
-                if (req.method=='POST' && req.url=='/request')
-                {
-                    let parsed = {};
-                    try { parsed = JSON.parse(body); } catch(e){ /* ignore */ }
-                    const target_url = parsed.url || '';
-                    if (target_url.includes('bad.example'))
-                    {
-                        res.writeHead(400, {'Content-Type': 'application/json'});
-                        res.end(JSON.stringify({error: 'zone not found'}));
-                        return;
-                    }
-                    res.writeHead(200, {'Content-Type': 'text/plain'});
-                    res.end('# Example\n\nHello world.');
-                    return;
-                }
-                res.writeHead(404);
-                res.end();
-            });
-        });
-        server.listen(0, '127.0.0.1', ()=>done(server));
-    });
-}
-
 test('scrape_batch is available without PRO_MODE and sanitizes a partial '
     +'batch (one success, one failure) fully offline', async()=>{
         const stub = await start_stub_server();
-        const {port} = stub.address();
         const secret_token = 'offline-canary-token-should-not-leak';
-        const env = {
-            ...process.env,
-            API_TOKEN: secret_token,
-            BRIGHTDATA_API_URL: `http://127.0.0.1:${port}`,
-        };
+        const env = stub_env(stub, {API_TOKEN: secret_token});
         delete env.PRO_MODE;
         delete env.GROUPS;
         delete env.TOOLS;
@@ -92,8 +45,17 @@ test('scrape_batch is available without PRO_MODE and sanitizes a partial '
             assert.equal(parsed.length, 2, 'both URLs produced a result');
             assert.ok(parsed.some(r=>r.status=='fulfilled'),
                 'the successful URL is reported as fulfilled');
-            assert.ok(parsed.some(r=>r.status=='rejected'),
-                'the failing URL is reported as rejected');
+
+            const rejected = parsed.find(r=>r.status=='rejected');
+            assert.ok(rejected, 'the failing URL is reported as rejected');
+            assert.equal(typeof rejected.reason, 'string',
+                'reason must be a sanitized string, not a raw error object');
+            assert.match(rejected.reason, /^HTTP 400/,
+                'reason must carry the sanitized HTTP status');
+            assert.equal('config' in rejected, false,
+                'rejected entry must not carry a raw axios config');
+            assert.equal('request' in rejected, false,
+                'rejected entry must not carry a raw axios request');
 
             assert.doesNotMatch(text_block.text, new RegExp(secret_token),
                 'result must never contain the API token');
@@ -108,3 +70,4 @@ test('scrape_batch is available without PRO_MODE and sanitizes a partial '
             stub.close();
         }
     });
+

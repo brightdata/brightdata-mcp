@@ -1,7 +1,7 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sanitize_error, redact_sensitive_headers}
+import {sanitize_error, redact_sensitive_headers, redact_secrets}
     from '../error_sanitizer.js';
 
 const SECRET = 'Bearer SECRET_TOKEN_CANARY_should_never_leak';
@@ -134,6 +134,43 @@ test('sanitize_error never leaks a canary secret placed anywhere on the '
             assert.doesNotMatch(result, new RegExp(SECRET),
                 'sanitize_error output must never contain the token');
         }
+    });
+
+test('sanitize_error redacts a secret that leaks through e.message', ()=>{
+    const token = 'super-secret-api-token';
+    const e = new Error(`connect ECONNREFUSED, token=${token}`);
+    const result = sanitize_error(e, [token]);
+    assert.doesNotMatch(result, new RegExp(token));
+    assert.match(result, /\[REDACTED\]/);
+});
+
+test('sanitize_error redacts a secret that leaks through the HTTP '
+    +'response body', ()=>{
+        const token = 'super-secret-api-token';
+        const e = make_axios_error({status: 400, statusText: 'Bad Request',
+            data: `invalid request, token was ${token}`});
+        const result = sanitize_error(e, [token]);
+        assert.doesNotMatch(result, new RegExp(token));
+        assert.match(result, /\[REDACTED\]/);
+    });
+
+test('sanitize_error ignores falsy/empty secrets without throwing', ()=>{
+    const e = new Error('plain failure');
+    assert.equal(sanitize_error(e, ['', null, undefined]), 'plain failure');
+    assert.equal(sanitize_error(e), 'plain failure');
+});
+
+test('redact_secrets replaces every occurrence of every provided secret',
+    ()=>{
+        const result = redact_secrets('a=SECRET1, b=SECRET2, c=SECRET1',
+            ['SECRET1', 'SECRET2']);
+        assert.equal(result, 'a=[REDACTED], b=[REDACTED], c=[REDACTED]');
+    });
+
+test('redact_secrets is a no-op without secrets and coerces to string',
+    ()=>{
+        assert.equal(redact_secrets('hello'), 'hello');
+        assert.equal(redact_secrets(404), '404');
     });
 
 test('redact_sensitive_headers redacts known sensitive headers '
