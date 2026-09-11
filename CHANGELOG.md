@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [2.11.2] - 2026-09-10
 
 ### Security
-- `scrape_batch` no longer serializes raw request/response errors in its result; failures are reported as a sanitized message.
-- Added a centralized error-sanitization boundary applied to every tool, including the browser automation tools, so a raw exception (and any credentials it might carry) can no longer reach a tool result.
-- Added defense-in-depth redaction of sensitive headers and known secrets (API token, browser zone credentials) in error messages and logs.
-- Added offline, deterministic regression coverage for the above.
+- Fixed an API token disclosure in `scrape_batch` by replacing raw rejected
+  request errors with sanitized error strings before serializing the tool
+  result.
 
-
+### Fixed
+- Fixed a broken string concatenation in the usage-limit error message that
+  caused a `TypeError` instead of the intended error.
 
 ## [2.11.1] - 2026-07-27
 

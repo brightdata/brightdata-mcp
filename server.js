@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'; /*jslint node:true es9:true*/
-import {FastMCP, UserError} from 'fastmcp';
+import {FastMCP} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
@@ -9,19 +9,29 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
-import {sanitize_error, redact_sensitive_headers, redact_secrets,
-    redact_sensitive_fields} from './error_sanitizer.js';
-import {get_brightdata_api_url} from './config.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
-const sensitive_values = [api_token];
-const redact = value=>redact_secrets(value, sensitive_values);
-const safe_error = e=>sanitize_error(e, sensitive_values);
-const brightdata_api_url = get_brightdata_api_url();
+const redact_token = value=>{
+    const text = String(value);
+    return api_token
+        ? text.split(api_token).join('[REDACTED]')
+        : text;
+};
+const safe_error = e=>{
+    try {
+        const message = e instanceof Error
+            && typeof e.message=='string'
+            ? e.message
+            : 'Tool execution failed';
+        return redact_token(message).slice(0, 4096);
+    } catch(_e){
+        return 'Tool execution failed';
+    }
+};
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const pro_mode = process.env.PRO_MODE === 'true';
@@ -78,14 +88,6 @@ const rate_limit_config = parse_rate_limit(process.env.RATE_LIMIT);
 if (!api_token)
     throw new Error('Cannot run MCP server without API_TOKEN env');
 
-axios.interceptors.response.use(response=>response, error=>{
-    if (error?.config?.headers)
-        redact_sensitive_headers(error.config.headers);
-    if (error?.request?.headers)
-        redact_sensitive_headers(error.request.headers);
-    return Promise.reject(error);
-});
-
 async function base_request(config){
     let last_err;
     for (let attempt = 0; attempt <= base_max_retries; attempt++)
@@ -132,7 +134,7 @@ async function ensure_required_zones(){
     try {
         console.error('Checking for required zones...');
         let response = await axios({
-            url: `${brightdata_api_url}/zone/get_active_zones`,
+            url: 'https://api.brightdata.com/zone/get_active_zones',
             method: 'GET',
             headers: api_headers(),
         });
@@ -145,7 +147,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${unlocker_zone}" not found, `
                 +`creating it...`);
             await axios({
-                url: `${brightdata_api_url}/zone`,
+                url: 'https://api.brightdata.com/zone',
                 method: 'POST',
                 headers: {
                     ...api_headers(),
@@ -166,7 +168,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${browser_zone}" not found, `
                 +`creating it...`);
             await axios({
-                url: `${brightdata_api_url}/zone`,
+                url: 'https://api.brightdata.com/zone',
                 method: 'POST',
                 headers: {
                     ...api_headers(),
@@ -183,7 +185,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${browser_zone}" already exists`);
     } catch(e){
         console.error('Error checking/creating zones:',
-            redact(e.response?.data||e.message));
+            e.response?.data||e.message);
     }
 }
 
@@ -243,7 +245,7 @@ addTool({
         const is_google = engine=='google';
         const url = search_url(engine, query, cursor, geo_location);
         let response = await base_request({
-            url: `${brightdata_api_url}/request`,
+            url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
                 url: is_google ? `${url}&brd_json=1` : url,
@@ -275,7 +277,7 @@ addTool({
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
         let response = await base_request({
-            url: `${brightdata_api_url}/request`,
+            url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
                 url,
@@ -328,7 +330,7 @@ addTool({
             return (async()=>{
                 try {
                     const response = await base_request({
-                        url: `${brightdata_api_url}/request`,
+                        url: 'https://api.brightdata.com/request',
                         method: 'POST',
                         data: {
                             url: is_google ? `${url}&brd_json=1` : url,
@@ -359,7 +361,7 @@ addTool({
                     return {
                         query,
                         engine: normalized_engine,
-                        error: safe_error(e),
+                        error: e instanceof Error ? e.message : String(e),
                     };
                 }
             })();
@@ -387,7 +389,7 @@ addTool({
    execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
        const scrapePromises = urls.map(url =>
            base_request({
-               url: `${brightdata_api_url}/request`,
+               url: 'https://api.brightdata.com/request',
                method: 'POST',
                data: {
                    url,
@@ -407,7 +409,9 @@ addTool({
        );
 
        const settled = await Promise.allSettled(scrapePromises);
-       const results = settled.map(result=>result.status === 'fulfilled'
+       // NEVER pass a raw rejection reason into JSON.stringify: AxiosError
+       // .toJSON() serializes config.headers, which carries the API token.
+       const results = settled.map(result=>result.status=='fulfilled'
            ? result
            : {status: 'rejected', reason: safe_error(result.reason)});
        return JSON.stringify(results, null, 2);
@@ -428,7 +432,7 @@ addTool({
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
         let response = await axios({
-            url: `${brightdata_api_url}/request`,
+            url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
                 url,
@@ -462,7 +466,7 @@ addTool({
     }),
     execute: tool_fn('extract', async ({ url, extraction_prompt }, ctx) => {
         let scrape_response = await axios({
-            url: `${brightdata_api_url}/request`,
+            url: 'https://api.brightdata.com/request',
             method: 'POST',
             data: {
                 url,
@@ -560,7 +564,7 @@ addTool({
         if (data.end_date)
             body.end_date = data.end_date;
         let trigger_response = await axios({
-            url: `${brightdata_api_url}/discover`,
+            url: 'https://api.brightdata.com/discover',
             method: 'POST',
             data: body,
             headers: {
@@ -587,7 +591,7 @@ addTool({
                     });
                 }
                 let poll_response = await axios({
-                    url: `${brightdata_api_url}/discover`,
+                    url: 'https://api.brightdata.com/discover',
                     params: {task_id},
                     method: 'GET',
                     headers: api_headers(ctx.clientName, 'discover'),
@@ -611,8 +615,7 @@ addTool({
                 }));
                 return JSON.stringify(results);
             } catch(e){
-                console.error(`[discover] polling error: `
-                    +redact(e.message));
+                console.error(`[discover] polling error: ${e.message}`);
                 if (e.response?.status===400)
                     throw e;
                 attempts++;
@@ -645,7 +648,7 @@ addTool({
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
         let response = await base_request({
-            url: `${brightdata_api_url}/datasets/${dataset_id}`
+            url: `https://api.brightdata.com/datasets/${dataset_id}`
                 +`/metadata`,
             method: 'GET',
             headers: api_headers(ctx.clientName, 'list_dataset_fields'),
@@ -694,7 +697,7 @@ addTool({
         if (search_after!==undefined)
             body.search_after = search_after;
         let response = await base_request({
-            url: `${brightdata_api_url}/datasets/search/${dataset_id}`,
+            url: `https://api.brightdata.com/datasets/search/${dataset_id}`,
             method: 'POST',
             data: body,
             headers: {
@@ -1241,7 +1244,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
             let trigger_response = await axios({
-                url: `${brightdata_api_url}/datasets/v3/trigger`,
+                url: 'https://api.brightdata.com/datasets/v3/trigger',
                 params: {dataset_id, include_errors: true, ...trigger_params},
                 method: 'POST',
                 data: [data],
@@ -1267,7 +1270,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                         });
                     }
                     let snapshot_response = await axios({
-                        url: `${brightdata_api_url}/datasets/v3`
+                        url: `https://api.brightdata.com/datasets/v3`
                             +`/snapshot/${snapshot_id}`,
                         params: {format: 'json'},
                         method: 'GET',
@@ -1291,7 +1294,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                     return JSON.stringify(data);
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
-                        +redact(e.message));
+                        +`${e.message}`);
                     if (e.response?.status === 400) throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
@@ -1306,7 +1309,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
 server.addPrompts(prompts);
 
 for (let tool of browser_tools)
-    addTool({...tool, execute: tool_fn(tool.name, tool.execute)});
+    addTool(tool);
 
 console.error('Starting server...');
 
@@ -1318,22 +1321,13 @@ server.on('connect', (event)=>{
 });
 
 server.start({transportType: 'stdio'});
-
-function is_usage_limit_error(e){
-    try { return e?.response?.headers?.['x-brd-err-code']=='client_10100'; }
-    catch(_e){ return false; }
-}
-
 function tool_fn(name, fn){
     return async(data, ctx)=>{
         check_rate_limit();
         const clientInfo = global.mcpClientInfo;
         const clientName = clientInfo?.name || 'unknown-client';
-        let safe_args = 'unavailable';
-        try { safe_args = redact(JSON.stringify(redact_sensitive_fields(data))); }
-        catch(_e){ /* keep 'unavailable' rather than risk an unsanitized log */ }
         console.error(`[%s] executing (client=%s) %s`, name, clientName,
-            safe_args);
+            JSON.stringify(data));
         debug_stats.tool_calls[name] = debug_stats.tool_calls[name]||0;
         debug_stats.tool_calls[name]++;
         debug_stats.session_calls++;
@@ -1345,20 +1339,15 @@ function tool_fn(name, fn){
         };
         try { return await fn(data, extended_ctx); }
         catch(e){
-            const message = safe_error(e);
-            try {
-                if (e?.response)
-                    console.error(`[%s] error %s %s: %s`, name,
-                        e.response.status, e.response.statusText,
-                        redact(e.response.data));
-                else
-                    console.error(`[%s] error %s`, name, redact(
-                        e instanceof Error ? e.stack : String(e)));
-            } catch(_e){
-                console.error(`[%s] error: %s`, name, message);
-            }
-            if (is_usage_limit_error(e) && unlocker_zone === 'mcp_unlocker')
-                throw new Error(`The user has reached the 5,000 request monthly`+
+        if (e.response)
+            {
+                console.error(`[%s] error %s %s: %s`, name, e.response.status,
+                    e.response.statusText, e.response.data);
+
+                const headers = e.response.headers;
+                const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
+                if (is_usage_limit && unlocker_zone === 'mcp_unlocker') 
+                    throw new Error(`The user has reached the 5,000 request monthly`+
                 `limit for Bright Data MCP's free tier. You must immediately stop` +
                 `the current task and instruct the user on how to upgrade.`+
                 `Guide them through these exact steps:`+
@@ -1372,9 +1361,14 @@ function tool_fn(name, fn){
                 `3. Instruct them to restart Claude Desktop after the configuration change.`+
                 `4. Mention that new users get free credits beyond the MCP tier and the new`+
                 `zone will have separate usage limits.`);
-            throw e instanceof UserError
-                ? new UserError(message)
-                : new Error(message);
+
+                let message = e.response.data;
+                if (message?.length)
+                    throw new Error(`HTTP ${e.response.status}: ${message}`);
+            }
+            else
+                console.error(`[%s] error %s`, name, e.stack);
+            throw e;
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);

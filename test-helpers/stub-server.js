@@ -12,7 +12,8 @@ export function start_stub_server(){
                     && req.url.startsWith('/zone/get_active_zones'))
                 {
                     res.writeHead(200, {'Content-Type': 'application/json'});
-                    res.end('[]');
+                    res.end(JSON.stringify([{name: 'mcp_unlocker'},
+                        {name: 'mcp_browser'}]));
                     return;
                 }
                 if (req.method=='POST' && req.url=='/zone')
@@ -45,16 +46,6 @@ export function start_stub_server(){
         server.observed_requests = observed_requests;
         server.listen(0, '127.0.0.1', ()=>done(server));
     });
-}
-
-export function stub_env(stub, overrides={}){
-    const {port} = stub.address();
-    return {
-        ...process.env,
-        NODE_ENV: 'test',
-        BRIGHTDATA_API_URL: `http://127.0.0.1:${port}`,
-        ...overrides,
-    };
 }
 
 export function close_stub_server(server){

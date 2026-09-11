@@ -71,7 +71,7 @@ export class Aria_snapshot_filter {
                 return 'No interactive elements found';
             return this.format_compact(elements);
         } catch(e){
-            return `Error filtering snapshot: ${e.message}`;
+            return `Error filtering snapshot: ${e.message}\n${e.stack}`;
         }
     }
 
