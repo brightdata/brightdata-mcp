@@ -1363,12 +1363,13 @@ function tool_fn(name, fn){
                 `zone will have separate usage limits.`);
 
                 let message = e.response.data;
-                if (message?.length)
-                    throw new Error(`HTTP ${e.response.status}: ${message}`);
+                if (typeof message=='string' && message.length)
+                    throw new Error(`HTTP ${e.response.status}: `
+                        +redact_token(message));
             }
             else
                 console.error(`[%s] error %s`, name, e.stack);
-            throw e;
+            throw new Error(safe_error(e));
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);

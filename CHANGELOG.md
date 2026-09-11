@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Security
 - Fixed an API token disclosure in `scrape_batch` by replacing raw rejected
   request errors with sanitized error strings before serializing the tool
-  result.
+  result. For failed entries, `reason` is now a sanitized string instead
+  of a serialized error object.
 
 ### Fixed
 - Fixed a broken string concatenation in the usage-limit error message that
