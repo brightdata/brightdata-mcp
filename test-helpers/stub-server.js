@@ -22,6 +22,15 @@ export function start_stub_server(){
                     res.end('{}');
                     return;
                 }
+                if (req.method=='GET' && req.url.startsWith('/datasets/')
+                    && req.url.endsWith('/metadata'))
+                {
+                    observed_requests.push({headers: req.headers,
+                        body: null});
+                    res.writeHead(400, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify({error: 'dataset not found'}));
+                    return;
+                }
                 if (req.method=='POST' && req.url=='/request')
                 {
                     let parsed = {};
