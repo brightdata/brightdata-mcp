@@ -409,8 +409,6 @@ addTool({
        );
 
        const settled = await Promise.allSettled(scrapePromises);
-       // NEVER pass a raw rejection reason into JSON.stringify: AxiosError
-       // .toJSON() serializes config.headers, which carries the API token.
        const results = settled.map(result=>result.status=='fulfilled'
            ? result
            : {status: 'rejected', reason: safe_error(result.reason)});
