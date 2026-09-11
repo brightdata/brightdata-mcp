@@ -5,9 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [2.11.2] - 2026-09-10
 
 ### Security
-- Fixed an API token disclosure in `scrape_batch` by replacing raw
-  rejected request errors with sanitized error strings before
-  serializing the tool result.
+- Hardened `scrape_batch` error handling to always report failed requests
+  as sanitized error strings instead of raw error objects.
 
 ### Changed
 - Errors thrown from tools are now re-thrown as sanitized `Error`
