@@ -67,8 +67,9 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
             const rejected = parsed[1];
             assert.equal(typeof rejected.reason, 'string',
                 'reason must be a sanitized string, not a raw error object');
-            assert.equal(rejected.reason, 'Request failed with status code '
-                +'400');
+            assert.equal(rejected.reason, 'HTTP 400: zone not found',
+                'the reason carries the sentence the API sent back, bounded '
+                +'and redacted, not the HTTP client\'s generic message');
             assert.equal(rejected.url, 'https://bad.example/fail',
                 'a rejected entry names the url that failed');
             assert.equal('config' in rejected, false,

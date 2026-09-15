@@ -9,6 +9,7 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {summarize_upstream, clip, MAX_MESSAGE} from './upstream_error.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -21,13 +22,18 @@ const redact_token = value=>{
         ? text.split(api_token).join('[REDACTED]')
         : text;
 };
+// What a failed tool says to the model. An upstream summary, when one was
+// attached (see base_request and tool_fn), beats the HTTP client's generic
+// "Request failed with status code 400", because the sentence the API sent
+// back is the only thing the model has to correct itself with. Whatever the
+// source, the token is redacted as a backstop and the length is bounded.
 const safe_error = e=>{
     try {
-        const message = e instanceof Error
-            && typeof e.message=='string'
-            ? e.message
-            : 'Tool execution failed';
-        return redact_token(message).slice(0, 4096);
+        const message = e?.upstream_message
+            || (e instanceof Error && typeof e.message=='string'
+                ? e.message
+                : 'Tool execution failed');
+        return clip(redact_token(message), MAX_MESSAGE);
     } catch(_e){
         return 'Tool execution failed';
     }
@@ -96,6 +102,13 @@ async function base_request(config){
             return await axios({...config, timeout: base_timeout});
         } catch(e){
             last_err = e;
+            // Annotate, never replace: tool_fn's free-tier branch reads
+            // e.response.headers['x-brd-err-code'], and a fresh Error would
+            // drop it along with the upgrade instructions the user needs.
+            // base_request sees the response; tool_fn only ever sees an
+            // exception, so the summary is computed where the information is.
+            if (e.response && !e.upstream_message)
+                e.upstream_message = summarize_upstream(e.response);
             if (e.response?.status && e.response.status >= 400
                 && e.response.status < 500)
             {
@@ -134,7 +147,7 @@ async function ensure_required_zones(){
     try {
         console.error('Checking for required zones...');
         let response = await axios({
-            url: 'https://api.brightdata.com/zone/get_active_zones',
+            url: `https://api.brightdata.com/zone/get_active_zones`,
             method: 'GET',
             headers: api_headers(),
         });
@@ -147,7 +160,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${unlocker_zone}" not found, `
                 +`creating it...`);
             await axios({
-                url: 'https://api.brightdata.com/zone',
+                url: `https://api.brightdata.com/zone`,
                 method: 'POST',
                 headers: {
                     ...api_headers(),
@@ -168,7 +181,7 @@ async function ensure_required_zones(){
             console.error(`Required zone "${browser_zone}" not found, `
                 +`creating it...`);
             await axios({
-                url: 'https://api.brightdata.com/zone',
+                url: `https://api.brightdata.com/zone`,
                 method: 'POST',
                 headers: {
                     ...api_headers(),
@@ -245,7 +258,7 @@ addTool({
         const is_google = engine=='google';
         const url = search_url(engine, query, cursor, geo_location);
         let response = await base_request({
-            url: 'https://api.brightdata.com/request',
+            url: `https://api.brightdata.com/request`,
             method: 'POST',
             data: {
                 url: is_google ? `${url}&brd_json=1` : url,
@@ -277,7 +290,7 @@ addTool({
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
         let response = await base_request({
-            url: 'https://api.brightdata.com/request',
+            url: `https://api.brightdata.com/request`,
             method: 'POST',
             data: {
                 url,
@@ -330,7 +343,7 @@ addTool({
             return (async()=>{
                 try {
                     const response = await base_request({
-                        url: 'https://api.brightdata.com/request',
+                        url: `https://api.brightdata.com/request`,
                         method: 'POST',
                         data: {
                             url: is_google ? `${url}&brd_json=1` : url,
@@ -389,7 +402,7 @@ addTool({
    execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
        const scrapePromises = urls.map(url =>
            base_request({
-               url: 'https://api.brightdata.com/request',
+               url: `https://api.brightdata.com/request`,
                method: 'POST',
                data: {
                    url,
@@ -434,7 +447,7 @@ addTool({
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
         let response = await axios({
-            url: 'https://api.brightdata.com/request',
+            url: `https://api.brightdata.com/request`,
             method: 'POST',
             data: {
                 url,
@@ -468,7 +481,7 @@ addTool({
     }),
     execute: tool_fn('extract', async ({ url, extraction_prompt }, ctx) => {
         let scrape_response = await axios({
-            url: 'https://api.brightdata.com/request',
+            url: `https://api.brightdata.com/request`,
             method: 'POST',
             data: {
                 url,
@@ -566,7 +579,7 @@ addTool({
         if (data.end_date)
             body.end_date = data.end_date;
         let trigger_response = await axios({
-            url: 'https://api.brightdata.com/discover',
+            url: `https://api.brightdata.com/discover`,
             method: 'POST',
             data: body,
             headers: {
@@ -593,7 +606,7 @@ addTool({
                     });
                 }
                 let poll_response = await axios({
-                    url: 'https://api.brightdata.com/discover',
+                    url: `https://api.brightdata.com/discover`,
                     params: {task_id},
                     method: 'GET',
                     headers: api_headers(ctx.clientName, 'discover'),
@@ -1246,7 +1259,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
             let trigger_response = await axios({
-                url: 'https://api.brightdata.com/datasets/v3/trigger',
+                url: `https://api.brightdata.com/datasets/v3/trigger`,
                 params: {dataset_id, include_errors: true, ...trigger_params},
                 method: 'POST',
                 data: [data],
@@ -1364,10 +1377,12 @@ function tool_fn(name, fn){
                 `4. Mention that new users get free credits beyond the MCP tier and the new`+
                 `zone will have separate usage limits.`);
 
-                let message = e.response.data;
-                if (typeof message=='string' && message.length)
-                    throw new Error(`HTTP ${e.response.status}: `
-                        +redact_token(message));
+                // Nine of the sixteen request sites bypass base_request and
+                // arrive here unannotated; summarise from the response we
+                // have. The full body stays on stderr above for whoever
+                // operates the server -- only what the MODEL sees is bounded.
+                if (!e.upstream_message)
+                    e.upstream_message = summarize_upstream(e.response);
             }
             else
                 console.error(`[%s] error %s`, name, e.stack);
