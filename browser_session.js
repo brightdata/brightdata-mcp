@@ -2,6 +2,13 @@
 import * as playwright from 'playwright';
 import {Aria_snapshot_filter} from './aria_snapshot_filter.js';
 
+// The CDP endpoint carries the zone password in its userinfo
+// (wss://brd-customer-x-zone-y:PASSWORD@brd.superproxy.io:9222), and Playwright
+// puts the endpoint it failed to reach into its error messages. Anything built
+// from a caught value has to pass through here first.
+export const redact_credentials = text=>String(text ?? '')
+    .replace(/(wss?:\/\/[^\s:@/]+):[^\s@/]+@/gi, '$1:***@');
+
 export class Browser_session {
     constructor({cdp_endpoint}){
         this.cdp_endpoint = cdp_endpoint;

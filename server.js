@@ -409,9 +409,13 @@ addTool({
        );
 
        const settled = await Promise.allSettled(scrapePromises);
-       const results = settled.map(result=>result.status=='fulfilled'
+       // A rejected entry names the url that failed alongside why: with
+       // several urls in flight, a reason without its url is not actionable.
+       // Same shape search_engine_batch has always used.
+       const results = settled.map((result, i)=>result.status=='fulfilled'
            ? result
-           : {status: 'rejected', reason: safe_error(result.reason)});
+           : {status: 'rejected', url: urls[i],
+               reason: safe_error(result.reason)});
        return JSON.stringify(results, null, 2);
    }),
 });

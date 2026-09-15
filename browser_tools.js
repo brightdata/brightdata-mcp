@@ -2,7 +2,22 @@
 import {UserError, imageContent as image_content} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
-import {Browser_session} from './browser_session.js';
+import {Browser_session, redact_credentials} from './browser_session.js';
+
+// Read directly rather than importing from server.js, which starts a server on
+// import. Same default, same variable.
+
+// Browser tools do not pass through tool_fn (routing them through it is what
+// PR #169 does, and it is not merged), so this is the only thing standing
+// between a Playwright exception and the model. It redacts AND bounds, so the
+// guarantee holds regardless of which PR lands first.
+const MAX_BROWSER_ERROR = 300;
+function browser_error(context, e){
+    const detail = redact_credentials(e?.message ?? String(e ?? ''));
+    const clipped = detail.length<=MAX_BROWSER_ERROR
+        ? detail : detail.slice(0, MAX_BROWSER_ERROR-1)+'\u2026';
+    return new UserError(clipped ? `${context}: ${clipped}` : context);
+}
 let browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 
 let open_session;
@@ -27,7 +42,7 @@ const require_browser = async country=>{
 const calculate_cdp_endpoint = async country=>{
     try {
         const status_response = await axios({
-            url: 'https://api.brightdata.com/status',
+            url: `https://api.brightdata.com/status`,
             method: 'GET',
             headers: {authorization: `Bearer ${process.env.API_TOKEN}`},
         });
@@ -80,7 +95,7 @@ let scraping_browser_navigate = {
                 `URL: ${page.url()}`,
             ].join('\n');
         } catch(e){
-            throw new UserError(`Error navigating to ${url}: ${e}`);
+            throw browser_error(`Error navigating to ${url}`, e);
         }
     },
 };
@@ -103,7 +118,7 @@ let scraping_browser_go_back = {
                 `URL: ${page.url()}`,
             ].join('\n');
         } catch(e){
-            throw new UserError(`Error navigating back: ${e}`);
+            throw browser_error(`Error navigating back`, e);
         }
     },
 };
@@ -126,7 +141,7 @@ const scraping_browser_go_forward = {
                 `URL: ${page.url()}`,
             ].join('\n');
         } catch(e){
-            throw new UserError(`Error navigating forward: ${e}`);
+            throw browser_error(`Error navigating forward`, e);
         }
     },
 };
@@ -171,7 +186,7 @@ let scraping_browser_snapshot = {
             }
             return lines.join('\n');
         } catch(e){
-            throw new UserError(`Error capturing snapshot: ${e}`);
+            throw browser_error(`Error capturing snapshot`, e);
         }
     },
 };
@@ -198,7 +213,7 @@ let scraping_browser_click_ref = {
             await locator.click({timeout: 5000});
             return `Successfully clicked element: ${element} (ref=${ref})`;
         } catch(e){
-            throw new UserError(`Error clicking element ${element} with ref ${ref}: ${e}`);
+            throw browser_error(`Error clicking element ${element} with ref ${ref}`, e);
         }
     },
 };
@@ -232,7 +247,7 @@ let scraping_browser_type_ref = {
             return 'Successfully typed "'+text+'" into element: '+element
                 +' (ref='+ref+')'+suffix;
         } catch(e){
-            throw new UserError(`Error typing into element ${element} with ref ${ref}: ${e}`);
+            throw browser_error(`Error typing into element ${element} with ref ${ref}`, e);
         }
     },
 };
@@ -257,7 +272,7 @@ let scraping_browser_screenshot = {
             const buffer = await page.screenshot({fullPage: full_page});
             return image_content({buffer});
         } catch(e){
-            throw new UserError(`Error taking screenshot: ${e}`);
+            throw browser_error(`Error taking screenshot`, e);
         }
     },
 };
@@ -288,7 +303,7 @@ let scraping_browser_get_html = {
                 return html.split('<body>')[1].split('</body>')[0];
             return html;
         } catch(e){
-            throw new UserError(`Error getting HTML content: ${e}`);
+            throw browser_error(`Error getting HTML content`, e);
         }
     },
 };
@@ -304,7 +319,7 @@ let scraping_browser_get_text = {
     execute: async()=>{
         const page = await (await require_browser()).get_page();
         try { return await page.$eval('body', body=>body.innerText); }
-        catch(e){ throw new UserError(`Error getting text content: ${e}`); }
+        catch(e){ throw browser_error(`Error getting text content`, e); }
     },
 };
 
@@ -324,7 +339,7 @@ let scraping_browser_scroll = {
             });
             return 'Successfully scrolled to the bottom of the page';
         } catch(e){
-            throw new UserError(`Error scrolling page: ${e}`);
+            throw browser_error(`Error scrolling page`, e);
         }
     },
 };
@@ -351,8 +366,8 @@ let scraping_browser_scroll_to_ref = {
             await locator.scrollIntoViewIfNeeded();
             return `Successfully scrolled to element: ${element} (ref=${ref})`;
         } catch(e){
-            throw new UserError(`Error scrolling to element ${element} with `
-                +`ref ${ref}: ${e}`);
+            throw browser_error(`Error scrolling to element ${element} `
+                +`with ref ${ref}`, e);
         }
     },
 };
@@ -393,7 +408,7 @@ let scraping_browser_network_requests = {
                 ...results
             ].join('\n');
         } catch(e){
-            throw new UserError(`Error getting network requests: ${e}`);
+            throw browser_error(`Error getting network requests`, e);
         }
     },
 };
@@ -422,7 +437,7 @@ let scraping_browser_wait_for_ref = {
             await locator.waitFor({timeout: timeout || 30000});
             return `Successfully waited for element: ${element} (ref=${ref})`;
         } catch(e){
-            throw new UserError(`Error waiting for element ${element} with ref ${ref}: ${e}`);
+            throw browser_error(`Error waiting for element ${element} with ref ${ref}`, e);
         }
     },
 };
@@ -478,7 +493,7 @@ let scraping_browser_fill_form = {
             }
             return 'Successfully filled form:\n'+results.join('\n');
         } catch(e){
-            throw new UserError(`Error filling form: ${e}`);
+            throw browser_error(`Error filling form`, e);
         }
     },
 };

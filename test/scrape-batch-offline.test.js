@@ -69,6 +69,8 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
                 'reason must be a sanitized string, not a raw error object');
             assert.equal(rejected.reason, 'Request failed with status code '
                 +'400');
+            assert.equal(rejected.url, 'https://bad.example/fail',
+                'a rejected entry names the url that failed');
             assert.equal('config' in rejected, false,
                 'rejected entry must not carry a raw axios config');
             assert.equal('request' in rejected, false,
