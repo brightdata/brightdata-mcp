@@ -111,12 +111,15 @@ test('tool_fn error boundary sanitizes a single-tool failure whose '
             const text_block = result.content.find(block=>block.type=='text');
             assert.ok(text_block, 'the tool error carries text content');
 
-            assert.match(text_block.text,
-                /Request failed with status code 400/,
-                'the sanitized fallback message must surface the HTTP '
-                +'failure');
-            assert.doesNotMatch(text_block.text, /dataset not found/,
-                'the raw response body must never reach the tool output');
+            // The sentence the API sent back is the only thing the model has
+            // to correct itself with, so it is surfaced -- bounded, with the
+            // token redacted -- rather than replaced by the HTTP client's
+            // generic message. What must never appear is the envelope around
+            // it: headers, config, the raw object.
+            assert.match(text_block.text, /HTTP 400: dataset not found/,
+                'the upstream reason reaches the model');
+            assert.ok(text_block.text.length<=400,
+                'and it is bounded');
             assert.doesNotMatch(text_block.text, /\[object Object\]/,
                 'a stringified error object must never reach the tool '
                 +'output');

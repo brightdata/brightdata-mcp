@@ -9,7 +9,7 @@
     },
     "scripts": {
         "start": "node server.js",
-        "test": "node --test"
+        "test": "node --test test/*.test.js"
     },
     "keywords": [
         "mcp",
@@ -44,7 +44,8 @@
         "browser_session.js",
         "aria_snapshot_filter.js",
         "tool_groups.js",
-        "prompts.js"
+        "prompts.js",
+        "upstream_error.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"
 }
