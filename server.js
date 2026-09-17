@@ -5,7 +5,9 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
-import {GROUPS} from './tool_groups.js';
+import {GROUPS, get_all_group_ids} from './tool_groups.js';
+import {parse_bool_env, find_unknown_groups, find_unknown_tools}
+    from './tool_config.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -34,7 +36,11 @@ const safe_error = e=>{
 };
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
-const pro_mode = process.env.PRO_MODE === 'true';
+const pro_mode_env = parse_bool_env(process.env.PRO_MODE);
+if (!pro_mode_env.recognized)
+    console.error(`[config] PRO_MODE="${process.env.PRO_MODE}" is not a `
+        +`recognized boolean; treating as false. Use PRO_MODE=true.`);
+const pro_mode = pro_mode_env.value;
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
@@ -65,6 +71,12 @@ function build_allowed_tools(groups = [], custom_tools = []){
 }
 
 const allowed_tools = build_allowed_tools(tool_groups, custom_tools);
+const unknown_groups = find_unknown_groups(tool_groups,
+    Object.values(GROUPS).map(g=>g.id));
+if (unknown_groups.length)
+    console.error(`[config] GROUPS: ignored unknown group id(s): `
+        +`${unknown_groups.join(', ')}. Valid groups: `
+        +`${get_all_group_ids().join(', ')}.`);
 function parse_rate_limit(rate_limit_str) {
     if (!rate_limit_str) 
         return null;
@@ -197,22 +209,32 @@ let server = new FastMCP({
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
+// Every tool definition passes through here regardless of gating, so
+// known_tool_names is the complete catalog (used to validate TOOLS below) and
+// registered_count is the ground truth of what this run actually exposes.
+const known_tool_names = new Set();
+let registered_count = 0;
 const addTool = (tool) => {
+    known_tool_names.add(tool.name);
+    const register = ()=>{
+        server.addTool(tool);
+        registered_count++;
+    };
     if (pro_mode)
     {
-        server.addTool(tool);
+        register();
         return;
     }
 
     if (allowed_tools.size>0)
     {
         if (allowed_tools.has(tool.name))
-            server.addTool(tool);
+            register();
         return;
     }
 
     if (pro_mode_tools.includes(tool.name))
-        server.addTool(tool);
+        register();
 };
 
 addTool({
@@ -1308,6 +1330,30 @@ server.addPrompts(prompts);
 
 for (let tool of browser_tools)
     addTool(tool);
+
+// All addTool calls are done -- validate TOOLS against the full catalog and
+// report the resolved selection, so a mistyped GROUPS/TOOLS/PRO_MODE is visible
+// instead of silently producing a plausible-but-wrong tool list.
+for (const unknown of find_unknown_tools(custom_tools, known_tool_names))
+{
+    console.error(`[config] TOOLS: "${unknown.name}" matched no tool`
+        +(unknown.suggestion ? ` -- did you mean "${unknown.suggestion}"? `
+            +`(tool names are case-sensitive)` : '')+'.');
+}
+const selection_summary = pro_mode
+    ? 'PRO_MODE (all tools)'
+        +(tool_groups.length || custom_tools.length
+            ? ' -- GROUPS/TOOLS are ignored in pro mode' : '')
+    : allowed_tools.size>0
+        ? 'selection'
+            +(tool_groups.length ? ` groups=[${tool_groups.join(', ')}]` : '')
+            +(custom_tools.length ? ` tools=[${custom_tools.join(', ')}]` : '')
+        : `default (${pro_mode_tools.length} free-tier tools)`;
+console.error(`[config] registered ${registered_count} of `
+    +`${known_tool_names.size} tools -- mode: ${selection_summary}`);
+if (!registered_count)
+    console.error(`[config] WARNING: 0 tools registered -- the server will `
+        +`expose an empty tool list. Check the GROUPS/TOOLS values above.`);
 
 console.error('Starting server...');
 
