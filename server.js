@@ -7,6 +7,7 @@ import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
+import {search_url} from './search_url.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
 import {createRequire} from 'node:module';
@@ -237,7 +238,8 @@ addTool({
             .length(2)
             .optional()
             .describe('2-letter country code for geo-targeted results '
-                +'(e.g., "us", "uk")'),
+                +'(e.g., "us", "de"). Supported for google and bing; not '
+                +'supported for yandex (the call fails if supplied).'),
     }),
     execute: tool_fn('search_engine', async({query, engine, cursor,
         geo_location}, ctx)=>
@@ -317,7 +319,9 @@ addTool({
                 .length(2)
                 .optional()
                 .describe('2-letter country code for geo-targeted results '
-                    +'(e.g., "us", "uk")'),
+                    +'(e.g., "us", "de"). Supported for google and bing; '
+                    +'not supported for yandex (the call fails if '
+                    +'supplied).'),
         })).min(1).max(5),
     }),
     execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
@@ -1375,14 +1379,3 @@ function tool_fn(name, fn){
     };
 }
 
-function search_url(engine, query, cursor, geo_location){
-    let q = encodeURIComponent(query);
-    let page = cursor ? parseInt(cursor) : 0;
-    let start = page * 10;
-    if (engine=='yandex')
-        return `https://yandex.com/search/?text=${q}&p=${page}`;
-    if (engine=='bing')
-        return `https://www.bing.com/search?q=${q}&first=${start + 1}`;
-    let gl = geo_location ? `&gl=${geo_location}` : '';
-    return `https://www.google.com/search?q=${q}&start=${start}${gl}`;
-}
