@@ -9,6 +9,8 @@ import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
+import {log} from './logger.js';
+import {annotate} from './tool_annotations.js';
 import {createRequire} from 'node:module';
 import {remark} from 'remark';
 import strip from 'strip-markdown';
@@ -38,6 +40,14 @@ const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
+// The zone bootstrap below runs before the MCP handshake; a hung API call
+// there freezes startup with no diagnosable cause on the client side. Bound
+// it: honor BASE_TIMEOUT when configured, else a 10s default -- unlike tool
+// calls, "no timeout" is never an acceptable setting for startup (the bound
+// applies even when BASE_TIMEOUT=0).
+const zone_check_timeout = base_timeout || 10*1000;
+const zone_log = log('zone');
+const server_log = log('server');
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
@@ -132,11 +142,12 @@ function check_rate_limit(){
 
 async function ensure_required_zones(){
     try {
-        console.error('Checking for required zones...');
+        zone_log.info('Checking for required zones...');
         let response = await axios({
             url: 'https://api.brightdata.com/zone/get_active_zones',
             method: 'GET',
             headers: api_headers(),
+            timeout: zone_check_timeout,
         });
         let zones = response.data || [];
         let has_unlocker_zone = zones.some(zone=>zone.name==unlocker_zone);
@@ -144,7 +155,7 @@ async function ensure_required_zones(){
         
         if (!has_unlocker_zone)
         {
-            console.error(`Required zone "${unlocker_zone}" not found, `
+            zone_log.info(`Required zone "${unlocker_zone}" not found, `
                 +`creating it...`);
             await axios({
                 url: 'https://api.brightdata.com/zone',
@@ -157,15 +168,16 @@ async function ensure_required_zones(){
                     zone: {name: unlocker_zone, type: 'unblocker'},
                     plan: {type: 'unblocker', ub_premium: true},
                 },
+                timeout: zone_check_timeout,
             });
-            console.error(`Zone "${unlocker_zone}" created successfully`);
+            zone_log.info(`Zone "${unlocker_zone}" created successfully`);
         }
         else
-            console.error(`Required zone "${unlocker_zone}" already exists`);
+            zone_log.info(`Required zone "${unlocker_zone}" already exists`);
             
         if (!has_browser_zone)
         {
-            console.error(`Required zone "${browser_zone}" not found, `
+            zone_log.info(`Required zone "${browser_zone}" not found, `
                 +`creating it...`);
             await axios({
                 url: 'https://api.brightdata.com/zone',
@@ -178,13 +190,14 @@ async function ensure_required_zones(){
                     zone: {name: browser_zone, type: 'browser_api'},
                     plan: {type: 'browser_api'},
                 },
+                timeout: zone_check_timeout,
             });
-            console.error(`Zone "${browser_zone}" created successfully`);
+            zone_log.info(`Zone "${browser_zone}" created successfully`);
         }
         else
-            console.error(`Required zone "${browser_zone}" already exists`);
+            zone_log.info(`Required zone "${browser_zone}" already exists`);
     } catch(e){
-        console.error('Error checking/creating zones:',
+        zone_log.error('Error checking/creating zones:',
             e.response?.data||e.message);
     }
 }
@@ -220,11 +233,7 @@ addTool({
     description: 'Scrape search results from Google, Bing or Yandex. Returns '
         +'SERP results in JSON or Markdown (URL, title, description),Ideal for'
         +'gathering current information, news, and detailed search results.',
-    annotations: {
-        title: 'Search Engine',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Search Engine'),
     parameters: z.object({
         query: z.string(),
         engine: z.enum(['google', 'bing', 'yandex'])
@@ -269,11 +278,7 @@ addTool({
     +'content extraction and get back the results in MarkDown language. '
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
-    annotations: {
-        title: 'Scrape as Markdown',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Scrape as Markdown'),
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
         let response = await base_request({
@@ -300,11 +305,7 @@ addTool({
     name: 'search_engine_batch',
     description: 'Run multiple search queries simultaneously. Returns '
     +'JSON for Google, Markdown for Bing/Yandex.',
-    annotations: {
-        title: 'Search Engine Batch',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Search Engine Batch'),
     parameters: z.object({
         queries: z.array(z.object({
             query: z.string(),
@@ -378,11 +379,7 @@ addTool({
         +'content extraction and get back the results in MarkDown language. '
         +'This tool can unlock any webpage even if it uses bot detection or '
         +'CAPTCHA.',
-   annotations: {
-       title: 'Scrape Batch',
-       readOnlyHint: true,
-       openWorldHint: true,
-   },
+   annotations: annotate('sync_fetch', 'Scrape Batch'),
    parameters: z.object({
        urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
    }),
@@ -422,11 +419,7 @@ addTool({
     +'content extraction and get back the results in HTML. '
     +'This tool can unlock any webpage even if it uses bot detection or '
     +'CAPTCHA.',
-    annotations: {
-        title: 'Scrape as HTML',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Scrape as HTML'),
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
         let response = await axios({
@@ -450,11 +443,7 @@ addTool({
         + 'First scrapes the page as markdown, then uses AI sampling to convert '
         + 'it to structured JSON format. This tool can unlock any webpage even '
         + 'if it uses bot detection or CAPTCHA.',
-    annotations: {
-        title: 'Extract Structured Data',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('sync_fetch', 'Extract Structured Data'),
     parameters: z.object({
         url: z.string().url(),
         extraction_prompt: z.string().optional().describe(
@@ -512,11 +501,7 @@ addTool({
         +'Returns scored results with title, description, and URL. Supports '
         +'intent-based ranking, geo-targeting, date filtering, and keyword '
         +'filtering.',
-    annotations: {
-        title: 'Discover',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('job_start', 'Discover'),
     parameters: z.object({
         query: z.string().describe('The search query'),
         intent: z.string().optional().describe('Describes the specific goal '
@@ -573,7 +558,8 @@ addTool({
         let task_id = trigger_response.data?.task_id;
         if (!task_id)
             throw new Error('No task_id returned from discover request');
-        console.error(`[discover] triggered with task ID: ${task_id}`);
+        const discover_log = log('discover');
+        discover_log.info(`triggered with task ID: ${task_id}`);
         let max_attempts = polling_timeout;
         let attempts = 0;
         while (attempts<max_attempts)
@@ -596,13 +582,13 @@ addTool({
                 });
                 if (poll_response.data?.status==='processing')
                 {
-                    console.error(`[discover] still processing, polling `
+                    discover_log.info(`still processing, polling `
                         +`again (attempt ${attempts+1}/${max_attempts})`);
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
                     continue;
                 }
-                console.error(`[discover] results received after `
+                discover_log.info(`results received after `
                     +`${attempts+1} attempts`);
                 let results = poll_response.data?.results || [];
                 results = results.map(r=>({
@@ -613,7 +599,7 @@ addTool({
                 }));
                 return JSON.stringify(results);
             } catch(e){
-                console.error(`[discover] polling error: ${e.message}`);
+                discover_log.warn(`polling error: ${e.message}`);
                 if (e.response?.status===400)
                     throw e;
                 attempts++;
@@ -638,11 +624,7 @@ addTool({
         +'(field name, type, and description). Call this before '
         +'search_dataset to learn which field names and types you can '
         +'filter on.\n'+SEARCHABLE_DATASETS_DESC,
-    annotations: {
-        title: 'List Dataset Fields',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('closed_read', 'List Dataset Fields'),
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
         let response = await base_request({
@@ -666,11 +648,7 @@ addTool({
         +'or a leaf {name, value, operator}. Max nesting depth 3.\n'
         +'Leaf operators: '+FILTER_OPERATORS.join(', ')+'.\n'
         +SEARCHABLE_DATASETS_DESC,
-    annotations: {
-        title: 'Search Dataset',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
+    annotations: annotate('closed_read', 'Search Dataset'),
     parameters: z.object({
         dataset_id: dataset_id_schema,
         filter: filter_schema.describe('Filter tree describing which '
@@ -715,10 +693,7 @@ addTool({
 addTool({
     name: 'session_stats',
     description: 'Tell the user about the tool usage during this session',
-    annotations: {
-        title: 'Session Stats',
-        readOnlyHint: true,
-    },
+    annotations: annotate('closed_read', 'Session Stats'),
     parameters: z.object({}),
     execute: tool_fn('session_stats', async()=>{
         let used_tools = Object.entries(debug_stats.tool_calls);
@@ -1233,11 +1208,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
     addTool({
         name: tool_name,
         description,
-        annotations: {
-            title: dataset_id_to_title(id),
-            readOnlyHint: true,
-            openWorldHint: true,
-        },
+        annotations: annotate('job_start', dataset_id_to_title(id)),
         parameters: z.object(parameters),
         execute: tool_fn(tool_name, async(data, ctx)=>{
             data = {...data, ...fixed_values};
@@ -1251,7 +1222,8 @@ for (let {dataset_id, id, description, inputs, defaults = {},
             if (!trigger_response.data?.snapshot_id)
                 throw new Error('No snapshot ID returned from request');
             let snapshot_id = trigger_response.data.snapshot_id;
-            console.error(`[${tool_name}] triggered collection with `
+            const dataset_log = log(tool_name);
+            dataset_log.info(`triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
             let max_attempts = polling_timeout;
             let attempts = 0;
@@ -1277,21 +1249,21 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                     if (['running', 'building', 'starting'].includes(
                         snapshot_response.data?.status))
                     {
-                        console.error(`[${tool_name}] snapshot not ready, `
+                        dataset_log.info(`snapshot not ready, `
                             +`polling again (attempt `
                             +`${attempts + 1}/${max_attempts})`);
                         attempts++;
                         await new Promise(resolve=>setTimeout(resolve, 1000));
                         continue;
                     }
-                    console.error(`[${tool_name}] snapshot data received `
+                    dataset_log.info(`snapshot data received `
                         +`after ${attempts + 1} attempts`);
                     const data = JSON.parse(JSON.stringify(
                             snapshot_response.data,
                             (_k, v)=>v==null ? undefined : v));
                     return JSON.stringify(data);
                 } catch(e){
-                    console.error(`[${tool_name}] polling error: `
+                    dataset_log.warn(`polling error: `
                         +`${e.message}`);
                     if (e.response?.status === 400) throw e;
                     attempts++;
@@ -1309,7 +1281,7 @@ server.addPrompts(prompts);
 for (let tool of browser_tools)
     addTool(tool);
 
-console.error('Starting server...');
+server_log.info('Starting server...');
 
 server.on('connect', (event)=>{
     const session = event.session;
@@ -1324,7 +1296,8 @@ function tool_fn(name, fn){
         check_rate_limit();
         const clientInfo = global.mcpClientInfo;
         const clientName = clientInfo?.name || 'unknown-client';
-        console.error(`[%s] executing (client=%s) %s`, name, clientName,
+        const tool_log = log(name);
+        tool_log.info(`executing (client=%s) %s`, clientName,
             JSON.stringify(data));
         debug_stats.tool_calls[name] = debug_stats.tool_calls[name]||0;
         debug_stats.tool_calls[name]++;
@@ -1339,7 +1312,7 @@ function tool_fn(name, fn){
         catch(e){
         if (e.response)
             {
-                console.error(`[%s] error %s %s: %s`, name, e.response.status,
+                tool_log.error(`error %s %s: %s`, e.response.status,
                     e.response.statusText, e.response.data);
 
                 const headers = e.response.headers;
@@ -1366,11 +1339,11 @@ function tool_fn(name, fn){
                         +redact_token(message));
             }
             else
-                console.error(`[%s] error %s`, name, e.stack);
+                tool_log.error(`error %s`, e.stack);
             throw new Error(safe_error(e));
         } finally {
             let dur = Date.now()-ts;
-            console.error(`[%s] tool finished in %sms`, name, dur);
+            tool_log.info(`tool finished in %sms`, dur);
         }
     };
 }

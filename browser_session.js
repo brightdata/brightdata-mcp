@@ -1,6 +1,11 @@
 'use strict'; /*jslint node:true es9:true*/
 import * as playwright from 'playwright';
 import {Aria_snapshot_filter} from './aria_snapshot_filter.js';
+// Renamed on import: several methods take a `log` callback parameter that
+// would otherwise shadow it.
+import {log as make_log} from './logger.js';
+
+const browser_log = make_log('browser');
 
 const cred_url_re = /((?:wss?|https?):\/\/)[^/@\s]+@/gi;
 
@@ -29,7 +34,7 @@ export class Browser_session {
             const urlObj = new URL(url);
             return urlObj.hostname;
         } catch(e){
-            console.error(`Error extracting domain from ${url}:`, e);
+            browser_log.error(`Error extracting domain from ${url}:`, e);
             return 'default';
         }
     }
@@ -77,7 +82,8 @@ export class Browser_session {
             }
             return session.browser;
         } catch(e){
-            console.error(`Error connecting to browser for domain ${domain}:`, e);
+            browser_log.error(`Error connecting to browser for domain `
+                +`${domain}:`, e);
             const session = this._domainSessions.get(domain);
             if (session)
             {
@@ -125,7 +131,7 @@ export class Browser_session {
             }
             return session.page;
         } catch(e){
-            console.error(`Error getting page for domain ${domain}:`, e);
+            browser_log.error(`Error getting page for domain ${domain}:`, e);
             const session = this._domainSessions.get(domain);
             if (session) 
             {
@@ -322,7 +328,8 @@ export class Browser_session {
             if (session && session.browser) 
             {
                 try { await session.browser.close(); }
-                catch(e){ console.error(`Error closing browser for domain ${domain}:`, e); }
+                catch(e){ browser_log.error(`Error closing browser for `
+                    +`domain ${domain}:`, e); }
                 session.browser = null;
                 session.page = null;
                 session.browserClosed = true;
@@ -335,7 +342,8 @@ export class Browser_session {
                 if (session.browser) 
                 {
                     try { await session.browser.close(); }
-                    catch(e){ console.error(`Error closing browser for domain ${domain}:`, e); }
+                    catch(e){ browser_log.error(`Error closing browser `
+                        +`for domain ${domain}:`, e); }
                     session.browser = null;
                     session.page = null;
                     session.browserClosed = true;
