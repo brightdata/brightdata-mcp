@@ -6,6 +6,7 @@ import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {GROUPS} from './tool_groups.js';
+import {build_instructions, capabilities_from} from './instructions.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -191,9 +192,20 @@ async function ensure_required_zones(){
 
 await ensure_required_zones();
 
+// The guidance a client may put in front of the model, derived from the same
+// gate addTool applies below so it can never name a tool this session will not
+// register. The catalogue in tool_groups.js is the source of names -- it holds
+// exactly the tools pro mode registers.
+const tool_catalogue = [...new Set(
+    Object.values(GROUPS).flatMap(group=>group.tools || []))];
+const will_register = tool_catalogue.filter(name=>pro_mode
+    || (allowed_tools.size>0 ? allowed_tools.has(name)
+        : pro_mode_tools.includes(name)));
+
 let server = new FastMCP({
     name: 'Bright Data',
     version: package_json.version,
+    instructions: build_instructions(capabilities_from(will_register)).text,
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
