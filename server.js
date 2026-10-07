@@ -5,6 +5,7 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
+import {gate_page_content} from './content_gate.js';
 import {GROUPS} from './tool_groups.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
@@ -42,6 +43,10 @@ const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
     'search_engine_batch', 'scrape_batch', 'discover'];
+// Tools whose result is page-derived content. Their return passes through the
+// content gate (see content_gate.js); every other tool is untouched.
+const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
+    'extract', 'scrape_batch', 'search_engine_batch']);
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
         .filter(Boolean) : [];
@@ -1335,7 +1340,13 @@ function tool_fn(name, fn){
             clientInfo,
             clientName,
         };
-        try { return await fn(data, extended_ctx); }
+        try {
+            const result = await fn(data, extended_ctx);
+            if (!page_content_tools.has(name))
+                return result;
+            return await gate_page_content({name, result, ctx: extended_ctx,
+                sessions: server.sessions});
+        }
         catch(e){
         if (e.response)
             {

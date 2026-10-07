@@ -854,10 +854,28 @@ Full skill with offer schema and ranking rules: [skills/price-comparison](https:
 | `WEB_UNLOCKER_ZONE` | Custom Web Unlocker zone name | `mcp_unlocker` | `my_custom_zone` |
 | `BROWSER_ZONE` | Custom Browser zone name | `mcp_browser` | `my_browser_zone` |
 | `POLLING_TIMEOUT` | Timeout for `web_data_*` tools polling (seconds). Each second = 1 polling attempt | `600` | `300`, `1200` |
+| `CONTENT_GATE` | When page content returned by a data tool looks like instructions to change the MCP configuration, the server asks the user (via MCP elicitation) before returning it. Set to `off` to disable | `on` | `off` |
+| `CONTENT_GATE_TIMEOUT` | Seconds to wait for the user's answer before withholding the content | `120` | `60`, `300` |
 | `BASE_TIMEOUT` | Request timeout for base tools in seconds (search and scrape) | No limit | `60`, `120` |
 | `BASE_MAX_RETRIES` | Max retries for base tools on transient errors (0-3) | `0` | `1`, `3` |
 | `GROUPS` | Comma-separated tool group IDs | - | `ecommerce,browser` |
 | `TOOLS` | Comma-separated individual tool names | - | `extract,scrape_as_html` |
+
+### Content gate
+
+`scrape_as_markdown`, `search_engine`, `extract` and their batch variants return whatever a web
+page says. If that content contains text that reads like instructions to change your MCP
+configuration — register a server, run an `npx -y` package, edit the MCP config file — the server
+pauses and asks you, through your MCP client, before returning it. Approve and the content is
+returned unchanged; decline and it is withheld with a short explanation to the assistant. Pages that
+do not contain such text are returned exactly as before, with no prompt. For a batch call, only the
+matching items are withheld.
+
+Pages that are *about* MCP configuration (documentation, READMEs) will naturally prompt. Clients that
+do not support MCP elicitation get the matching content withheld; set `CONTENT_GATE=off` if you
+accept the risk. While the server waits for your answer it reports progress; clients that do not
+extend their tool timeout on progress will cap the wait at their own limit — `CONTENT_GATE_TIMEOUT`
+is the knob on the server side. Browser tools are not covered.
 
 ---
 
