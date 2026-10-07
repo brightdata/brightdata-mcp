@@ -43,6 +43,7 @@
         "browser_tools.js",
         "browser_session.js",
         "aria_snapshot_filter.js",
+        "content_gate.js",
         "tool_groups.js",
         "prompts.js"
     ],
