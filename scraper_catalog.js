@@ -13,9 +13,10 @@ const to_entry = s=>({
 });
 
 const score = (entry, words)=>{
-    const text = `${entry.name} ${entry.domain} ${entry.dataset_id}`
-        .toLowerCase();
-    return words.filter(w=>text.includes(w)).length;
+    const text = `${entry.name} ${entry.domain}`.toLowerCase();
+    const id = entry.dataset_id.toLowerCase();
+    return words.filter(w=>w.startsWith('gd_') ? id.includes(w)
+        : text.includes(w)).length;
 };
 
 const to_method = (m, source)=>({

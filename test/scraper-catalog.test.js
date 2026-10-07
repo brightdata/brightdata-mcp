@@ -92,6 +92,13 @@ test('search matches name, domain or id', async t=>{
     assert.deepEqual(ids(await catalog.search('gd_amz_rev')), ['gd_amz_rev']);
 });
 
+test('search ignores ids unless the word starts with gd_', async t=>{
+    const {catalog} = await setup(t);
+    assert.deepEqual(await catalog.search('amz'), []);
+    assert.deepEqual(ids(await catalog.search('gd_amz')),
+        ['gd_amz_prod', 'gd_amz_rev']);
+});
+
 test('search ranks by matched words, trims names, honours limit',
 async t=>{
     const {catalog} = await setup(t);
