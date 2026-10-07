@@ -32,7 +32,7 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **69 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **75 tools** covering:
 
 - **Web search** — Google, Bing, and Yandex results as structured data
 - **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
@@ -40,7 +40,7 @@ The Bright Data MCP server gives AI agents real-time access to public web data. 
 - **Browser automation** — navigate, click, type, screenshot, and read pages in a remote browser session
 - **LLM response collection** — send prompts to ChatGPT, Grok, and Perplexity and get their answers back as structured data
 - **Package registry data** — npm and PyPI package versions, READMEs, dependencies, and metadata
-- **Web Scraper API** — search and run any of 1,200+ pre-built scrapers (reviews, profiles, products, jobs, listings) from one set of tools (local server only for now)
+- **Web Scraper API** — search and run any of 1,200+ pre-built scrapers (reviews, profiles, products, jobs, listings) from one set of tools
 
 Every request is routed through Bright Data's unblocking infrastructure, so pages that block ordinary HTTP clients (bot detection, CAPTCHAs, rate limits, geo-restrictions) return normally. No proxy setup, no headless browser maintenance, no retry logic to write.
 
@@ -362,7 +362,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 | Capability | Bright Data MCP | Typical web MCP servers |
 |------------|-----------------|------------------------|
-| Total tools | 69 | 2–10 |
+| Total tools | 75 | 2–10 |
 | Platform-specific structured JSON extractors | 45 tools across e-commerce, social, business, finance, travel, app stores | Rare; generic scraping only |
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
 | Search engines | Google, Bing, Yandex | Usually one |
@@ -398,7 +398,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 | `geo` | ChatGPT, Grok, Perplexity response collection | 3 |
 | `code` | npm, PyPI package data | 2 |
 | `advanced_scraping` | Batch tools, HTML scraping, AI extraction, session stats | 5 |
-| `scrapers` | Search and run any pre-built Web Scraper API scraper (local server only for now) | 6 |
+| `scrapers` | Search and run any pre-built Web Scraper API scraper | 6 |
 
 ### Configuration examples
 
@@ -439,7 +439,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm and PyPI package da
 
 ---
 
-## Tools Reference (69 Tools)
+## Tools Reference (75 Tools)
 
 ### Which tool to use
 
@@ -447,7 +447,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm and PyPI package da
 - **Need to find information:** `search_engine`. Multiple queries (up to 10): `search_engine_batch`
 - **Deep research or RAG, need relevance-ranked sources:** `discover` with an `intent`
 - **Page is on a supported platform (Amazon, LinkedIn, TikTok, etc.):** use the matching `web_data_*` tool — returns clean JSON, faster and more reliable than scraping the same page
-- **Structured data from a site with no `web_data_*` tool:** `search_scrapers` → `get_scraper_details` → `run_scraper` (local server only for now)
+- **Structured data from a site with no `web_data_*` tool:** `search_scrapers` → `get_scraper_details` → `run_scraper`
 - **Structured JSON from an unsupported page:** `extract`
 - **Raw HTML:** `scrape_as_html`
 - **Page requires interaction (click, type, scroll, login):** `scraping_browser_*` tools
@@ -478,9 +478,9 @@ Notes that apply to all `web_data_*` tools:
 </details>
 
 <details>
-<summary><b>Web Scraper API — 6 tools (local server only for now)</b></summary>
+<summary><b>Web Scraper API — 6 tools</b></summary>
 
-Search and run any of Bright Data's 1,200+ pre-built scrapers. The scraper list is loaded from `docs.brightdata.com/scrapers.json` and refreshed daily. Enabled by default when neither `GROUPS` nor `TOOLS` is set; otherwise add the `scrapers` group.
+Search and run any of Bright Data's 1,200+ pre-built scrapers. The scraper list is loaded from `docs.brightdata.com/scrapers.json` and refreshed daily. Available on both the hosted and the local server. Enabled by default when no tools or groups are selected; otherwise add the `scrapers` group (`&groups=scrapers` on the hosted URL, `GROUPS=scrapers` locally).
 
 Typical flow: `search_scrapers` → `get_scraper_details` → `run_scraper`. Runs are billed per record; `discover_by_*` methods collect up to `limit_per_input` records per input (default 10).
 
