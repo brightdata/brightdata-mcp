@@ -58,7 +58,7 @@ export function create_scraper_catalog(opt = {}){
             scrapers = res.data.scrapers.map(to_entry);
             loaded_at = now();
         } catch(e){
-            if (!scrapers)
+            if (!scrapers || force)
                 throw e;
             console.error(`[scraper_catalog] refresh failed, serving `
                 +`catalog from ${new Date(loaded_at).toISOString()}: `

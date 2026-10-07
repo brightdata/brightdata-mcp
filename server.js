@@ -7,6 +7,9 @@ import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {gate_page_content} from './content_gate.js';
 import {GROUPS} from './tool_groups.js';
+import {create_scraper_catalog} from './scraper_catalog.js';
+import {create_scraper_run} from './scraper_run.js';
+import {scraper_tools, scraper_tool_names} from './scraper_tools.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -42,7 +45,7 @@ const base_timeout = process.env.BASE_TIMEOUT
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
-    'search_engine_batch', 'scrape_batch', 'discover'];
+    'search_engine_batch', 'scrape_batch', 'discover', ...scraper_tool_names];
 // Tools whose result is page-derived content. Their return passes through the
 // content gate (see content_gate.js); every other tool is untouched.
 const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
@@ -716,6 +719,12 @@ addTool({
         return JSON.stringify(result);
     }),
 });
+
+for (const tool of scraper_tools({catalog: create_scraper_catalog(),
+    runner: create_scraper_run(), tool_fn, headers: api_headers}))
+{
+    addTool(tool);
+}
 
 addTool({
     name: 'session_stats',

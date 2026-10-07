@@ -16,6 +16,28 @@ export function start_stub_server(){
                         {name: 'mcp_browser'}]));
                     return;
                 }
+                if (req.url=='/scrapers.json')
+                {
+                    res.writeHead(200, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify({scrapers: [{dataset_id: 'gd_rev',
+                        name: 'Amazon Reviews', domain: 'amazon.com',
+                        collection_methods: ['collect_by_url']}]}));
+                    return;
+                }
+                if (req.url.startsWith('/datasets/v3/trigger'))
+                {
+                    observed_requests.push({headers: req.headers,
+                        url: req.url, body: JSON.parse(body)});
+                    res.writeHead(200, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify({snapshot_id: 's_1'}));
+                    return;
+                }
+                if (req.url.startsWith('/datasets/v3/snapshot/s_1'))
+                {
+                    res.writeHead(200, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify([{rating: 5, title: null}]));
+                    return;
+                }
                 if (req.method=='POST' && req.url=='/zone')
                 {
                     res.writeHead(200, {'Content-Type': 'application/json'});
@@ -55,7 +77,8 @@ export function start_stub_server(){
                     }
                     if (target_url.includes('bad.example'))
                     {
-                        res.writeHead(400, {'Content-Type': 'application/json'});
+                        res.writeHead(400,
+                            {'Content-Type': 'application/json'});
                         res.end(JSON.stringify({error: 'zone not found'}));
                         return;
                     }

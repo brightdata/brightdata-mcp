@@ -166,6 +166,20 @@ export const GROUPS = {
             'web_data_pypi_package',
         ],
     },
+    SCRAPERS: {
+        id: 'scrapers',
+        name: 'Web Scraper API',
+        description: 'Search and run any of 1,200+ pre-built scrapers.',
+        tools: [
+            ...base_tools,
+            'search_scrapers',
+            'get_scraper_details',
+            'run_scraper',
+            'get_scraper_progress',
+            'get_scraper_results',
+            'refresh_scrapers',
+        ],
+    },
     CUSTOM: {
         id: 'custom',
         name: 'Custom',

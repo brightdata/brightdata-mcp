@@ -142,6 +142,16 @@ test('failed refresh keeps serving the old catalog', async t=>{
     assert.deepEqual(ids(await catalog.search('ebay')), ['gd_ebay']);
 });
 
+test('failed forced refresh reaches the caller, old catalog stays',
+async t=>{
+    const {catalog, state} = await setup(t);
+    await catalog.load_catalog();
+    state.fail = true;
+    await assert.rejects(catalog.load_catalog({force: true}),
+        /status code 500/);
+    assert.deepEqual(ids(await catalog.search('ebay')), ['gd_ebay']);
+});
+
 test('failed first load reaches the caller', async t=>{
     const {catalog, state} = await setup(t);
     state.fail = true;
