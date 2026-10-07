@@ -721,7 +721,8 @@ addTool({
 });
 
 for (const tool of scraper_tools({catalog: create_scraper_catalog(),
-    runner: create_scraper_run(), tool_fn, headers: api_headers}))
+    runner: create_scraper_run(), tool_fn,
+    headers: (ctx, name)=>api_headers(ctx.clientName, name)}))
 {
     addTool(tool);
 }

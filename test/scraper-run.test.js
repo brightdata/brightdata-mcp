@@ -18,7 +18,9 @@ const route = (state, req, res, body)=>{
     {
         state.trigger = {params: Object.fromEntries(url.searchParams),
             body: JSON.parse(body), auth: req.headers.authorization};
-        return send(res, 200, state.no_id ? {} : {snapshot_id: 's_1'});
+        const reply = state.no_id ? {} : {snapshot_id: 's_1'};
+        return void setTimeout(()=>send(res, 200, reply),
+            state.trigger_delay||0);
     }
     if (path=='/datasets/v3/progress/s_1')
         return send(res, 200, {snapshot_id: 's_1', status: 'running'});
@@ -91,6 +93,16 @@ test('run waits until the snapshot is ready', async t=>{
         input: {url: 'https://a.com'}});
     assert.equal(res.status, 'ready');
     assert.equal(state.polls, 4);
+});
+
+test('run counts the trigger time against the wait', async t=>{
+    const {sr, state} = await setup(t);
+    state.ready_after = Infinity;
+    state.trigger_delay = 50;
+    const res = await sr.run({dataset_id: 'gd_1', method: 'collect_by_url',
+        input: {url: 'https://a.com'}, wait_ms: 30});
+    assert.equal(res.status, 'running');
+    assert.equal(state.polls, 1);
 });
 
 test('run returns the snapshot id when the wait runs out', async t=>{

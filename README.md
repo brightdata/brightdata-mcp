@@ -488,7 +488,7 @@ Typical flow: `search_scrapers` → `get_scraper_details` → `run_scraper`. Run
 |------|-------------|-------|
 | `search_scrapers` | Find scrapers by site or data type (e.g. "amazon reviews", "linkedin.com"). Returns dataset ID, name, domain and collection methods | default / `scrapers` |
 | `get_scraper_details` | Description, input fields, example input and main output fields for one scraper method | default / `scrapers` |
-| `run_scraper` | Run a scraper method. Waits up to 60 seconds; if still running, returns a `snapshot_id` to check later | default / `scrapers` |
+| `run_scraper` | Run a scraper method. Waits up to 45 seconds; if still running, returns a `snapshot_id` to check later | default / `scrapers` |
 | `get_scraper_progress` | Status of a run: starting, running, ready, failed or canceled | default / `scrapers` |
 | `get_scraper_results` | Records of a finished run | default / `scrapers` |
 | `refresh_scrapers` | Reload the scraper list now instead of waiting for the daily refresh | default / `scrapers` |

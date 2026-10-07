@@ -43,7 +43,7 @@
     {"name": "discover", "description": "Search the web and rank results by AI-driven relevance. Returns scored results with title, description, and URL. Supports intent-based ranking, geo-targeting, date filtering, and keyword filtering."},
     {"name": "search_scrapers", "description": "Find a pre-built Bright Data scraper (Web Scraper API, 1,200+ sites) by site or data type."},
     {"name": "get_scraper_details", "description": "Show a scraper's description, input fields, example input and main output fields for one collection method."},
-    {"name": "run_scraper", "description": "Run any pre-built scraper. Waits up to 60 seconds, then returns a snapshot ID to check later."},
+    {"name": "run_scraper", "description": "Run any pre-built scraper. Waits up to 45 seconds, then returns a snapshot ID to check later."},
     {"name": "get_scraper_progress", "description": "Check the status of a scraper run."},
     {"name": "get_scraper_results", "description": "Get the records of a finished scraper run."},
     {"name": "refresh_scrapers", "description": "Reload the list of pre-built scrapers now."},

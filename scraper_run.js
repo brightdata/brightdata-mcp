@@ -55,9 +55,9 @@ export function create_scraper_run(opt = {}){
             return {snapshot_id, status: 'running'};
         return {snapshot_id, status: 'ready', data: strip_nulls(res.data)};
     };
-    const run = async({wait_ms = 60000, headers, ...req})=>{
-        const snapshot_id = await trigger({...req, headers});
+    const run = async({wait_ms = 45000, headers, ...req})=>{
         const deadline = Date.now()+wait_ms;
+        const snapshot_id = await trigger({...req, headers});
         for (;;)
         {
             const res = await results(snapshot_id, headers);

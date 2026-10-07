@@ -16,7 +16,7 @@ export function scraper_tools({catalog, runner, tool_fn, headers}){
         description, annotations: read_only(title),
         parameters: z.object(parameters),
         execute: tool_fn(name, async(data, ctx)=>JSON.stringify(
-            await fn(data, headers(ctx.clientName, name)))),
+            await fn(data, headers(ctx, name)))),
     });
     return [
         tool('search_scrapers', 'Search Scrapers', 'Find a Bright Data '
@@ -39,7 +39,7 @@ export function scraper_tools({catalog, runner, tool_fn, headers}){
             +'get_scraper_details, one per URL or query. collect_by_url '
             +'returns one record per input; discover_by_* methods return up '
             +'to limit_per_input records per input, and every record is '
-            +'billed. Waits up to 60 seconds; if still running it returns '
+            +'billed. Waits up to 45 seconds; if still running it returns '
             +'snapshot_id with status "running": then poll '
             +'get_scraper_progress and call get_scraper_results when ready. '
             +'Records with an "error" field explain failed inputs.',
