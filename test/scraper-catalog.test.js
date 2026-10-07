@@ -18,28 +18,67 @@ const scrapers = [
         collection_methods: ['discover_by_sietmap']},
 ];
 
-const start_docs = ()=>new Promise(done=>{
-    const state = {hits: 0, fail: false};
-    const server = http.createServer((req, res)=>{
+const url_field = {name: 'url', type: 'url', required: true,
+    description: 'Review URL', example: 'https://amazon.com/r/1'};
+const details = {
+    gd_amz_rev: {
+        collect_by_url: {input_schema: [url_field],
+            output_fields: [{name: 'rating', type: 'number', fill_rate: 99,
+                description: 'Star rating'}],
+            sample_input: [{url: 'https://amazon.com/r/1'}]},
+        discover_by_keyword: {
+            input_schema: [{name: 'keyword', type: 'text', required: false}],
+            output_fields: [{name: 'rating', type: 'number'}],
+            sample_input: []},
+    },
+    gd_jobs_b: {discover_by_sietmap: {input_schema: [], output_fields: [],
+        sample_input: []}},
+};
+
+const send =(res, code, body)=>{
+    res.writeHead(code, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify(body));
+};
+
+const route = (state, req, res)=>{
+    const url = new URL(req.url, 'http://x'), pathname = url.pathname;
+    if (pathname=='/scrapers.json')
+    {
         state.hits++;
         if (state.fail)
-        {
-            res.writeHead(500);
-            return void res.end();
-        }
-        res.writeHead(200, {'Content-Type': 'application/json'});
-        res.end(JSON.stringify({count: scrapers.length, scrapers}));
-    });
+            return send(res, 500, {});
+        return send(res, 200, {count: scrapers.length, scrapers});
+    }
+    if (pathname=='/datasets/v3/scrapers')
+    {
+        state.api_hits++;
+        state.auth = req.headers.authorization;
+        if (state.api_fail)
+            return send(res, 500, {});
+        const id = url.searchParams.get('dataset_id');
+        return send(res, 200, details[id] ? [{id, description: `About ${id}`,
+            scrapers: details[id]}]
+            : []);
+    }
+    const m = pathname.match(/^\/scrapers\/(\w+)\.json$/);
+    if (m && details[m[1]])
+        return send(res, 200, {id: m[1], collection_methods: details[m[1]]});
+    return send(res, 404, {});
+};
+
+const start_docs = ()=>new Promise(done=>{
+    const state = {hits: 0, api_hits: 0, fail: false, api_fail: false};
+    const server = http.createServer((req, res)=>route(state, req, res));
     server.listen(0, '127.0.0.1', ()=>done({server, state,
-        url: `http://127.0.0.1:${server.address().port}/scrapers.json`}));
+        url: `http://127.0.0.1:${server.address().port}`}));
 });
 
 const setup = async t=>{
     const docs = await start_docs();
     t.after(()=>docs.server.close());
     const clock = {ms: 1000};
-    const catalog = create_scraper_catalog({url: docs.url,
-        now: ()=>clock.ms});
+    const catalog = create_scraper_catalog({docs_url: docs.url,
+        api_url: docs.url, now: ()=>clock.ms});
     return {...docs, clock, catalog};
 };
 
@@ -107,4 +146,81 @@ test('failed first load reaches the caller', async t=>{
     const {catalog, state} = await setup(t);
     state.fail = true;
     await assert.rejects(catalog.search('amazon'), /status code 500/);
+});
+
+const auth = {Authorization: 'Bearer k'};
+
+test('details from the API include the example input', async t=>{
+    const {catalog, state} = await setup(t);
+    const d = await catalog.get_details('gd_amz_rev', 'collect_by_url',
+        auth);
+    assert.equal(state.auth, 'Bearer k');
+    assert.deepEqual(d, {dataset_id: 'gd_amz_rev', name: 'Amazon Reviews',
+        domain: 'amazon.com', description: 'About gd_amz_rev',
+        method: 'collect_by_url', source: 'api',
+        input_fields: [{name: 'url', type: 'url', required: true,
+            description: 'Review URL'}],
+        output_fields: [{name: 'rating', description: 'Star rating'}],
+        sample_input: [{url: 'https://amazon.com/r/1'}], notes: []});
+});
+
+test('details say when there is no example or required field',
+async t=>{
+    const {catalog} = await setup(t);
+    const d = await catalog.get_details('gd_amz_rev', 'discover_by_keyword',
+        auth);
+    assert.equal(d.sample_input, null);
+    assert.deepEqual(d.notes, ['No example input for this method.',
+        'This method has no required input fields.']);
+});
+
+test('details say when the schema is empty', async t=>{
+    const {catalog} = await setup(t);
+    const d = await catalog.get_details('gd_jobs_b', 'discover_by_sietmap',
+        auth);
+    assert.deepEqual(d.input_fields, []);
+    assert.deepEqual(d.notes, ['No example input for this method.',
+        'This method has no documented input fields.']);
+});
+
+test('details fall back to docs when the API fails', async t=>{
+    const {catalog, state} = await setup(t);
+    state.api_fail = true;
+    const d = await catalog.get_details('gd_amz_rev', 'collect_by_url',
+        auth);
+    assert.equal(d.source, 'docs');
+    assert.equal(d.description, null);
+    assert.equal(d.sample_input, null);
+    assert.deepEqual(d.input_fields.map(f=>f.name), ['url']);
+    assert.deepEqual(d.notes,
+        ['Example input unavailable: details API failed.']);
+});
+
+test('API details are cached per id, docs fallback is not', async t=>{
+    const {catalog, state, clock} = await setup(t);
+    state.api_fail = true;
+    await catalog.get_details('gd_amz_rev', 'collect_by_url', auth);
+    state.api_fail = false;
+    await catalog.get_details('gd_amz_rev', 'collect_by_url', auth);
+    await catalog.get_details('gd_amz_rev', 'discover_by_keyword', auth);
+    assert.equal(state.api_hits, 2);
+    clock.ms += DAY_MS;
+    await catalog.get_details('gd_amz_rev', 'collect_by_url', auth);
+    assert.equal(state.api_hits, 3);
+});
+
+test('details reject unknown ids and methods', async t=>{
+    const {catalog, state} = await setup(t);
+    await assert.rejects(catalog.get_details('gd_nope', 'collect_by_url'),
+        /Unknown dataset_id gd_nope/);
+    await assert.rejects(catalog.get_details('gd_amz_rev', 'discover_by_x'),
+        /no method discover_by_x, available: collect_by_url, discover_by/);
+    assert.equal(state.api_hits, 1);
+});
+
+test('details fail when API and docs both fail', async t=>{
+    const {catalog, state} = await setup(t);
+    state.api_fail = true;
+    await assert.rejects(catalog.get_details('gd_ebay', 'collect_by_url'),
+        /status code 404/);
 });
