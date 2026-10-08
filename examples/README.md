@@ -21,7 +21,7 @@ A curated list of community demos using Bright Data's MCP server.
   
   [💻Source Code](https://github.com/MeirKaD/MCP_ADK)
 
-- **Replacing 3 MCP servers with our MCP server to avoid getting blocked 🤯**  
+- **Replacing 3 MCP servers with our MCP server 🤯**  
 
   [📹 YouTube Demo](https://www.youtube.com/watch?v=0xmE0OJrNmg) 
 

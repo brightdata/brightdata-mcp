@@ -1,10 +1,10 @@
 |Feature|Description|
 |---|---|
 |search_engine|Scrape search results from Google, Bing, or Yandex. Returns SERP results in JSON for Google and Markdown for Bing/Yandex; supports pagination with the cursor parameter.|
-|scrape_as_markdown|Scrape a single webpage with advanced extraction and return Markdown. Uses Bright Data's unlocker to handle bot protection and CAPTCHA.|
+|scrape_as_markdown|Scrape a single webpage with advanced extraction and return Markdown.|
 |search_engine_batch|Run up to 10 search queries in parallel. Returns JSON for Google results and Markdown for Bing/Yandex.|
 |scrape_batch|Scrape up to 10 webpages in one request and return an array of URL/content pairs in Markdown format.|
-|scrape_as_html|Scrape a single webpage with advanced extraction and return the HTML response body. Handles sites protected by bot detection or CAPTCHA.|
+|scrape_as_html|Scrape a single webpage with advanced extraction and return the HTML response body.|
 |extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|
 |discover|Search the web and rank results by AI-driven relevance. Returns scored results with title, description, URL, and relevance score. Supports intent-based ranking, geo-targeting, date filtering, and keyword filtering.|
 |session_stats|Report how many times each tool has been called during the current MCP session.|

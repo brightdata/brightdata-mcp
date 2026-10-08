@@ -274,9 +274,7 @@ addTool({
 addTool({
     name: 'scrape_as_markdown',
     description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in MarkDown language. '
-    +'This tool can unlock any webpage even if it uses bot detection or '
-    +'CAPTCHA.',
+    +'content extraction and get back the results in MarkDown language.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
@@ -383,9 +381,7 @@ addTool({
 addTool({
    name: 'scrape_batch',
    description: 'Scrape multiple webpages URLs with advanced options for '
-        +'content extraction and get back the results in MarkDown language. '
-        +'This tool can unlock any webpage even if it uses bot detection or '
-        +'CAPTCHA.',
+        +'content extraction and get back the results in MarkDown language.',
    annotations: {
        title: 'Scrape Batch',
        readOnlyHint: true,
@@ -427,9 +423,7 @@ addTool({
 addTool({
     name: 'scrape_as_html',
     description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in HTML. '
-    +'This tool can unlock any webpage even if it uses bot detection or '
-    +'CAPTCHA.',
+    +'content extraction and get back the results in HTML.',
     annotations: {
         title: 'Scrape as HTML',
         readOnlyHint: true,
@@ -456,8 +450,7 @@ addTool({
     name: 'extract',
     description: 'Scrape a webpage and extract structured data as JSON. '
         + 'First scrapes the page as markdown, then uses AI sampling to convert '
-        + 'it to structured JSON format. This tool can unlock any webpage even '
-        + 'if it uses bot detection or CAPTCHA.',
+        + 'it to structured JSON format.',
     annotations: {
         title: 'Extract Structured Data',
         readOnlyHint: true,
