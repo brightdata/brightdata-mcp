@@ -65,14 +65,14 @@ export class Aria_snapshot_filter {
     }
 
     static filter_snapshot(snapshot_text){
-        try {
-            const elements = this.parse_playwright_snapshot(snapshot_text);
-            if (elements.length==0)
-                return 'No interactive elements found';
-            return this.format_compact(elements);
-        } catch(e){
-            return `Error filtering snapshot: ${e.message}\n${e.stack}`;
-        }
+        // Throws on a parse failure. Never return an error as a value here:
+        // the result goes to the model as the page's interactive elements,
+        // and an error string in that slot is indistinguishable from content.
+        // The caller (capture_snapshot) degrades to the unfiltered snapshot.
+        const elements = this.parse_playwright_snapshot(snapshot_text);
+        if (elements.length==0)
+            return 'No interactive elements found';
+        return this.format_compact(elements);
     }
 
     static format_dom_elements(elements){
