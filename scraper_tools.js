@@ -15,8 +15,18 @@ export function scraper_tools({catalog, runner, tool_fn, headers}){
     const tool = (name, title, description, parameters, fn)=>({name,
         description, annotations: read_only(title),
         parameters: z.object(parameters),
-        execute: tool_fn(name, async(data, ctx)=>JSON.stringify(
-            await fn(data, headers(ctx, name)))),
+        execute: tool_fn(name, async(data, ctx)=>{
+            const meta = ctx.tool_meta||{};
+            Object.assign(meta, {dataset_id: data.dataset_id,
+                method: data.method});
+            try {
+                return JSON.stringify(await fn(data, headers(ctx, name)));
+            } catch(e){
+                Object.assign(meta, {failed_step: e.step,
+                    error_code: e.error_code});
+                throw e;
+            }
+        }),
     });
     return [
         tool('search_scrapers', 'Search Scrapers', 'Find a Bright Data '
