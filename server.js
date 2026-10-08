@@ -42,6 +42,12 @@ const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
+// The zone bootstrap below runs before the MCP handshake; a hung API call
+// there freezes startup with no diagnosable cause on the client side. Bound
+// it: honor BASE_TIMEOUT when configured, else a 10s default -- unlike tool
+// calls, "no timeout" is never an acceptable setting for startup (the bound
+// applies even when BASE_TIMEOUT=0).
+const zone_check_timeout = base_timeout || 10*1000;
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
@@ -145,6 +151,7 @@ async function ensure_required_zones(){
             url: 'https://api.brightdata.com/zone/get_active_zones',
             method: 'GET',
             headers: api_headers(),
+            timeout: zone_check_timeout,
         });
         let zones = response.data || [];
         let has_unlocker_zone = zones.some(zone=>zone.name==unlocker_zone);
@@ -165,6 +172,7 @@ async function ensure_required_zones(){
                     zone: {name: unlocker_zone, type: 'unblocker'},
                     plan: {type: 'unblocker', ub_premium: true},
                 },
+                timeout: zone_check_timeout,
             });
             console.error(`Zone "${unlocker_zone}" created successfully`);
         }
@@ -186,6 +194,7 @@ async function ensure_required_zones(){
                     zone: {name: browser_zone, type: 'browser_api'},
                     plan: {type: 'browser_api'},
                 },
+                timeout: zone_check_timeout,
             });
             console.error(`Zone "${browser_zone}" created successfully`);
         }
