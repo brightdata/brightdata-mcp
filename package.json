@@ -1,6 +1,6 @@
 {
     "name": "@brightdata/mcp",
-    "version": "2.11.3",
+    "version": "2.12.0",
     "description": "An MCP interface into the Bright Data toolset",
     "type": "module",
     "main": "./server.js",
@@ -45,6 +45,10 @@
         "aria_snapshot_filter.js",
         "content_gate.js",
         "tool_groups.js",
+        "content_gate.js",
+        "scraper_catalog.js",
+        "scraper_run.js",
+        "scraper_tools.js",
         "prompts.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"

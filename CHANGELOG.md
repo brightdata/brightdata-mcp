@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.12.0] - 2026-10-08
+
+### Added
+- Web Scraper API tools: `search_scrapers`, `get_scraper_details`,
+  `run_scraper`, `get_scraper_progress`, `get_scraper_results` and
+  `refresh_scrapers`. They give access to all 1,200+ pre-built scrapers
+  from a catalog that updates itself, with no hardcoded list. On by
+  default, or select them with the new `scrapers` group.
+- `run_scraper` waits up to 45 seconds. If the data is not ready by
+  then, it returns a snapshot ID for `get_scraper_progress` and
+  `get_scraper_results`.
+- Content gate: when page content from `scrape_as_markdown`,
+  `search_engine`, `extract` or their batch variants looks like
+  instructions to change the MCP configuration, the server asks the
+  user (via MCP elicitation) before returning it. Configure it with
+  `CONTENT_GATE` and `CONTENT_GATE_TIMEOUT` (PR #190).
+
 ## [2.11.3] - 2026-09-15
 
 ### Security

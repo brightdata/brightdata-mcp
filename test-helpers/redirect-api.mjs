@@ -5,9 +5,9 @@ const stub_url = process.env.__BRD_TEST_STUB_URL;
 
 axios.interceptors.request.use(config=>{
     if (stub_url && typeof config.url=='string')
-        config.url = config.url.replace(
-            'https://api.brightdata.com',
-            stub_url
-        );
+    {
+        config.url = config.url.replace('https://api.brightdata.com',
+            stub_url).replace('https://docs.brightdata.com', stub_url);
+    }
     return config;
 });
