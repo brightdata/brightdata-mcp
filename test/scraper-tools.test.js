@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {scraper_tools, scraper_tool_names} from '../scraper_tools.js';
 
-const setup = ()=>{
+const setup = (runner = {})=>{
     const calls = [];
     const spy = name=>async(...args)=>{
         calls.push([name, ...args]);
@@ -16,14 +16,15 @@ const setup = ()=>{
                 return [1, 2, 3];
             }},
         runner: {run: spy('run'), progress: spy('progress'),
-            results: spy('results')},
+            results: spy('results'), ...runner},
         tool_fn: (name, fn)=>fn,
         headers: (ctx, name)=>({token: ctx.api_token, tool: name}),
     });
     const by_name = Object.fromEntries(tools.map(t=>[t.name, t]));
+    const tool_meta = {};
     const call = (name, args)=>by_name[name].execute(
-        by_name[name].parameters.parse(args), {api_token: 'tok'});
-    return {tools, by_name, calls, call};
+        by_name[name].parameters.parse(args), {api_token: 'tok', tool_meta});
+    return {tools, by_name, calls, call, tool_meta};
 };
 
 test('tool names match scraper_tool_names', ()=>{
@@ -60,4 +61,18 @@ test('run_scraper rejects an empty input list', ()=>{
     assert.equal(by_name.run_scraper.parameters.safeParse({
         dataset_id: 'gd_1', method: 'collect_by_url', input: []}).success,
     false);
+});
+
+test('tools record the scraper and failed step in tool_meta', async()=>{
+    const err = Object.assign(new Error('x'), {step: 'trigger',
+        error_code: 401});
+    const {call, tool_meta} = setup({run: async()=>{ throw err; }});
+    await call('get_scraper_details', {dataset_id: 'gd_1',
+        method: 'collect_by_url'});
+    assert.deepEqual(tool_meta, {dataset_id: 'gd_1',
+        method: 'collect_by_url'});
+    await assert.rejects(call('run_scraper', {dataset_id: 'gd_2',
+        method: 'collect_by_url', input: [{url: 'u'}]}), err);
+    assert.deepEqual(tool_meta, {dataset_id: 'gd_2',
+        method: 'collect_by_url', failed_step: 'trigger', error_code: 401});
 });

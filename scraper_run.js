@@ -13,6 +13,7 @@ const api_error = (step, e)=>{
         +(e.response ? ` (HTTP ${e.response.status}): ${msg.slice(0, 500)}`
         : `: ${e.message}`));
     err.step = step;
+    err.error_code = e.response?.status??e.code;
     return err;
 };
 
@@ -57,10 +58,12 @@ export function create_scraper_run(opt = {}){
     };
     const run = async({wait_ms = 45000, headers, ...req})=>{
         const deadline = Date.now()+wait_ms;
-        const snapshot_id = await trigger({...req, headers});
+        const h = {...headers, 'x-mcp-dataset-id': req.dataset_id,
+            'x-mcp-method': req.method};
+        const snapshot_id = await trigger({...req, headers: h});
         for (;;)
         {
-            const res = await results(snapshot_id, headers);
+            const res = await results(snapshot_id, h);
             if (res.status=='ready' || Date.now()+poll_ms>deadline)
                 return res;
             await new Promise(done=>setTimeout(done, poll_ms));

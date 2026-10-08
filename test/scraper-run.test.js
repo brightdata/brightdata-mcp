@@ -12,6 +12,8 @@ const send = (res, code, body)=>{
 const route = (state, req, res, body)=>{
     const url = new URL(req.url, 'http://x'), path = url.pathname;
     state.paths.push(path);
+    state.tags.push([req.headers['x-mcp-dataset-id'],
+        req.headers['x-mcp-method']]);
     if (state.fail[path.split('/')[3]])
         return send(res, state.fail[path.split('/')[3]], {error: 'boom'});
     if (path=='/datasets/v3/trigger')
@@ -34,7 +36,8 @@ const route = (state, req, res, body)=>{
 };
 
 const setup = t=>new Promise(done=>{
-    const state = {paths: [], fail: {}, polls: 0, ready_after: 0};
+    const state = {paths: [], tags: [], fail: {}, polls: 0,
+        ready_after: 0};
     const server = http.createServer((req, res)=>{
         let body = '';
         req.on('data', c=>body += c);
@@ -95,6 +98,16 @@ test('run waits until the snapshot is ready', async t=>{
     assert.equal(state.polls, 4);
 });
 
+test('run tags trigger and snapshot calls with the scraper', async t=>{
+    const {sr, state} = await setup(t);
+    state.ready_after = 1;
+    await sr.run({dataset_id: 'gd_1', method: 'collect_by_url',
+        input: {url: 'https://a.com'}, headers});
+    assert.equal(state.tags.length, 3);
+    for (const tag of state.tags)
+        assert.deepEqual(tag, ['gd_1', 'collect_by_url']);
+});
+
 test('run counts the trigger time against the wait', async t=>{
     const {sr, state} = await setup(t);
     state.ready_after = Infinity;
@@ -130,7 +143,8 @@ for (const [step, call] of [
             state.fail[step] = code;
             const name = step=='snapshot' ? 'results' : step;
             await assert.rejects(call(sr), err=>err.step==name
-                && err.message==`${name} failed (HTTP ${code}): `
+                && err.error_code==code &&
+                    err.message==`${name} failed (HTTP ${code}): `
                 +'{"error":"boom"}');
         });
     }
