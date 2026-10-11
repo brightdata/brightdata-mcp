@@ -6,7 +6,7 @@ import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {gate_page_content} from './content_gate.js';
-import {GROUPS} from './tool_groups.js';
+import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools, scraper_tool_names} from './scraper_tools.js';
@@ -68,7 +68,7 @@ function build_allowed_tools(groups = [], custom_tools = []){
             allowed.add(tool);
     }
     for (const tool of custom_tools)
-        allowed.add(tool);
+        resolve_tool(tool).forEach(t=>allowed.add(t));
     return allowed;
 }
 
@@ -668,7 +668,7 @@ addTool({
     description: 'Search a Bright Data dataset by a filter and get matching '
         +'records back directly (fast Elasticsearch-backed search; no '
         +'snapshot). Use this to FIND MANY records by criteria, as opposed '
-        +'to the web_data_* tools which fetch ONE record by URL.\n'
+        +'to run_scraper which collects fresh records by URL.\n'
         +'First call list_dataset_fields to get valid field names.\n'
         +'A filter is a tree: a group {operator:"and"|"or", filters:[...]} '
         +'or a leaf {name, value, operator}. Max nesting depth 3.\n'
@@ -745,433 +745,6 @@ addTool({
 });
 
 const datasets = [{
-    id: 'amazon_product',
-    dataset_id: 'gd_l7q7dkf244hwjntr0',
-    description: [
-        'Quickly read structured amazon product data.',
-        'Requires a valid product URL with /dp/ in it.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'amazon_product_reviews',
-    dataset_id: 'gd_le8e811kzy4ggddlq',
-    description: [
-        'Quickly read structured amazon product review data.',
-        'Requires a valid product URL with /dp/ in it.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'amazon_product_search',
-    dataset_id: 'gd_lwdb4vjm1ehb499uxs',
-    description: [
-        'Quickly read structured amazon product search data.',
-        'Requires a valid search keyword and amazon domain URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['keyword', 'url'],
-    fixed_values: {pages_to_search: '1'},
-}, {
-    id: 'walmart_product',
-    dataset_id: 'gd_l95fol7l1ru6rlo116',
-    description: [
-        'Quickly read structured walmart product data.',
-        'Requires a valid product URL with /ip/ in it.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'walmart_seller',
-    dataset_id: 'gd_m7ke48w81ocyu4hhz0',
-    description: [
-        'Quickly read structured walmart seller data.',
-        'Requires a valid walmart seller URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'ebay_product',
-    dataset_id: 'gd_ltr9mjt81n0zzdk1fb',
-    description: [
-        'Quickly read structured ebay product data.',
-        'Requires a valid ebay product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'homedepot_products',
-    dataset_id: 'gd_lmusivh019i7g97q2n',
-    description: [
-        'Quickly read structured homedepot product data.',
-        'Requires a valid homedepot product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'zara_products',
-    dataset_id: 'gd_lct4vafw1tgx27d4o0',
-    description: [
-        'Quickly read structured zara product data.',
-        'Requires a valid zara product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'etsy_products',
-    dataset_id: 'gd_ltppk0jdv1jqz25mz',
-    description: [
-        'Quickly read structured etsy product data.',
-        'Requires a valid etsy product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'bestbuy_products',
-    dataset_id: 'gd_ltre1jqe1jfr7cccf',
-    description: [
-        'Quickly read structured bestbuy product data.',
-        'Requires a valid bestbuy product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'linkedin_person_profile',
-    dataset_id: 'gd_l1viktl72bvl7bjuj0',
-    description: [
-        'Quickly read structured linkedin people profile data.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'linkedin_company_profile',
-    dataset_id: 'gd_l1vikfnt1wgvvqz95w',
-    description: [
-        'Quickly read structured linkedin company profile data',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'linkedin_job_listings',
-    dataset_id: 'gd_lpfll7v5hcqtkxl6l',
-    description: [
-        'Quickly read structured linkedin job listings data',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'linkedin_posts',
-    dataset_id: 'gd_lyy3tktm25m4avu764',
-    description: [
-        'Quickly read structured linkedin posts data.',
-        'Requires a real LinkedIn post URL, for example:',
-        'linkedin.com/pulse/... or linkedin.com/posts/...',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'linkedin_people_search',
-    dataset_id: 'gd_m8d03he47z8nwb5xc',
-    description: [
-        'Quickly read structured linkedin people search data',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url', 'first_name', 'last_name'],
-}, {
-    id: 'crunchbase_company',
-    dataset_id: 'gd_l1vijqt9jfj7olije',
-    description: [
-        'Quickly read structured crunchbase company data',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'zoominfo_company_profile',
-    dataset_id: 'gd_m0ci4a4ivx3j5l6nx',
-    description: [
-        'Quickly read structured ZoomInfo company profile data.',
-        'Requires a valid ZoomInfo company URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'instagram_profiles',
-    dataset_id: 'gd_l1vikfch901nx3by4',
-    description: [
-        'Quickly read structured Instagram profile data.',
-        'Requires a valid Instagram URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'instagram_posts',
-    dataset_id: 'gd_lk5ns7kz21pck8jpis',
-    description: [
-        'Quickly read structured Instagram post data.',
-        'Requires a valid Instagram URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'instagram_reels',
-    dataset_id: 'gd_lyclm20il4r5helnj',
-    description: [
-        'Quickly read structured Instagram reel data.',
-        'Requires a valid Instagram URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'instagram_comments',
-    dataset_id: 'gd_ltppn085pokosxh13',
-    description: [
-        'Quickly read structured Instagram comments data.',
-        'Requires a valid Instagram URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'facebook_posts',
-    dataset_id: 'gd_lyclm1571iy3mv57zw',
-    description: [
-        'Quickly read structured Facebook post data.',
-        'Requires a valid Facebook post URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'facebook_marketplace_listings',
-    dataset_id: 'gd_lvt9iwuh6fbcwmx1a',
-    description: [
-        'Quickly read structured Facebook marketplace listing data.',
-        'Requires a valid Facebook marketplace listing URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'facebook_company_reviews',
-    dataset_id: 'gd_m0dtqpiu1mbcyc2g86',
-    description: [
-        'Quickly read structured Facebook company reviews data.',
-        'Requires a valid Facebook company URL and number of reviews.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url', 'num_of_reviews'],
-}, {
-    id: 'facebook_events',
-    dataset_id: 'gd_m14sd0to1jz48ppm51',
-    description: [
-        'Quickly read structured Facebook events data.',
-        'Requires a valid Facebook event URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'tiktok_profiles',
-    dataset_id: 'gd_l1villgoiiidt09ci',
-    description: [
-        'Quickly read structured Tiktok profiles data.',
-        'Requires a valid Tiktok profile URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'tiktok_posts',
-    dataset_id: 'gd_lu702nij2f790tmv9h',
-    description: [
-        'Quickly read structured Tiktok post data.',
-        'Requires a valid Tiktok post URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'tiktok_shop',
-    dataset_id: 'gd_m45m1u911dsa4274pi',
-    description: [
-        'Quickly read structured Tiktok shop data.',
-        'Requires a valid Tiktok shop product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'tiktok_comments',
-    dataset_id: 'gd_lkf2st302ap89utw5k',
-    description: [
-        'Quickly read structured Tiktok comments data.',
-        'Requires a valid Tiktok video URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'google_maps_reviews',
-    dataset_id: 'gd_luzfs1dn2oa0teb81',
-    description: [
-        'Quickly read structured Google maps reviews data.',
-        'Requires a valid Google maps URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url', 'days_limit'],
-    defaults: {days_limit: '3'},
-}, {
-    id: 'google_shopping',
-    dataset_id: 'gd_ltppk50q18kdw67omz',
-    description: [
-        'Quickly read structured Google shopping data.',
-        'Requires a valid Google shopping product URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'google_play_store',
-    dataset_id: 'gd_lsk382l8xei8vzm4u',
-    description: [
-        'Quickly read structured Google play store data.',
-        'Requires a valid Google play store app URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'apple_app_store',
-    dataset_id: 'gd_lsk9ki3u2iishmwrui',
-    description: [
-        'Quickly read structured apple app store data.',
-        'Requires a valid apple app store app URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'reuter_news',
-    dataset_id: 'gd_lyptx9h74wtlvpnfu',
-    description: [
-        'Quickly read structured reuter news data.',
-        'Requires a valid reuter news report URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'github_repository_file',
-    dataset_id: 'gd_lyrexgxc24b3d4imjt',
-    description: [
-        'Quickly read structured github repository data.',
-        'Requires a valid github repository file URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'yahoo_finance_business',
-    dataset_id: 'gd_lmrpz3vxmz972ghd7',
-    description: [
-        'Quickly read structured yahoo finance business data.',
-        'Requires a valid yahoo finance business URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'x_posts',
-    dataset_id: 'gd_lwxkxvnf1cynvib9co',
-    description: [
-        'Quickly read structured X post data.',
-        'Requires a valid X post URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'x_profile_posts',
-    dataset_id: 'gd_lwxkxvnf1cynvib9co',
-    description: [
-        'Quickly read structured X posts from a profile.',
-        'Requires a valid X profile URL (e.g. https://x.com/username).',
-        'Returns the most recent posts from the profile.',
-        'Optionally filter by date range using start_date and end_date',
-        '(format: YYYY-MM-DD).',
-    ].join('\n'),
-    inputs: ['url', 'start_date', 'end_date'],
-    defaults: {start_date: '', end_date: ''},
-    trigger_params: {
-        type: 'discover_new',
-        discover_by: 'profile_url_most_recent_posts',
-        limit_per_input: 10,
-    },
-},
-{
-    id: 'zillow_properties_listing',
-    dataset_id: 'gd_lfqkr8wm13ixtbd8f5',
-    description: [
-        'Quickly read structured zillow properties listing data.',
-        'Requires a valid zillow properties listing URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'booking_hotel_listings',
-    dataset_id: 'gd_m5mbdl081229ln6t4a',
-    description: [
-        'Quickly read structured booking hotel listings data.',
-        'Requires a valid booking hotel listing URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'youtube_profiles',
-    dataset_id: 'gd_lk538t2k2p1k3oos71',
-    description: [
-        'Quickly read structured youtube profiles data.',
-        'Requires a valid youtube profile URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
-    id: 'youtube_comments',
-    dataset_id: 'gd_lk9q0ew71spt1mxywf',
-    description: [
-        'Quickly read structured youtube comments data.',
-        'Requires a valid youtube video URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url', 'num_of_comments'],
-    defaults: {num_of_comments: '10'},
-}, {
-    id: 'reddit_posts',
-    dataset_id: 'gd_lvz8ah06191smkebj4',
-    description: [
-        'Quickly read structured reddit posts data.',
-        'Requires a valid reddit post URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-},
-{
-    id: 'reddit_comments',
-    dataset_id: 'gd_lvzdpsdlw09j6t702',
-    description: [
-        'Quickly read structured Reddit comments data.',
-        'Requires a valid Reddit post or comment thread URL.',
-        'Optionally filter by recency using days_back (number of days).',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url', 'days_back'],
-    defaults: {days_back: ''},
-},
-{
-    id: 'youtube_videos',
-    dataset_id: 'gd_lk56epmy2i5g7lzu0k',
-    description: [
-        'Quickly read structured YouTube videos data.',
-        'Requires a valid YouTube video URL.',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['url'],
-}, {
     id: 'chatgpt_ai_insights',
     dataset_id: 'gd_m7aof0k82r803d5bjm',
     description: [
@@ -1188,17 +761,6 @@ const datasets = [{
     },
     trigger_params: {custom_output_fields: 'answer_text_markdown'},
 }, {
-    id: 'grok_ai_insights',
-    dataset_id: 'gd_m8ve0u141icu75ae74',
-    description: [
-        'Send a prompt to Grok and get back AI-generated insights.',
-        'Returns structured answer text in markdown format.',
-        'Useful for GEO and LLM as a judge.',
-    ].join('\n'),
-    inputs: ['prompt'],
-    fixed_values: {url: 'https://grok.com/', index: ''},
-    trigger_params: {custom_output_fields: 'answer_text_markdown'},
-}, {
     id: 'perplexity_ai_insights',
     dataset_id: 'gd_m7dhdot1vw9a7gc1n',
     description: [
@@ -1209,24 +771,6 @@ const datasets = [{
     inputs: ['prompt'],
     fixed_values: {url: 'https://www.perplexity.ai', index: '', country: ''},
     trigger_params: {custom_output_fields: 'answer_text_markdown'},
-}, {
-    id: 'npm_package',
-    dataset_id: 'gd_mk57m0301khq4jmsul',
-    description: [
-        'Quickly read structured npm package data.',
-        'Requires a valid npm package name (e.g., @brightdata/sdk).',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['package_name'],
-}, {
-    id: 'pypi_package',
-    dataset_id: 'gd_mk57kc3t1wwgmnepp9',
-    description: [
-        'Quickly read structured PyPI package data.',
-        'Requires a valid PyPI package name (e.g., langchain-brightdata).',
-        'This can be a cache lookup, so it can be more reliable than scraping',
-    ].join('\n'),
-    inputs: ['package_name'],
 }];
 const dataset_id_to_title = id=>{
     return id.split('_')
@@ -1237,7 +781,7 @@ const dataset_id_to_title = id=>{
 for (let {dataset_id, id, description, inputs, defaults = {},
     fixed_values = {}, trigger_params = {}} of datasets)
 {
-    const tool_name = `web_data_${id}`;
+    const tool_name = id;
     let parameters = {};
     for (let input of inputs)
     {

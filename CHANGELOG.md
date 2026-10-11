@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2026-10-11
+
+### Removed
+- 46 `web_data_*` tools (Amazon, LinkedIn, Instagram, TikTok, YouTube,
+  npm, PyPI and others). The scraper tools cover the same scrapers and
+  1,200+ more: `search_scrapers` → `get_scraper_details` →
+  `run_scraper`.
+- `web_data_grok_ai_insights` and `web_data_reuter_news`. Their
+  scrapers no longer exist, so these tools always failed.
+
+### Changed
+- `web_data_chatgpt_ai_insights` and `web_data_perplexity_ai_insights`
+  are renamed to `chatgpt_ai_insights` and `perplexity_ai_insights`.
+- Existing configs keep working. Old group IDs (`ecommerce`, `social`,
+  `business`, `finance`, `research`, `app_stores`, `travel`, `code`)
+  now enable the scraper tools, and old `web_data_*` names in `TOOLS`
+  enable the scraper tools or the renamed AI tools.
+- Scraper tool requests send the scraper's dataset ID and method in
+  `x-mcp-dataset-id` and `x-mcp-method` headers, so failed runs can be
+  traced to a scraper.
+- If you installed the `bright-data-mcp`, `competitive-intel` or
+  `price-comparison` skills, update them: older versions tell the agent
+  to use the removed tools.
+
 ## [2.12.0] - 2026-10-08
 
 ### Added

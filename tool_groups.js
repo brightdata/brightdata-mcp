@@ -1,60 +1,23 @@
 'use strict'; /*jslint node:true es9:true*/
+import {scraper_tool_names} from './scraper_tools.js';
 
 const base_tools = ['search_engine', 'scrape_as_markdown', 'discover'];
+const scraper_tools = [...base_tools, ...scraper_tool_names];
+const dataset_search = ['list_dataset_fields', 'search_dataset'];
+const ai_tools = ['chatgpt_ai_insights', 'perplexity_ai_insights'];
 
 export const GROUPS = {
     ECOMMERCE: {
         id: 'ecommerce',
         name: 'E-commerce',
         description: 'Retail and marketplace datasets for product intel.',
-        tools: [
-            ...base_tools,
-            'web_data_amazon_product',
-            'web_data_amazon_product_reviews',
-            'web_data_amazon_product_search',
-            'web_data_walmart_product',
-            'web_data_walmart_seller',
-            'web_data_ebay_product',
-            'web_data_homedepot_products',
-            'web_data_zara_products',
-            'web_data_etsy_products',
-            'web_data_bestbuy_products',
-            'web_data_google_shopping',
-        ],
+        tools: scraper_tools,
     },
     SOCIAL_MEDIA: {
         id: 'social',
         name: 'Social Media',
         description: 'Social networks, UGC platforms, and creator insights.',
-        tools: [
-            ...base_tools,
-            'web_data_linkedin_person_profile',
-            'web_data_linkedin_company_profile',
-            'web_data_linkedin_job_listings',
-            'web_data_linkedin_posts',
-            'web_data_linkedin_people_search',
-            'list_dataset_fields',
-            'search_dataset',
-            'web_data_instagram_profiles',
-            'web_data_instagram_posts',
-            'web_data_instagram_reels',
-            'web_data_instagram_comments',
-            'web_data_facebook_posts',
-            'web_data_facebook_marketplace_listings',
-            'web_data_facebook_company_reviews',
-            'web_data_facebook_events',
-            'web_data_tiktok_profiles',
-            'web_data_tiktok_posts',
-            'web_data_tiktok_shop',
-            'web_data_tiktok_comments',
-            'web_data_x_posts',
-            'web_data_x_profile_posts',
-            'web_data_youtube_profiles',
-            'web_data_youtube_comments',
-            'web_data_youtube_videos',
-            'web_data_reddit_posts',
-            'web_data_reddit_comments',
-        ],
+        tools: [...scraper_tools, ...dataset_search],
     },
     BROWSER: {
         id: 'browser',
@@ -82,54 +45,31 @@ export const GROUPS = {
         id: 'finance',
         name: 'Finance Intelligence',
         description: 'Company, financial, and location intelligence datasets.',
-        tools: [
-            ...base_tools,
-            'web_data_yahoo_finance_business',
-        ],
+        tools: scraper_tools,
     },
     BUSINESS: {
         id: 'business',
         name: 'Business Intelligence',
         description: 'Company, and location intelligence datasets.',
-        tools: [
-            ...base_tools,
-            'web_data_crunchbase_company',
-            'web_data_zoominfo_company_profile',
-            'web_data_google_maps_reviews',
-            'web_data_zillow_properties_listing',
-            'web_data_booking_hotel_listings',
-            'list_dataset_fields',
-            'search_dataset',
-        ],
+        tools: [...scraper_tools, ...dataset_search],
     },
     RESEARCH: {
         id: 'research',
         name: 'Research',
         description: 'App stores, news, and developer data feeds.',
-        tools: [
-            ...base_tools,
-            'web_data_github_repository_file',
-            'web_data_reuter_news',
-        ],
+        tools: scraper_tools,
     },
     APP_STORES: {
         id: 'app_stores',
         name: 'App stores',
         description: 'App stores.',
-        tools: [
-            ...base_tools,
-            'web_data_google_play_store',
-            'web_data_apple_app_store',
-        ],
+        tools: scraper_tools,
     },
     TRAVEL: {
         id: 'travel',
         name: 'Travel',
         description: 'Travel information.',
-        tools: [
-            ...base_tools,
-            'web_data_booking_hotel_listings',
-        ],
+        tools: scraper_tools,
     },
     ADVANCED_SCRAPING: {
         id: 'advanced_scraping',
@@ -149,36 +89,19 @@ export const GROUPS = {
         name: 'GEO & LLM Visibility',
         description: 'Tools for measuring and analyzing AI/LLM brand '
         +'visibility and generative engine optimization.',
-        tools: [
-            ...base_tools,
-            'web_data_chatgpt_ai_insights',
-            'web_data_grok_ai_insights',
-            'web_data_perplexity_ai_insights',
-        ],
+        tools: [...base_tools, ...ai_tools],
     },
     CODE: {
         id: 'code',
         name: 'Code',
         description: 'Developer tools and package information datasets.',
-        tools: [
-            ...base_tools,
-            'web_data_npm_package',
-            'web_data_pypi_package',
-        ],
+        tools: scraper_tools,
     },
     SCRAPERS: {
         id: 'scrapers',
         name: 'Web Scraper API',
         description: 'Search and run any of 1,200+ pre-built scrapers.',
-        tools: [
-            ...base_tools,
-            'search_scrapers',
-            'get_scraper_details',
-            'run_scraper',
-            'get_scraper_progress',
-            'get_scraper_results',
-            'refresh_scrapers',
-        ],
+        tools: scraper_tools,
     },
     CUSTOM: {
         id: 'custom',
@@ -200,6 +123,13 @@ export const get_total_tool_count = ()=>{
         for (let tool of group.tools)
             all_tools.add(tool);
     return all_tools.size;
+};
+
+export const resolve_tool = name=>{
+    const short = name.replace(/^web_data_/, '');
+    if (short==name)
+        return [name];
+    return ai_tools.includes(short) ? [short] : scraper_tool_names;
 };
 
 export {base_tools};

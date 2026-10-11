@@ -105,12 +105,12 @@ Example test case:
   "runs": 1,
   "model": "gpt-5.1-2025-11-13",
   "provider": "openai",
-  "expectedToolCalls": ["web_data_amazon_product_search"],
+  "expectedToolCalls": ["search_scrapers", "run_scraper"],
   "selectedServers": ["ecommerce-server"],
   "advancedConfig": {
     "instructions": "You are a shopping assistant helping users find products on Amazon",
     "temperature": 0.1,
-    "maxSteps": 5,
+    "maxSteps": 10,
     "toolChoice": "required"
   }
 }
@@ -149,21 +149,29 @@ Using openai:gpt-5.1-2025-11-13
 
 run 1/1
 user: Search for wireless headphones on Amazon and show me the top products with reviews
-[tool-call] web_data_amazon_product_search
+[tool-call] search_scrapers
 {
-  "keyword": "wireless headphones",
-  "url": "https://www.amazon.com"
+  "query": "amazon products"
 }
-[tool-result] web_data_amazon_product_search
+[tool-result] search_scrapers
+{
+  "content": [...]
+}
+[tool-call] run_scraper
+{
+  "dataset_id": "gd_l7q7dkf244hwjntr0",
+  "method": "discover_by_keyword",
+  "input": [{"keyword": "wireless headphones"}]
+}
+[tool-result] run_scraper
 {
   "content": [...]
 }
 assistant: Here are some of the top wireless headphones currently on Amazon...
 
-Expected: [web_data_amazon_product_search]
-Actual:   [web_data_amazon_product_search]
-PASS (23.8s)
-Tokens • input 20923 • output 1363 • total 22286
+Expected: [search_scrapers, run_scraper]
+Actual:   [search_scrapers, run_scraper]
+PASS
 ```
 
 #### 2. Research Tool Group
@@ -188,8 +196,8 @@ mcpjam evals run \
 
 | Tool Group | Description | Example Tools |
 |------------|-------------|---------------|
-| **ecommerce** | E-commerce platforms (Amazon, Walmart, Best Buy) | `web_data_amazon_product_search` |
-| **research** | Research platforms (GitHub, Reuters, academic) | `web_data_github_repository_file`, `web_data_reuter_news` |
+| **ecommerce** | E-commerce platforms (Amazon, Walmart, Best Buy) | `search_scrapers`, `run_scraper` |
+| **research** | Research platforms (GitHub, academic) | `search_scrapers`, `run_scraper` |
 | **finance** | Financial data sources | Stock data, market info |
 | **social** | Social media platforms | Twitter, LinkedIn, Instagram |
 | **business** | Business data and tools | Company information, B2B data |
@@ -215,9 +223,9 @@ mcpjam evals run \
 
 3. **Test Result**: Shows pass/fail status
    ```
-   Expected: [web_data_amazon_product_search]
-   Actual:   [web_data_amazon_product_search]
-   PASS (23.8s)
+   Expected: [search_scrapers, run_scraper]
+   Actual:   [search_scrapers, run_scraper]
+   PASS
    ```
 
 4. **Token Usage**: Displays token consumption
@@ -253,12 +261,12 @@ Example:
   "runs": 1,
   "model": "gpt-5.1-2025-11-13",
   "provider": "openai",
-  "expectedToolCalls": ["web_data_amazon_product_search"],
+  "expectedToolCalls": ["search_scrapers", "run_scraper"],
   "selectedServers": ["ecommerce-server"],
   "advancedConfig": {
     "instructions": "You are a price tracking assistant",
     "temperature": 0.1,
-    "maxSteps": 5,
+    "maxSteps": 10,
     "toolChoice": "required"
   }
 }

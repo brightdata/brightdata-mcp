@@ -5,12 +5,12 @@
     "runs": 1,
     "model": "gpt-5-mini-2025-08-07",
     "provider": "openai",
-    "expectedToolCalls": ["search_engine", "web_data_linkedin_company_profile", "web_data_linkedin_job_listings"],
+    "expectedToolCalls": ["search_scrapers", "run_scraper"],
     "selectedServers": ["social-server"],
     "advancedConfig": {
       "instructions": "You are a professional networking research assistant",
       "temperature": 0.1,
-      "maxSteps": 5,
+      "maxSteps": 10,
       "toolChoice": "auto"
     }
   },
@@ -20,12 +20,12 @@
     "runs": 1,
     "model": "gpt-5-mini-2025-08-07",
     "provider": "openai",
-    "expectedToolCalls": ["search_engine", "web_data_instagram_posts", "web_data_instagram_reels", "web_data_instagram_comments"],
+    "expectedToolCalls": ["search_scrapers", "run_scraper"],
     "selectedServers": ["social-server"],
     "advancedConfig": {
       "instructions": "You are a social media analytics assistant",
       "temperature": 0.1,
-      "maxSteps": 5,
+      "maxSteps": 10,
       "toolChoice": "auto"
     }
   }

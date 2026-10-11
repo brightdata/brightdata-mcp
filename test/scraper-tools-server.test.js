@@ -51,3 +51,33 @@ test('scraper tools are on by default and run end to end', async t=>{
     assert.deepEqual((await call(client, 'refresh_scrapers', {})).data,
         {scrapers: 1});
 });
+
+const list_tools = async(t, extra_env)=>{
+    const stub = await start_stub_server();
+    t.after(()=>close_stub_server(stub));
+    const env = {...process.env, API_TOKEN: 'scraper-test-token',
+        __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`,
+        ...extra_env};
+    delete env.PRO_MODE;
+    const client = new Client({name: 'scraper-tools-test', version: '0'},
+        {capabilities: {tools: {}}});
+    t.after(()=>client.close());
+    await client.connect(new StdioClientTransport({cwd: repo_root, env,
+        command: process.execPath,
+        args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
+    return (await client.listTools()).tools.map(x=>x.name);
+};
+
+test('old groups and web_data names turn on the scraper tools', async t=>{
+    for (const env of [{GROUPS: 'ecommerce', TOOLS: ''},
+        {GROUPS: '', TOOLS: 'web_data_amazon_product'}])
+    {
+        const names = await list_tools(t, env);
+        assert.ok(names.includes('run_scraper'), JSON.stringify(env));
+        assert.ok(!names.some(n=>n.startsWith('web_data_')));
+    }
+    assert.ok((await list_tools(t, {GROUPS: 'geo', TOOLS: ''}))
+        .includes('chatgpt_ai_insights'));
+    assert.deepEqual(await list_tools(t, {GROUPS: '',
+        TOOLS: 'web_data_chatgpt_ai_insights'}), ['chatgpt_ai_insights']);
+});
