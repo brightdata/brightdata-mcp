@@ -6,7 +6,7 @@ import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {gate_page_content} from './content_gate.js';
-import {GROUPS} from './tool_groups.js';
+import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools, scraper_tool_names} from './scraper_tools.js';
@@ -68,7 +68,7 @@ function build_allowed_tools(groups = [], custom_tools = []){
             allowed.add(tool);
     }
     for (const tool of custom_tools)
-        allowed.add(tool);
+        resolve_tool(tool).forEach(t=>allowed.add(t));
     return allowed;
 }
 
@@ -781,7 +781,7 @@ const dataset_id_to_title = id=>{
 for (let {dataset_id, id, description, inputs, defaults = {},
     fixed_values = {}, trigger_params = {}} of datasets)
 {
-    const tool_name = `web_data_${id}`;
+    const tool_name = id;
     let parameters = {};
     for (let input of inputs)
     {
