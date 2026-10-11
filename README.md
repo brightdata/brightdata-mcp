@@ -32,15 +32,13 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **75 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **32 tools** covering:
 
 - **Web search** — Google, Bing, and Yandex results as structured data
 - **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
-- **Structured data extraction** — clean JSON from Amazon, LinkedIn, Instagram, TikTok, YouTube, X, Reddit, Facebook, Crunchbase, Zillow, and other major platforms, without parsing HTML
+- **Structured data (Web Scraper API)** — clean JSON from 1,200+ pre-built scrapers: Amazon, LinkedIn, Instagram, TikTok, YouTube, X, Reddit, Facebook, Crunchbase, Zillow, npm, PyPI and more, without parsing HTML. Six tools find and run any of them
 - **Browser automation** — navigate, click, type, screenshot, and read pages in a remote browser session
-- **LLM response collection** — send prompts to ChatGPT, Grok, and Perplexity and get their answers back as structured data
-- **Package registry data** — npm and PyPI package versions, READMEs, dependencies, and metadata
-- **Web Scraper API** — search and run any of 1,200+ pre-built scrapers (reviews, profiles, products, jobs, listings) from one set of tools
+- **LLM response collection** — send prompts to ChatGPT and Perplexity and get their answers back as structured data
 
 Every request is routed through Bright Data's unblocking infrastructure, so pages that block ordinary HTTP clients (bot detection, CAPTCHAs, rate limits, geo-restrictions) return normally. No proxy setup, no headless browser maintenance, no retry logic to write.
 
@@ -62,7 +60,7 @@ Optional URL parameters:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `groups=<ids>` | Enable specific tool groups | `...&groups=social,ecommerce` |
+| `groups=<ids>` | Enable specific tool groups | `...&groups=scrapers,browser` |
 | `tools=<names>` | Enable specific tools only | `...&tools=search_engine,scrape_as_markdown` |
 
 <details>
@@ -273,10 +271,8 @@ Read product data as structured JSON: price, availability, rating, review count,
 
 | Task | Tools |
 |------|-------|
-| Amazon product details, reviews, search results | `web_data_amazon_product`, `web_data_amazon_product_reviews`, `web_data_amazon_product_search` |
-| Walmart, eBay, Best Buy, Etsy, Home Depot, Zara products | `web_data_walmart_product`, `web_data_ebay_product`, `web_data_bestbuy_products`, `web_data_etsy_products`, `web_data_homedepot_products`, `web_data_zara_products` |
-| Cross-retailer price view | `web_data_google_shopping` |
-| Seller profiles | `web_data_walmart_seller` |
+| Products, reviews and search results from Amazon, Walmart, eBay, Best Buy, Etsy, Home Depot, Zara and other stores | `search_scrapers` → `get_scraper_details` → `run_scraper` |
+| Cross-retailer price view | the same flow with the Google Shopping scraper |
 
 Example prompts: "Compare this laptop's price on Amazon vs Walmart vs Best Buy", "Get the rating and review count for ASIN B0D2Q9397Y", "Is this product in stock?".
 
@@ -286,9 +282,8 @@ Build competitor profiles from live data: funding, headcount, hiring, customer r
 
 | Task | Tools |
 |------|-------|
-| Company funding, investors, size | `web_data_crunchbase_company`, `web_data_zoominfo_company_profile` |
-| Company pages, employees, job postings | `web_data_linkedin_company_profile`, `web_data_linkedin_job_listings` |
-| Customer sentiment | `web_data_google_maps_reviews`, `web_data_facebook_company_reviews`, app store review tools |
+| Company funding, size, employees, job postings (Crunchbase, ZoomInfo, LinkedIn) | `search_scrapers` → `run_scraper` |
+| Customer sentiment (Google Maps, Facebook, app store reviews) | `search_scrapers` → `run_scraper` |
 | Competitor pricing pages | `scrape_as_markdown`, `scrape_batch` |
 | Market discovery | `search_engine_batch`, `discover` |
 
@@ -312,9 +307,8 @@ Package registry data on demand — no scraping, no stale caches.
 
 | Task | Tools |
 |------|-------|
-| npm package version, README, dependencies, metadata | `web_data_npm_package` |
-| PyPI package version, README, dependencies, metadata | `web_data_pypi_package` |
-| Read files from GitHub repositories | `web_data_github_repository_file` |
+| npm and PyPI package version, README, metadata | `run_scraper` with the npmjs or pypi scraper (find them with `search_scrapers`) |
+| Read files from GitHub repositories | `run_scraper` with the GitHub repository scraper |
 
 Example prompts: "What's the latest version of express on npm?", "Get the README for the langchain-brightdata PyPI package".
 
@@ -324,25 +318,24 @@ Send prompts to major LLMs and get their answers back as structured data. Measur
 
 | Task | Tools |
 |------|-------|
-| ChatGPT answers with citations and recommendations | `web_data_chatgpt_ai_insights` |
-| Grok answers | `web_data_grok_ai_insights` |
-| Perplexity answers with sources | `web_data_perplexity_ai_insights` |
+| ChatGPT answers with citations and recommendations | `chatgpt_ai_insights` |
+| Perplexity answers with sources | `perplexity_ai_insights` |
 
-Example prompt: "Ask ChatGPT, Grok, and Perplexity 'what is the best proxy provider' and compare how each one ranks us".
+Example prompt: "Ask ChatGPT and Perplexity 'what is the best proxy provider' and compare how each one ranks us".
 
 ### Social media monitoring
 
-Structured data from seven platforms: profiles, posts, comments, engagement metrics.
+Structured data from every major platform: profiles, posts, comments, engagement metrics. Each platform has scrapers per data type (LinkedIn profiles, Instagram reels, TikTok comments, ...); find them with `search_scrapers` and run them with `run_scraper`.
 
-| Platform | Tools |
-|----------|-------|
-| LinkedIn | person profiles, company profiles, job listings, posts, people search (5 tools) |
-| Instagram | profiles, posts, reels, comments (4 tools) |
-| TikTok | profiles, posts, shop, comments (4 tools) |
-| Facebook | posts, marketplace listings, company reviews, events (4 tools) |
-| YouTube | videos, channel profiles, comments (3 tools) |
-| X (Twitter) | posts, profile posts (2 tools) |
-| Reddit | posts (1 tool) |
+| Platform | Examples of scrapers |
+|----------|----------------------|
+| LinkedIn | person profiles, company profiles, job listings, posts, people search |
+| Instagram | profiles, posts, reels, comments |
+| TikTok | profiles, posts, shop, comments |
+| Facebook | profiles, posts, marketplace listings, company reviews, events |
+| YouTube | videos, channels, comments |
+| X (Twitter) | posts, posts by profile |
+| Reddit | posts, comments |
 
 Example prompt: "Get the last 10 posts from this TikTok profile and summarize the engagement".
 
@@ -354,7 +347,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 |------|-------|
 | Collect multiple sources in one call | `scrape_batch` (up to 10 URLs) |
 | Find sources by topic with date filtering | `discover` with `start_date` / `end_date` |
-| News and finance data | `web_data_yahoo_finance_business`, `search_engine` with news queries |
+| News and finance data | `search_engine` with news queries, `run_scraper` with the Yahoo Finance scraper |
 
 ---
 
@@ -362,13 +355,13 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 | Capability | Bright Data MCP | Typical web MCP servers |
 |------------|-----------------|------------------------|
-| Total tools | 75 | 2–10 |
-| Platform-specific structured JSON extractors | 45 tools across e-commerce, social, business, finance, travel, app stores | Rare; generic scraping only |
+| Total tools | 32 | 2–10 |
+| Platform-specific structured JSON extractors | 1,200+ pre-built scrapers across e-commerce, social, business, finance, travel, app stores, through 6 tools | Rare; generic scraping only |
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
 | Search engines | Google, Bing, Yandex | Usually one |
 | AI-relevance-ranked search with intent | Yes (`discover`) | Not offered |
 | Browser automation | 13 tools, remote browser, no local setup | Limited or none |
-| LLM response collection (ChatGPT, Grok, Perplexity) | Yes | Not offered |
+| LLM response collection (ChatGPT, Perplexity) | Yes | Not offered |
 | Package registry data (npm, PyPI) | Yes | Not offered |
 | Batch operations | 10 searches or 10 scrapes per call | Usually single-request only |
 | Geo-targeting | Yes | Limited or none |
@@ -380,25 +373,19 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 Tools are organized into groups so you only load what you need. Fewer tools means less context for your agent to process.
 
-- `GROUPS` enables tool bundles. Comma-separated: `GROUPS="ecommerce,browser"` (local) or `&groups=ecommerce,browser` (hosted URL)
+- `GROUPS` enables tool bundles. Comma-separated: `GROUPS="scrapers,browser"` (local) or `&groups=scrapers,browser` (hosted URL)
 - `TOOLS` adds individual tools on top: `TOOLS="extract,scrape_as_html"`
 - Base tools are always enabled: `search_engine`, `search_engine_batch`, `scrape_as_markdown`, `scrape_batch`, `discover`
 - Group ID `custom` is reserved; use `TOOLS` for individual picks
 
 | Group ID | Contents | Tool count |
 |----------|----------|-----------|
-| `ecommerce` | Amazon, Walmart, eBay, Best Buy, Etsy, Home Depot, Zara, Google Shopping | 11 |
-| `social` | LinkedIn, Instagram, Facebook, TikTok, YouTube, X, Reddit | 23 |
-| `browser` | Remote browser automation | 13 |
-| `business` | Crunchbase, ZoomInfo, Google Maps reviews, Zillow | 4 |
-| `finance` | Yahoo Finance | 1 |
-| `research` | GitHub repository files | 1 |
-| `app_stores` | Google Play, Apple App Store | 2 |
-| `travel` | Booking.com | 1 |
-| `geo` | ChatGPT, Grok, Perplexity response collection | 3 |
-| `code` | npm, PyPI package data | 2 |
+| `scrapers` | Search and run any pre-built Web Scraper API scraper (Amazon, LinkedIn, TikTok, npm, ...) | 6 |
+| `browser` | Remote browser automation | 14 |
+| `geo` | ChatGPT and Perplexity response collection | 2 |
 | `advanced_scraping` | Batch tools, HTML scraping, AI extraction, session stats | 5 |
-| `scrapers` | Search and run any pre-built Web Scraper API scraper | 6 |
+
+Older group IDs (`ecommerce`, `social`, `business`, `finance`, `research`, `app_stores`, `travel`, `code`) still work and enable the `scrapers` tools; `social` and `business` also add `search_dataset` and `list_dataset_fields`. Old `web_data_*` names in `TOOLS` enable the `scrapers` tools too.
 
 ### Configuration examples
 
@@ -420,7 +407,7 @@ Local server with browser automation and AI extraction:
 }
 ```
 
-Coding agent setup (Claude Code / Cursor / Windsurf) — npm and PyPI package data:
+Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub data through the pre-built scrapers:
 
 ```json
 {
@@ -430,7 +417,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm and PyPI package da
       "args": ["@brightdata/mcp"],
       "env": {
         "API_TOKEN": "<your-api-token-here>",
-        "GROUPS": "code"
+        "GROUPS": "scrapers"
       }
     }
   }
