@@ -298,7 +298,7 @@ Replace built-in fetch/search tools that get blocked on protected sites. Every r
 | Drop-in replacement for built-in web search | `search_engine` |
 | Drop-in replacement for built-in URL fetch | `scrape_as_markdown` |
 | Parallel data collection (10 at a time) | `search_engine_batch`, `scrape_batch` |
-| Interactive sites (login walls, infinite scroll, dynamic content) | `scraping_browser_*` (13 tools) |
+| Interactive sites (login walls, infinite scroll, dynamic content) | `scraping_browser_*` (14 tools) |
 | Structured JSON from any page, no schema needed | `extract` |
 
 ### Coding agents
@@ -360,7 +360,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
 | Search engines | Google, Bing, Yandex | Usually one |
 | AI-relevance-ranked search with intent | Yes (`discover`) | Not offered |
-| Browser automation | 13 tools, remote browser, no local setup | Limited or none |
+| Browser automation | 14 tools, remote browser, no local setup | Limited or none |
 | LLM response collection (ChatGPT, Perplexity) | Yes | Not offered |
 | Package registry data (npm, PyPI) | Yes | Not offered |
 | Batch operations | 10 searches or 10 scrapes per call | Usually single-request only |
@@ -426,27 +426,25 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 
 ---
 
-## Tools Reference (75 Tools)
+## Tools Reference (32 Tools)
 
 ### Which tool to use
 
 - **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 10): `scrape_batch`
 - **Need to find information:** `search_engine`. Multiple queries (up to 10): `search_engine_batch`
 - **Deep research or RAG, need relevance-ranked sources:** `discover` with an `intent`
-- **Page is on a supported platform (Amazon, LinkedIn, TikTok, etc.):** use the matching `web_data_*` tool — returns clean JSON, faster and more reliable than scraping the same page
-- **Structured data from a site with no `web_data_*` tool:** `search_scrapers` → `get_scraper_details` → `run_scraper`
-- **Structured JSON from an unsupported page:** `extract`
+- **Structured data from a known platform (Amazon, LinkedIn, TikTok, npm, PyPI, etc.):** `search_scrapers` → `get_scraper_details` → `run_scraper` — returns clean JSON, faster and more reliable than scraping the same page
+- **Structured JSON from a page no scraper covers:** `extract`
 - **Raw HTML:** `scrape_as_html`
 - **Page requires interaction (click, type, scroll, login):** `scraping_browser_*` tools
-- **npm/PyPI package info:** `web_data_npm_package` / `web_data_pypi_package` — never scrape package registries
-- **How ChatGPT/Grok/Perplexity answer a prompt:** `web_data_chatgpt_ai_insights` / `web_data_grok_ai_insights` / `web_data_perplexity_ai_insights`
+- **How ChatGPT/Perplexity answer a prompt:** `chatgpt_ai_insights` / `perplexity_ai_insights`
 
-Notes that apply to all `web_data_*` tools:
+Notes on scraper runs:
 
 - Return structured JSON, billed per record returned
-- Each tool validates its URL pattern; a wrong URL type fails (exact requirements in the tables below)
-- Results can be large. Use built-in limits where available (`num_of_comments`, `days_limit`) and run bulk collection in a subagent where your framework supports it, so records don't flood the main context window
-- If a `web_data_*` call fails, `scrape_as_markdown` works on the same URL as a fallback
+- Records with an `error` field explain inputs that failed, e.g. a URL of the wrong type
+- Results can be large. Keep `limit_per_input` low for `discover_by_*` methods and run bulk collection in a subagent where your framework supports it, so records don't flood the main context window
+- If a run fails, `scrape_as_markdown` works on the same URL as a fallback
 
 <details>
 <summary><b>Search and Scraping — 8 tools</b></summary>
@@ -483,57 +481,7 @@ Typical flow: `search_scrapers` → `get_scraper_details` → `run_scraper`. Run
 </details>
 
 <details>
-<summary><b>E-commerce — 11 tools</b></summary>
-
-| Tool | Input requirement | Returns |
-|------|-------------------|---------|
-| `web_data_amazon_product` | Product URL containing `/dp/` | Price, title, availability, rating, review count, ASIN, seller, images |
-| `web_data_amazon_product_reviews` | Product URL containing `/dp/` | Review data |
-| `web_data_amazon_product_search` | Search keyword + Amazon domain URL | First page of search results |
-| `web_data_walmart_product` | Product URL containing `/ip/` | Product data |
-| `web_data_walmart_seller` | Walmart seller URL | Seller data |
-| `web_data_ebay_product` | eBay product URL | Listing data |
-| `web_data_homedepot_products` | homedepot.com product URL | Product data |
-| `web_data_zara_products` | Zara product URL | Product data |
-| `web_data_etsy_products` | Etsy product URL | Listing data |
-| `web_data_bestbuy_products` | Best Buy product URL | Product data |
-| `web_data_google_shopping` | Google Shopping product URL | Multi-seller product data |
-
-</details>
-
-<details>
-<summary><b>Social Media — 23 tools</b></summary>
-
-| Tool | Input requirement | Returns |
-|------|-------------------|---------|
-| `web_data_linkedin_person_profile` | LinkedIn profile URL | Profile, experience, skills |
-| `web_data_linkedin_company_profile` | LinkedIn company URL | Company data |
-| `web_data_linkedin_job_listings` | LinkedIn jobs URL | Job listing data |
-| `web_data_linkedin_posts` | LinkedIn post URL | Post data |
-| `web_data_linkedin_people_search` | LinkedIn people search URL | Search results |
-| `web_data_instagram_profiles` | Instagram profile URL | Profile data |
-| `web_data_instagram_posts` | Instagram post URL | Post data |
-| `web_data_instagram_reels` | Instagram reel URL | Reel data |
-| `web_data_instagram_comments` | Instagram URL | Comments |
-| `web_data_facebook_posts` | Facebook post URL | Post data |
-| `web_data_facebook_marketplace_listings` | Marketplace listing URL | Listing data |
-| `web_data_facebook_company_reviews` | Facebook company URL + review count | Reviews |
-| `web_data_facebook_events` | Facebook event URL | Event data |
-| `web_data_tiktok_profiles` | TikTok profile URL | Profile data |
-| `web_data_tiktok_posts` | TikTok post URL | Post data |
-| `web_data_tiktok_shop` | TikTok Shop product URL | Product data |
-| `web_data_tiktok_comments` | TikTok video URL | Comments |
-| `web_data_x_posts` | X post URL | Post data |
-| `web_data_x_profile_posts` | X profile URL | Recent posts, optional date range filter |
-| `web_data_youtube_videos` | YouTube video URL | Video metadata |
-| `web_data_youtube_profiles` | YouTube channel URL | Channel data |
-| `web_data_youtube_comments` | YouTube video URL, optional `num_of_comments` (default 10) | Comments |
-| `web_data_reddit_posts` | Reddit post URL | Post data |
-
-</details>
-
-<details>
-<summary><b>Browser Automation — 13 tools</b></summary>
+<summary><b>Browser Automation — 14 tools</b></summary>
 
 Remote browser session. Typical sequence: navigate → snapshot → interact by ref → extract or screenshot.
 
@@ -545,6 +493,7 @@ Remote browser session. Typical sequence: navigate → snapshot → interact by 
 | `scraping_browser_snapshot` | ARIA snapshot of the page listing interactive elements with refs. Required before ref-based actions |
 | `scraping_browser_click_ref` | Click an element by ref from the latest snapshot |
 | `scraping_browser_type_ref` | Type into an element by ref; optionally press Enter to submit |
+| `scraping_browser_fill_form` | Fill several form fields by ref in one call |
 | `scraping_browser_screenshot` | Screenshot of the current page; optional `full_page` |
 | `scraping_browser_get_text` | Text content of the page body |
 | `scraping_browser_get_html` | HTML of the current page |
@@ -558,50 +507,26 @@ Refs come from the latest snapshot. If the page changes after a click or navigat
 </details>
 
 <details>
-<summary><b>Business Intelligence — 4 tools</b></summary>
-
-| Tool | Input requirement | Returns |
-|------|-------------------|---------|
-| `web_data_crunchbase_company` | Crunchbase company URL | Funding, investors, company data |
-| `web_data_zoominfo_company_profile` | ZoomInfo company URL | Company profile |
-| `web_data_google_maps_reviews` | Google Maps URL, optional `days_limit` (default 3) | Business reviews |
-| `web_data_zillow_properties_listing` | Zillow listing URL | Property listing data |
-
-</details>
-
-<details>
-<summary><b>GEO and LLM Visibility — 3 tools</b></summary>
+<summary><b>GEO and LLM Visibility — 2 tools</b></summary>
 
 | Tool | Input | Returns |
 |------|-------|---------|
-| `web_data_chatgpt_ai_insights` | Prompt | ChatGPT's answer: structured text, citations, recommendations, Markdown |
-| `web_data_grok_ai_insights` | Prompt | Grok's answer as structured Markdown |
-| `web_data_perplexity_ai_insights` | Prompt | Perplexity's answer with sources, as structured Markdown |
+| `chatgpt_ai_insights` | Prompt | ChatGPT's answer as Markdown |
+| `perplexity_ai_insights` | Prompt | Perplexity's answer as Markdown |
 
 Use for Generative Engine Optimization (tracking how LLMs describe your brand) and LLM-as-a-judge workflows.
 
 </details>
 
 <details>
-<summary><b>Code — 2 tools</b></summary>
+<summary><b>Dataset Search — 2 tools</b></summary>
 
-| Tool | Input | Returns |
-|------|-------|---------|
-| `web_data_npm_package` | npm package name (e.g., `@brightdata/sdk`) | Latest version, README, dependencies, metadata |
-| `web_data_pypi_package` | PyPI package name (e.g., `langchain-brightdata`) | Latest version, README, dependencies, metadata |
+Filter search over stored LinkedIn datasets; returns matching records at once, with no scraper run.
 
-</details>
-
-<details>
-<summary><b>Finance, Research, App Stores, Travel — 5 tools</b></summary>
-
-| Tool | Input requirement | Returns | Group |
-|------|-------------------|---------|-------|
-| `web_data_yahoo_finance_business` | Yahoo Finance business URL | Company financial data | `finance` |
-| `web_data_github_repository_file` | GitHub file URL | File content and metadata | `research` |
-| `web_data_google_play_store` | Play Store app URL | App details | `app_stores` |
-| `web_data_apple_app_store` | App Store app URL | App details | `app_stores` |
-| `web_data_booking_hotel_listings` | Booking.com listing URL | Hotel listing data | `travel` |
+| Tool | Description | Group |
+|------|-------------|-------|
+| `list_dataset_fields` | Filterable fields of a dataset (name, type, description). Call before `search_dataset` | `social`, `business` |
+| `search_dataset` | Records matching a filter, up to 10 per call, with a cursor for more | `social`, `business` |
 
 </details>
 
