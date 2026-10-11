@@ -61,7 +61,7 @@
         },
         {
           "name": "POLLING_TIMEOUT",
-          "description": "Polling timeout in seconds for web_data_* tools (default: 600)",
+          "description": "Polling timeout in seconds for the discover tool (default: 600)",
           "isRequired": false,
           "isSecret": false,
           "format": "number"

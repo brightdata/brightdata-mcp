@@ -8,58 +8,23 @@
 |extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|
 |discover|Search the web and rank results by AI-driven relevance. Returns scored results with title, description, URL, and relevance score. Supports intent-based ranking, geo-targeting, date filtering, and keyword filtering.|
 |session_stats|Report how many times each tool has been called during the current MCP session.|
-|web_data_amazon_product|Quickly read structured Amazon product data. Requires a valid product URL containing /dp/. Often faster and more reliable than scraping.|
-|web_data_amazon_product_reviews|Quickly read structured Amazon product review data. Requires a valid product URL containing /dp/. Often faster and more reliable than scraping.|
-|web_data_amazon_product_search|Retrieve structured Amazon search results. Requires a search keyword and Amazon domain URL; limited to the first page of results.|
-|web_data_walmart_product|Quickly read structured Walmart product data. Requires a product URL containing /ip/. Often faster and more reliable than scraping.|
-|web_data_walmart_seller|Quickly read structured Walmart seller data. Requires a valid Walmart seller URL. Often faster and more reliable than scraping.|
-|web_data_ebay_product|Quickly read structured eBay product data. Requires a valid eBay product URL. Often faster and more reliable than scraping.|
-|web_data_homedepot_products|Quickly read structured Home Depot product data. Requires a valid homedepot.com product URL. Often faster and more reliable than scraping.|
-|web_data_zara_products|Quickly read structured Zara product data. Requires a valid Zara product URL. Often faster and more reliable than scraping.|
-|web_data_etsy_products|Quickly read structured Etsy product data. Requires a valid Etsy product URL. Often faster and more reliable than scraping.|
-|web_data_bestbuy_products|Quickly read structured Best Buy product data. Requires a valid Best Buy product URL. Often faster and more reliable than scraping.|
-|web_data_linkedin_person_profile|Quickly read structured LinkedIn people profile data. Requires a valid LinkedIn profile URL. Often faster and more reliable than scraping.|
-|web_data_linkedin_company_profile|Quickly read structured LinkedIn company profile data. Requires a valid LinkedIn company URL. Often faster and more reliable than scraping.|
-|web_data_linkedin_job_listings|Quickly read structured LinkedIn job listings data. Requires a valid LinkedIn jobs URL or search URL. Often faster and more reliable than scraping.|
-|web_data_linkedin_posts|Quickly read structured LinkedIn posts data. Requires a valid LinkedIn post URL. Often faster and more reliable than scraping.|
-|web_data_linkedin_people_search|Quickly read structured LinkedIn people search data. Requires a LinkedIn people search URL. Often faster and more reliable than scraping.|
-|web_data_crunchbase_company|Quickly read structured Crunchbase company data. Requires a valid Crunchbase company URL. Often faster and more reliable than scraping.|
-|web_data_zoominfo_company_profile|Quickly read structured ZoomInfo company profile data. Requires a valid ZoomInfo company URL. Often faster and more reliable than scraping.|
-|web_data_instagram_profiles|Quickly read structured Instagram profile data. Requires a valid Instagram profile URL. Often faster and more reliable than scraping.|
-|web_data_instagram_posts|Quickly read structured Instagram post data. Requires a valid Instagram post URL. Often faster and more reliable than scraping.|
-|web_data_instagram_reels|Quickly read structured Instagram reel data. Requires a valid Instagram reel URL. Often faster and more reliable than scraping.|
-|web_data_instagram_comments|Quickly read structured Instagram comments data. Requires a valid Instagram URL. Often faster and more reliable than scraping.|
-|web_data_facebook_posts|Quickly read structured Facebook post data. Requires a valid Facebook post URL. Often faster and more reliable than scraping.|
-|web_data_facebook_marketplace_listings|Quickly read structured Facebook Marketplace listing data. Requires a valid Marketplace listing URL. Often faster and more reliable than scraping.|
-|web_data_facebook_company_reviews|Quickly read structured Facebook company reviews data. Requires a valid Facebook company URL and review count. Often faster and more reliable than scraping.|
-|web_data_facebook_events|Quickly read structured Facebook events data. Requires a valid Facebook event URL. Often faster and more reliable than scraping.|
-|web_data_tiktok_profiles|Quickly read structured TikTok profile data. Requires a valid TikTok profile URL. Often faster and more reliable than scraping.|
-|web_data_tiktok_posts|Quickly read structured TikTok post data. Requires a valid TikTok post URL. Often faster and more reliable than scraping.|
-|web_data_tiktok_shop|Quickly read structured TikTok Shop product data. Requires a valid TikTok Shop product URL. Often faster and more reliable than scraping.|
-|web_data_tiktok_comments|Quickly read structured TikTok comments data. Requires a valid TikTok video URL. Often faster and more reliable than scraping.|
-|web_data_google_maps_reviews|Quickly read structured Google Maps reviews data. Requires a valid Google Maps URL and optional days_limit (default 3). Often faster and more reliable than scraping.|
-|web_data_google_shopping|Quickly read structured Google Shopping product data. Requires a valid Google Shopping product URL. Often faster and more reliable than scraping.|
-|web_data_google_play_store|Quickly read structured Google Play Store app data. Requires a valid Play Store app URL. Often faster and more reliable than scraping.|
-|web_data_apple_app_store|Quickly read structured Apple App Store app data. Requires a valid App Store app URL. Often faster and more reliable than scraping.|
-|web_data_reuter_news|Quickly read structured Reuters news data. Requires a valid Reuters news article URL. Often faster and more reliable than scraping.|
-|web_data_github_repository_file|Quickly read structured GitHub repository file data. Requires a valid GitHub file URL. Often faster and more reliable than scraping.|
-|web_data_yahoo_finance_business|Quickly read structured Yahoo Finance company profile data. Requires a valid Yahoo Finance business URL. Often faster and more reliable than scraping.|
-|web_data_x_posts|Quickly read structured X (Twitter) post data. Requires a valid X post URL. Often faster and more reliable than scraping.|
-|web_data_zillow_properties_listing|Quickly read structured Zillow property listing data. Requires a valid Zillow listing URL. Often faster and more reliable than scraping.|
-|web_data_booking_hotel_listings|Quickly read structured Booking.com hotel listing data. Requires a valid Booking.com listing URL. Often faster and more reliable than scraping.|
-|web_data_youtube_profiles|Quickly read structured YouTube channel profile data. Requires a valid YouTube channel URL. Often faster and more reliable than scraping.|
-|web_data_youtube_comments|Quickly read structured YouTube comments data. Requires a valid YouTube video URL and optional num_of_comments (default 10). Often faster and more reliable than scraping.|
-|web_data_reddit_posts|Quickly read structured Reddit post data. Requires a valid Reddit post URL. Often faster and more reliable than scraping.|
-|web_data_reddit_comments|Quickly read structured Reddit comments data. Requires a valid Reddit post or comment thread URL. Accepts an optional days_back parameter to limit results to comments posted within the last N days. Often faster and more reliable than scraping.|
-|web_data_youtube_videos|Quickly read structured YouTube video metadata. Requires a valid YouTube video URL. Often faster and more reliable than scraping.|
-|web_data_npm_package|Quickly read structured npm package data including latest version, README, dependencies, and metadata. Requires a valid npm package name (e.g., @brightdata/sdk). Your coding agent's go-to tool for package lookups.|
-|web_data_pypi_package|Quickly read structured PyPI package data including latest version, README, dependencies, and metadata. Requires a valid PyPI package name (e.g., langchain-brightdata). Your coding agent's go-to tool for Python package lookups.|
+|search_scrapers|Find a pre-built Web Scraper API scraper (1,200+ sites) by site or data type. Returns dataset ID, name, domain and collection methods.|
+|get_scraper_details|Show a scraper's description, input fields, example input and main output fields for one collection method.|
+|run_scraper|Run a scraper method on a list of inputs. Waits up to 45 seconds; if still running, returns a snapshot ID to check later. Billed per record.|
+|get_scraper_progress|Status of a scraper run: starting, running, ready, failed or canceled.|
+|get_scraper_results|Records of a finished scraper run.|
+|refresh_scrapers|Reload the scraper list now instead of waiting for the daily refresh.|
+|chatgpt_ai_insights|Send a prompt to ChatGPT and get its answer back as Markdown. Useful for GEO and LLM-as-a-judge.|
+|perplexity_ai_insights|Send a prompt to Perplexity and get its answer back as Markdown. Useful for GEO and LLM-as-a-judge.|
+|list_dataset_fields|List the filterable fields (name, type, description) of a searchable LinkedIn dataset. Call before search_dataset.|
+|search_dataset|Search a stored dataset by a filter and get up to 10 matching records directly, with a cursor for more.|
 |scraping_browser_navigate|Open or reuse a scraping-browser session and navigate to the provided URL, resetting tracked network requests.|
 |scraping_browser_go_back|Navigate the active scraping-browser session back to the previous page and report the new URL and title.|
 |scraping_browser_go_forward|Navigate the active scraping-browser session forward to the next page and report the new URL and title.|
 |scraping_browser_snapshot|Capture an ARIA snapshot of the current page listing interactive elements and their refs for later ref-based actions.|
 |scraping_browser_click_ref|Click an element using its ref from the latest ARIA snapshot; requires a ref and human-readable element description.|
 |scraping_browser_type_ref|Fill an element identified by ref from the ARIA snapshot, optionally pressing Enter to submit after typing.|
+|scraping_browser_fill_form|Fill several form fields identified by ARIA refs in one call.|
 |scraping_browser_screenshot|Capture a screenshot of the current page; supports optional full_page mode for full-length images.|
 |scraping_browser_network_requests|List the network requests recorded since page load with HTTP method, URL, and response status for debugging.|
 |scraping_browser_wait_for_ref|Wait until an element identified by ARIA ref becomes visible, with an optional timeout in milliseconds.|
