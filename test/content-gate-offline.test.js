@@ -8,6 +8,7 @@ import {dirname, resolve} from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
 import {ElicitRequestSchema} from '@modelcontextprotocol/sdk/types.js';
+import {unwrap} from '../test-helpers/untrusted.js';
 import {start_stub_server, close_stub_server}
     from '../test-helpers/stub-server.js';
 
@@ -105,7 +106,7 @@ test('scrape_batch: a declined item is withheld, the rest survive, one dialog',
                 const result = await client.callTool({name: 'scrape_batch',
                     arguments: {urls: [CLEAN, POISONED]}});
                 assert.equal(recorded.length, 1);
-                const items = JSON.parse(text_of(result));
+                const items = JSON.parse(unwrap(text_of(result)));
                 assert.equal(items.length, 2);
                 assert.equal(items[0].status, 'fulfilled');
                 assert.match(items[0].value.content, /Hello world\./);

@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname, resolve} from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
+import {unwrap} from '../test-helpers/untrusted.js';
 import {start_stub_server, close_stub_server}
     from '../test-helpers/stub-server.js';
 
@@ -50,7 +51,7 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
             const text_block = result.content.find(block=>block.type=='text');
             assert.ok(text_block, 'scrape_batch returned text content');
 
-            const parsed = JSON.parse(text_block.text);
+            const parsed = JSON.parse(unwrap(text_block.text));
             assert.equal(parsed.length, 2, 'both URLs produced a result, '
                 +'order and partial success are preserved');
             assert.equal(parsed[0].status, 'fulfilled',

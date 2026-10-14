@@ -5,6 +5,7 @@ import url from 'node:url';
 import {dirname, resolve} from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
+import {unwrap} from '../test-helpers/untrusted.js';
 import {start_stub_server, close_stub_server}
     from '../test-helpers/stub-server.js';
 import {scraper_tool_names} from '../scraper_tools.js';
@@ -15,7 +16,7 @@ const call = async(client, name, args)=>{
     const res = await client.callTool({name, arguments: args});
     const text = res.content.find(b=>b.type=='text').text;
     return {error: res.isError, text,
-        data: res.isError ? null : JSON.parse(text)};
+        data: res.isError ? null : JSON.parse(unwrap(text))};
 };
 
 test('scraper tools are on by default and run end to end', async t=>{

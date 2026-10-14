@@ -5,7 +5,8 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
-import {gate_page_content} from './content_gate.js';
+import {gate_page_content, refusal_text} from './content_gate.js';
+import {wrap_untrusted} from './untrusted_content.js';
 import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
@@ -50,6 +51,16 @@ const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
 // content gate (see content_gate.js); every other tool is untouched.
 const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
     'extract', 'scrape_batch', 'search_engine_batch']);
+// Tools that return attacker-controllable external web content. Their
+// output is wrapped as untrusted data so the model never treats embedded
+// text as instructions (indirect prompt injection). Scraper, dataset and
+// browser tools add themselves to this set below.
+const external_content_tools = new Set(['search_engine',
+    'scrape_as_markdown', 'scrape_as_html', 'search_engine_batch',
+    'scrape_batch', 'discover', 'extract']);
+const wrap_external = (name, result)=>
+    external_content_tools.has(name) && typeof result=='string'
+        ? wrap_untrusted(result) : result;
 const tool_groups = process.env.GROUPS ?
     process.env.GROUPS.split(',').map(g=>g.trim().toLowerCase())
         .filter(Boolean) : [];
@@ -726,6 +737,8 @@ for (const tool of scraper_tools({catalog: create_scraper_catalog(),
 {
     addTool(tool);
 }
+external_content_tools.add('run_scraper');
+external_content_tools.add('get_scraper_results');
 
 addTool({
     name: 'session_stats',
@@ -782,6 +795,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
     fixed_values = {}, trigger_params = {}} of datasets)
 {
     const tool_name = id;
+    external_content_tools.add(tool_name);
     let parameters = {};
     for (let input of inputs)
     {
@@ -866,7 +880,11 @@ for (let {dataset_id, id, description, inputs, defaults = {},
 server.addPrompts(prompts);
 
 for (let tool of browser_tools)
-    addTool(tool);
+{
+    external_content_tools.add(tool.name);
+    addTool({...tool, execute: async(params, ctx)=>
+        wrap_external(tool.name, await tool.execute(params, ctx))});
+}
 
 console.error('Starting server...');
 
@@ -895,11 +913,17 @@ function tool_fn(name, fn){
             clientName,
         };
         try {
-            const result = await fn(data, extended_ctx);
-            if (!page_content_tools.has(name))
-                return result;
-            return await gate_page_content({name, result, ctx: extended_ctx,
-                sessions: server.sessions});
+            let result = await fn(data, extended_ctx);
+            if (page_content_tools.has(name))
+            {
+                result = await gate_page_content({name, result,
+                    ctx: extended_ctx, sessions: server.sessions});
+                // a refusal is the server speaking to the agent, not page
+                // content, so it must not be wrapped as untrusted
+                if (result===refusal_text(name))
+                    return result;
+            }
+            return wrap_external(name, result);
         }
         catch(e){
         if (e.response)
@@ -927,8 +951,13 @@ function tool_fn(name, fn){
 
                 let message = e.response.data;
                 if (typeof message=='string' && message.length)
-                    throw new Error(`HTTP ${e.response.status}: `
-                        +redact_token(message));
+                {
+                    // error bodies from a scraped origin are also untrusted
+                    const body = redact_token(message);
+                    throw new Error(external_content_tools.has(name)
+                        ? `HTTP ${e.response.status}:\n${wrap_untrusted(body)}`
+                        : `HTTP ${e.response.status}: ${body}`);
+                }
             }
             else
                 console.error(`[%s] error %s`, name, e.stack);
