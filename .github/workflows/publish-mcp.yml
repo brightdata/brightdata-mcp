@@ -37,5 +37,17 @@ jobs:
       - name: Login to MCP Registry
         run: ./mcp-publisher login github-oidc
 
+      # release.yml publishes to npm in parallel; the registry rejects the
+      # version until npm has it, so retry only on that error
       - name: Publish to MCP Registry
-        run: ./mcp-publisher publish
+        run: |
+          set -o pipefail
+          for i in $(seq 1 20); do
+            if ./mcp-publisher publish 2>&1 | tee publish.log; then
+              exit 0
+            fi
+            grep -q "was not found" publish.log || exit 1
+            echo "npm does not have this version yet, retry $i/20 in 30s"
+            sleep 30
+          done
+          exit 1
