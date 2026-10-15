@@ -60,8 +60,8 @@ Optional URL parameters:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `groups=<ids>` | Enable specific tool groups | `...&groups=scrapers,browser` |
-| `tools=<names>` | Enable specific tools only | `...&tools=search_engine,scrape_as_markdown` |
+| `groups=<ids>` | Limit to specific tool groups (default: all tools) | `...&groups=scrapers,browser` |
+| `tools=<names>` | Limit to specific tools | `...&tools=search_engine,scrape_as_markdown` |
 
 <details>
 <summary><b>Claude Desktop</b></summary>
@@ -373,9 +373,10 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 Tools are organized into groups so you only load what you need. Fewer tools means less context for your agent to process.
 
+- With no `GROUPS` or `TOOLS`, all 32 tools are enabled. Setting either one limits the server to those tools only
 - `GROUPS` enables tool bundles. Comma-separated: `GROUPS="scrapers,browser"` (local) or `&groups=scrapers,browser` (hosted URL)
-- `TOOLS` adds individual tools on top: `TOOLS="extract,scrape_as_html"`
-- Base tools are always enabled: `search_engine`, `search_engine_batch`, `scrape_as_markdown`, `scrape_batch`, `discover`
+- `TOOLS` adds individual tools on top: `TOOLS="extract,scrape_as_html"`. On its own, it enables only the tools you list
+- Every group also includes `search_engine`, `scrape_as_markdown` and `discover`
 - Group ID `custom` is reserved; use `TOOLS` for individual picks
 
 | Group ID | Contents | Tool count |
@@ -451,14 +452,14 @@ Notes on scraper runs:
 
 | Tool | Description | Group |
 |------|-------------|-------|
-| `search_engine` | Search Google, Bing, or Yandex. Google returns JSON (URL, title, description); Bing and Yandex return Markdown. Paginate with the `cursor` parameter | always enabled |
-| `search_engine_batch` | Up to 10 search queries in one call | always enabled |
-| `scrape_as_markdown` | Any URL as Markdown. Bot protection and CAPTCHA handled automatically | always enabled |
-| `scrape_batch` | Up to 10 URLs in one call; returns an array of URL/content pairs in Markdown | always enabled |
-| `discover` | AI-relevance-ranked web search. Returns scored results (title, description, URL, relevance score). Supports intent-based ranking, geo-targeting, date filtering, keyword filtering | always enabled |
-| `scrape_as_html` | Any URL as raw HTML | `advanced_scraping` |
-| `extract` | Scrape a page and convert it to structured JSON using AI, with an optional custom extraction prompt | `advanced_scraping` |
-| `session_stats` | Tool usage counts for the current session | `advanced_scraping` |
+| `search_engine` | Search Google, Bing, or Yandex. Google returns JSON (URL, title, description); Bing and Yandex return Markdown. Paginate with the `cursor` parameter | default / every group |
+| `search_engine_batch` | Up to 10 search queries in one call | default / `advanced_scraping` |
+| `scrape_as_markdown` | Any URL as Markdown. Bot protection and CAPTCHA handled automatically | default / every group |
+| `scrape_batch` | Up to 10 URLs in one call; returns an array of URL/content pairs in Markdown | default / `advanced_scraping` |
+| `discover` | AI-relevance-ranked web search. Returns scored results (title, description, URL, relevance score). Supports intent-based ranking, geo-targeting, date filtering, keyword filtering | default / every group |
+| `scrape_as_html` | Any URL as raw HTML | default / `advanced_scraping` |
+| `extract` | Scrape a page and convert it to structured JSON using AI, with an optional custom extraction prompt | default / `advanced_scraping` |
+| `session_stats` | Tool usage counts for the current session | default / `advanced_scraping` |
 
 </details>
 
@@ -525,8 +526,8 @@ Filter search over stored LinkedIn datasets; returns matching records at once, w
 
 | Tool | Description | Group |
 |------|-------------|-------|
-| `list_dataset_fields` | Filterable fields of a dataset (name, type, description). Call before `search_dataset` | `social`, `business` |
-| `search_dataset` | Records matching a filter, up to 10 per call, with a cursor for more | `social`, `business` |
+| `list_dataset_fields` | Filterable fields of a dataset (name, type, description). Call before `search_dataset` | default / `social`, `business` |
+| `search_dataset` | Records matching a filter, up to 10 per call, with a cursor for more | default / `social`, `business` |
 
 </details>
 
@@ -601,8 +602,8 @@ Three of the highest-impact skills:
 | `CONTENT_GATE_TIMEOUT` | Seconds to wait for the user's answer before withholding the content | `120` | `60`, `300` |
 | `BASE_TIMEOUT` | Request timeout for base tools in seconds (search and scrape) | No limit | `60`, `120` |
 | `BASE_MAX_RETRIES` | Max retries for base tools on transient errors (0-3) | `0` | `1`, `3` |
-| `GROUPS` | Comma-separated tool group IDs | - | `scrapers,browser` |
-| `TOOLS` | Comma-separated individual tool names | - | `extract,scrape_as_html` |
+| `GROUPS` | Comma-separated tool group IDs. Limits the server to these groups | All tools | `scrapers,browser` |
+| `TOOLS` | Comma-separated individual tool names. Limits the server to these tools | All tools | `extract,scrape_as_html` |
 
 ### Content gate
 
