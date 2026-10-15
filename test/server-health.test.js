@@ -13,7 +13,6 @@ test('MCP serves session_stats tool over stdio', async()=>{
     const env = {
         ...process.env,
         API_TOKEN: 'dummy-token',
-        PRO_MODE: 'true',
     };
     const client = new Client(
         {name: 'server-health-test', version: '0.0.1'},

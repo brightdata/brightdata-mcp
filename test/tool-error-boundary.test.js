@@ -22,7 +22,6 @@ test('tool_fn error boundary sanitizes a single-tool failure whose '
             API_TOKEN: secret_token,
             __BRD_TEST_STUB_URL: `http://127.0.0.1:${port}`,
         };
-        delete env.PRO_MODE;
         delete env.GROUPS;
         delete env.TOOLS;
 
@@ -86,7 +85,6 @@ test('tool_fn error boundary sanitizes a single-tool failure whose '
             __BRD_TEST_STUB_URL: `http://127.0.0.1:${port}`,
             TOOLS: 'list_dataset_fields',
         };
-        delete env.PRO_MODE;
         delete env.GROUPS;
 
         const client = new Client(

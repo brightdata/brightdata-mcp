@@ -24,7 +24,6 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
             API_TOKEN: secret_token,
             __BRD_TEST_STUB_URL: `http://127.0.0.1:${port}`,
         };
-        delete env.PRO_MODE;
         delete env.GROUPS;
         delete env.TOOLS;
 
@@ -43,7 +42,7 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
             const tools = await client.listTools();
             assert.ok(tools.tools.some(tool=>tool.name=='scrape_batch'),
                 'scrape_batch is available in the default tool set '
-                +'without PRO_MODE, GROUPS or TOOLS');
+                +'without GROUPS or TOOLS');
 
             const result = await client.callTool({name: 'scrape_batch',
                 arguments: {urls: ['https://good.example/success',

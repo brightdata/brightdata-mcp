@@ -10,7 +10,7 @@ import {wrap_untrusted} from './untrusted_content.js';
 import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
-import {scraper_tools, scraper_tool_names} from './scraper_tools.js';
+import {scraper_tools} from './scraper_tools.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -39,14 +39,11 @@ const safe_error = e=>{
 };
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
-const pro_mode = process.env.PRO_MODE === 'true';
 const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
 const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
-const pro_mode_tools = ['search_engine', 'scrape_as_markdown',
-    'search_engine_batch', 'scrape_batch', 'discover', ...scraper_tool_names];
 // Tools whose result is page-derived content. Their return passes through the
 // content gate (see content_gate.js); every other tool is untouched.
 const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
@@ -217,21 +214,9 @@ let server = new FastMCP({
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
 const addTool = (tool) => {
-    if (pro_mode)
-    {
-        server.addTool(tool);
+    if (allowed_tools.size>0 && !allowed_tools.has(tool.name))
         return;
-    }
-
-    if (allowed_tools.size>0)
-    {
-        if (allowed_tools.has(tool.name))
-            server.addTool(tool);
-        return;
-    }
-
-    if (pro_mode_tools.includes(tool.name))
-        server.addTool(tool);
+    server.addTool(tool);
 };
 
 addTool({
