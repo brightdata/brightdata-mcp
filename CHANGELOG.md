@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-10-15
+
+### Changed
+- All tools are on by default, including the browser tools,
+  `scrape_as_html`, `search_dataset` and `session_stats`. Set `GROUPS`
+  or `TOOLS` to limit the server to those tools only.
+- Results from search, scrape, scraper, dataset and browser tools are
+  marked as untrusted web content, so the model treats text inside them
+  as data, not instructions. Error bodies from scraped sites are marked
+  too.
+- The `web_scraping_strategy` and `diagnose_scraping_approach` prompts
+  are reformatted, and no longer describe tools by cost.
+- The Docker image runs on Node.js 24.
+
+### Removed
+- `PRO_MODE`. Existing configs that set it keep working; it is ignored.
+
 ## [3.0.0] - 2026-10-11
 
 ### Removed

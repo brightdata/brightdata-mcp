@@ -24,7 +24,6 @@ test('scraper tools are on by default and run end to end', async t=>{
     t.after(()=>close_stub_server(stub));
     const env = {...process.env, API_TOKEN: 'scraper-test-token',
         __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`};
-    delete env.PRO_MODE;
     delete env.GROUPS;
     delete env.TOOLS;
     const client = new Client({name: 'scraper-tools-test', version: '0'},
@@ -59,7 +58,6 @@ const list_tools = async(t, extra_env)=>{
     const env = {...process.env, API_TOKEN: 'scraper-test-token',
         __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`,
         ...extra_env};
-    delete env.PRO_MODE;
     const client = new Client({name: 'scraper-tools-test', version: '0'},
         {capabilities: {tools: {}}});
     t.after(()=>client.close());
@@ -81,4 +79,19 @@ test('old groups and web_data names turn on the scraper tools', async t=>{
         .includes('chatgpt_ai_insights'));
     assert.deepEqual(await list_tools(t, {GROUPS: '',
         TOOLS: 'web_data_chatgpt_ai_insights'}), ['chatgpt_ai_insights']);
+});
+
+test('no GROUPS or TOOLS turns on every tool', async t=>{
+    const names = await list_tools(t, {GROUPS: '', TOOLS: ''});
+    for (const name of ['scraping_browser_navigate', 'scrape_as_html',
+        'session_stats', 'run_scraper'])
+    {
+        assert.ok(names.includes(name), `${name} listed`);
+    }
+});
+
+test('GROUPS limits the tools to that group', async t=>{
+    const names = await list_tools(t, {GROUPS: 'browser', TOOLS: ''});
+    assert.ok(names.includes('scraping_browser_navigate'));
+    assert.ok(!names.includes('run_scraper'));
 });

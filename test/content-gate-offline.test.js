@@ -25,7 +25,7 @@ async function with_gate({elicitation = true, answer, env: extra = {}} = {}, fn)
     const env = {...process.env, API_TOKEN: 'dummy-token',
         __BRD_TEST_STUB_URL: `http://127.0.0.1:${port}`,
         CONTENT_GATE_PROGRESS_MS: '100'};
-    delete env.PRO_MODE; delete env.GROUPS; delete env.TOOLS;
+    delete env.GROUPS; delete env.TOOLS;
     Object.assign(env, extra);
     const capabilities = {tools: {}};
     if (elicitation)
@@ -127,8 +127,7 @@ test('a clean page is returned untouched and nobody is asked', async()=>{
 });
 
 test('a non-gated tool is unaffected', async()=>{
-    // session_stats is a pro-mode tool, so this case enables the full set.
-    await with_gate({env: {PRO_MODE: 'true'}}, async({client, recorded})=>{
+    await with_gate({}, async({client, recorded})=>{
         const result = await client.callTool({name: 'session_stats',
             arguments: {}});
         assert.equal(recorded.length, 0);
