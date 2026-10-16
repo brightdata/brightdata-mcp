@@ -149,8 +149,28 @@ export class Browser_session {
                     aria_snapshot: full_snapshot,
                 };
             }
-            const filtered_snapshot = Aria_snapshot_filter.filter_snapshot(
-                full_snapshot);
+            let filtered_snapshot;
+            try {
+                filtered_snapshot = Aria_snapshot_filter.filter_snapshot(
+                    full_snapshot);
+            } catch(e){
+                // The filter is an optimization over content we already hold.
+                // If it breaks, degrade to the real page rather than failing
+                // the snapshot -- and say so, instead of handing the model an
+                // error string (or stack trace) presented as the page.
+                console.error('[snapshot] filtering failed, returning the '
+                    +'full unfiltered snapshot:',
+                    e?.stack || e?.message || String(e));
+                return {
+                    url: page.url(),
+                    title: await page.title(),
+                    aria_snapshot: '[note: snapshot filtering failed ('
+                        +(e?.message ?? e)+'); showing the full unfiltered '
+                        +'snapshot]\n\n'
+                        +(typeof full_snapshot=='string' ? full_snapshot
+                            : '(no snapshot text available)'),
+                };
+            }
             const dom_snapshot = await page.evaluate(()=>{
                 const selectors = [
                     'a[href]', 'button', 'input', 'select', 'textarea',
