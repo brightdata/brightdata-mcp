@@ -600,7 +600,7 @@ Three of the highest-impact skills:
 | `POLLING_TIMEOUT` | Timeout for `discover` polling (seconds). Each second = 1 polling attempt | `600` | `300`, `1200` |
 | `CONTENT_GATE` | When page content returned by a data tool looks like instructions to change the MCP configuration, the server asks the user (via MCP elicitation) before returning it. Set to `off` to disable | `on` | `off` |
 | `CONTENT_GATE_TIMEOUT` | Seconds to wait for the user's answer before withholding the content | `120` | `60`, `300` |
-| `BROWSER_FILTERED_SNAPSHOT` | `scraping_browser_snapshot` always lists only buttons, links and fields. Saves tokens, and stops page text posing as a clickable element (for sensitive tasks). Page text is then read with `scraping_browser_get_text` | `off` | `on` |
+| `BROWSER_FILTERED_SNAPSHOT` | `scraping_browser_snapshot` always lists only buttons, links and fields. Saves tokens, and stops page text posing as a clickable element (for sensitive tasks). If necessary, Page text can then be read with `scraping_browser_get_text` | `off` | `on` |
 | `BASE_TIMEOUT` | Request timeout for base tools in seconds (search and scrape) | No limit | `60`, `120` |
 | `BASE_MAX_RETRIES` | Max retries for base tools on transient errors (0-3) | `0` | `1`, `3` |
 | `GROUPS` | Comma-separated tool group IDs. Limits the server to these groups | All tools | `scrapers,browser` |

@@ -141,8 +141,8 @@ let scraping_browser_snapshot = {
         +'ref-based tools.',
         'Use this before interacting with elements to get proper refs instead '
         +'of guessing selectors.',
-        ...browser_filtered_snapshot ? ['Page text is not included; call '
-            +'scraping_browser_get_text to read it.'] : [],
+        'A filtered snapshot does not include page text; If necessary, call '
+        +'scraping_browser_get_text to read it.',
     ].join('\n'),
     annotations: {
         title: 'Browser Snapshot',
