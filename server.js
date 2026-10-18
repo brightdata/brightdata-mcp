@@ -39,7 +39,6 @@ const safe_error = e=>{
 };
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
-const polling_timeout = parseInt(process.env.POLLING_TIMEOUT || '600', 10);
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
 const base_max_retries = Math.min(
@@ -54,7 +53,7 @@ const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
 // browser tools add themselves to this set below.
 const external_content_tools = new Set(['search_engine',
     'scrape_as_markdown', 'scrape_as_html', 'search_engine_batch',
-    'scrape_batch', 'discover', 'extract']);
+    'scrape_batch', 'extract']);
 const wrap_external = (name, result)=>
     external_content_tools.has(name) && typeof result=='string'
         ? wrap_untrusted(result) : result;
@@ -510,125 +509,6 @@ addTool({
     }),
 });
 
-addTool({
-    name: 'discover',
-    description: 'Search the web and rank results by AI-driven relevance. '
-        +'Returns scored results with title, description, and URL. Supports '
-        +'intent-based ranking, geo-targeting, date filtering, and keyword '
-        +'filtering.',
-    annotations: {
-        title: 'Discover',
-        readOnlyHint: true,
-        openWorldHint: true,
-    },
-    parameters: z.object({
-        query: z.string().describe('The search query'),
-        intent: z.string().optional().describe('Describes the specific goal '
-            +'of the search to help the AI evaluate and rank result relevance.'
-            +'If not provided, the query string is used as the intent'),
-        country: z.string().length(2).optional()
-            .describe('2-letter ISO country code for localized results '
-                +'(e.g., "US", "GB", "DE")'),
-        city: z.string().optional()
-            .describe('City for localized results (e.g., "New York", '
-                +'"Berlin")'),
-        language: z.string().optional()
-            .describe('Language code (e.g., "en", "es", "fr")'),
-        num_results: z.number().int().optional()
-            .describe('Exact number of search results to return'),
-        filter_keywords: z.array(z.string()).optional()
-            .describe('Keywords that must appear in search results'),
-        remove_duplicates: z.boolean().optional()
-            .describe('Remove duplicate results (default: true)'),
-        start_date: z.string().optional()
-            .describe('Only content updated from this date (YYYY-MM-DD)'),
-        end_date: z.string().optional()
-            .describe('Only content updated until this date (YYYY-MM-DD)'),
-    }),
-    execute: tool_fn('discover', async(data, ctx)=>{
-        let body = {query: data.query, format: 'json'};
-        if (data.intent)
-            body.intent = data.intent;
-        if (data.country)
-            body.country = data.country;
-        if (data.city)
-            body.city = data.city;
-        if (data.language)
-            body.language = data.language;
-        if (data.num_results)
-            body.num_results = data.num_results;
-        if (data.filter_keywords)
-            body.filter_keywords = data.filter_keywords;
-        if (data.remove_duplicates===false)
-            body.remove_duplicates = false;
-        if (data.start_date)
-            body.start_date = data.start_date;
-        if (data.end_date)
-            body.end_date = data.end_date;
-        let trigger_response = await axios({
-            url: 'https://api.brightdata.com/discover',
-            method: 'POST',
-            data: body,
-            headers: {
-                ...api_headers(ctx.clientName, 'discover'),
-                'Content-Type': 'application/json',
-            },
-        });
-        let task_id = trigger_response.data?.task_id;
-        if (!task_id)
-            throw new Error('No task_id returned from discover request');
-        console.error(`[discover] triggered with task ID: ${task_id}`);
-        let max_attempts = polling_timeout;
-        let attempts = 0;
-        while (attempts<max_attempts)
-        {
-            try {
-                if (ctx && ctx.reportProgress)
-                {
-                    await ctx.reportProgress({
-                        progress: attempts,
-                        total: max_attempts,
-                        message: `Polling for discover results (attempt `
-                            +`${attempts+1}/${max_attempts})`,
-                    });
-                }
-                let poll_response = await axios({
-                    url: 'https://api.brightdata.com/discover',
-                    params: {task_id},
-                    method: 'GET',
-                    headers: api_headers(ctx.clientName, 'discover'),
-                });
-                if (poll_response.data?.status==='processing')
-                {
-                    console.error(`[discover] still processing, polling `
-                        +`again (attempt ${attempts+1}/${max_attempts})`);
-                    attempts++;
-                    await new Promise(resolve=>setTimeout(resolve, 1000));
-                    continue;
-                }
-                console.error(`[discover] results received after `
-                    +`${attempts+1} attempts`);
-                let results = poll_response.data?.results || [];
-                results = results.map(r=>({
-                    link: r.link,
-                    title: r.title,
-                    description: r.description,
-                    relevance_score: r.relevance_score,
-                }));
-                return JSON.stringify(results);
-            } catch(e){
-                console.error(`[discover] polling error: ${e.message}`);
-                if (e.response?.status===400)
-                    throw e;
-                attempts++;
-                await new Promise(resolve=>setTimeout(resolve, 1000));
-            }
-        }
-        throw new Error(`Timeout after ${max_attempts} seconds waiting `
-            +`for discover results`);
-    }),
-});
-
 const SEARCHABLE_DATASETS_DESC = [
     'Supported dataset_id values:',
     '- gd_l1viktl72bvl7bjuj0: LinkedIn people profiles',
@@ -811,7 +691,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
             let snapshot_id = trigger_response.data.snapshot_id;
             console.error(`[${tool_name}] triggered collection with `
                 +`snapshot ID: ${snapshot_id}`);
-            let max_attempts = polling_timeout;
+            let max_attempts = 600;
             let attempts = 0;
             while (attempts < max_attempts)
             {
