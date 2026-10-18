@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0] - 2026-10-18
+
+### Removed
+- **BREAKING**: The `discover` tool and its Discover API integration.
+  It was in every tool group and on by default, so it is no longer
+  served in any config. Use `search_engine` or `search_engine_batch` to
+  find sources and `scrape_as_markdown` or `scrape_batch` to read them.
+- `POLLING_TIMEOUT`. The AI insights tools wait up to 600 seconds, as
+  before. Configs that set it keep working; it is ignored.
+
 ## [3.1.0] - 2026-10-15
 
 ### Changed

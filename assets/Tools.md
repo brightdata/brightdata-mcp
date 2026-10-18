@@ -6,7 +6,6 @@
 |scrape_batch|Scrape up to 10 webpages in one request and return an array of URL/content pairs in Markdown format.|
 |scrape_as_html|Scrape a single webpage with advanced extraction and return the HTML response body. Handles sites protected by bot detection or CAPTCHA.|
 |extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|
-|discover|Search the web and rank results by AI-driven relevance. Returns scored results with title, description, URL, and relevance score. Supports intent-based ranking, geo-targeting, date filtering, and keyword filtering.|
 |session_stats|Report how many times each tool has been called during the current MCP session.|
 |search_scrapers|Find a pre-built Web Scraper API scraper (1,200+ sites) by site or data type. Returns dataset ID, name, domain and collection methods.|
 |get_scraper_details|Show a scraper's description, input fields, example input and main output fields for one collection method.|

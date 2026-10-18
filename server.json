@@ -53,13 +53,6 @@
           "format": "string"
         },
         {
-          "name": "POLLING_TIMEOUT",
-          "description": "Polling timeout in seconds for the discover tool (default: 600)",
-          "isRequired": false,
-          "isSecret": false,
-          "format": "number"
-        },
-        {
           "name": "BASE_TIMEOUT",
           "description": "Request timeout in seconds for base tools (search & scrape). No limit if unset",
           "isRequired": false,

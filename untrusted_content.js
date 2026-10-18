@@ -59,7 +59,7 @@ export const wrap_untrusted = result=>{
     let body;
     if (typeof result=='string')
     {
-        // only object/array JSON (batch/discover/scrapers) is parsed so
+        // only object/array JSON (batch/scrapers) is parsed so
         // nested fields can be deep-scrubbed; scalars (null, 42, "42") and
         // raw markdown/html are scrubbed as plain strings. compact stringify
         // (no indent) preserves original output size - pretty-printing large
