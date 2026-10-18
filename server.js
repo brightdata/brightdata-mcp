@@ -11,6 +11,7 @@ import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools} from './scraper_tools.js';
+import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -217,6 +218,20 @@ const addTool = (tool) => {
         return;
     server.addTool(tool);
 };
+
+addTool({
+    ...sophie_assistant_tool,
+    execute: tool_fn('ask_brightdata_assistant', async({question,
+        dialog_id})=>
+    {
+        const {answer, dialog_id: returned_id} = await ask_sophie({
+            question,
+            dialog_id,
+            api_token,
+        });
+        return JSON.stringify({answer, dialog_id: returned_id});
+    }),
+});
 
 addTool({
     name: 'search_engine',

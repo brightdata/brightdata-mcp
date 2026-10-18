@@ -18,7 +18,7 @@
   <a href="#quick-start">Quick Start</a> •
   <a href="#pricing-and-free-tier">Pricing</a> •
   <a href="#use-cases">Use Cases</a> •
-  <a href="#tools-reference-31-tools">Tools</a> •
+  <a href="#tools-reference-32-tools">Tools</a> •
   <a href="#agent-skills">Agent Skills</a> •
   <a href="#documentation">Docs</a> •
   <a href="#support">Support</a>
@@ -32,7 +32,7 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **31 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **32 tools** covering:
 
 - **Web search** — Google, Bing, and Yandex results as structured data
 - **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
@@ -353,7 +353,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 | Capability | Bright Data MCP | Typical web MCP servers |
 |------------|-----------------|------------------------|
-| Total tools | 31 | 2–10 |
+| Total tools | 32 | 2–10 |
 | Platform-specific structured JSON extractors | 1,200+ pre-built scrapers across e-commerce, social, business, finance, travel, app stores, through 6 tools | Rare; generic scraping only |
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
 | Search engines | Google, Bing, Yandex | Usually one |
@@ -370,10 +370,10 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 Tools are organized into groups so you only load what you need. Fewer tools means less context for your agent to process.
 
-- With no `GROUPS` or `TOOLS`, all 31 tools are enabled. Setting either one limits the server to those tools only
+- With no `GROUPS` or `TOOLS`, all 32 tools are enabled. Setting either one limits the server to those tools only
 - `GROUPS` enables tool bundles. Comma-separated: `GROUPS="scrapers,browser"` (local) or `&groups=scrapers,browser` (hosted URL)
 - `TOOLS` adds individual tools on top: `TOOLS="extract,scrape_as_html"`. On its own, it enables only the tools you list
-- Every group also includes `search_engine` and `scrape_as_markdown`
+- Every group also includes `search_engine`, `scrape_as_markdown` and `ask_brightdata_assistant`
 - Group ID `custom` is reserved; use `TOOLS` for individual picks
 
 | Group ID | Contents | Tool count |
@@ -424,7 +424,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 
 ---
 
-## Tools Reference (31 Tools)
+## Tools Reference (32 Tools)
 
 ### Which tool to use
 
@@ -435,6 +435,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 - **Raw HTML:** `scrape_as_html`
 - **Page requires interaction (click, type, scroll, login):** `scraping_browser_*` tools
 - **How ChatGPT/Perplexity answer a prompt:** `chatgpt_ai_insights` / `perplexity_ai_insights`
+- **Question about Bright Data itself (products, zones, errors, setup):** `ask_brightdata_assistant`
 
 Notes on scraper runs:
 
@@ -523,6 +524,15 @@ Filter search over stored LinkedIn datasets; returns matching records at once, w
 |------|-------------|-------|
 | `list_dataset_fields` | Filterable fields of a dataset (name, type, description). Call before `search_dataset` | default / `social`, `business` |
 | `search_dataset` | Records matching a filter, up to 10 per call, with a cursor for more | default / `social`, `business` |
+
+</details>
+
+<details>
+<summary><b>Bright Data Assistant — 1 tool</b></summary>
+
+| Tool | Description | Group |
+|------|-------------|-------|
+| `ask_brightdata_assistant` | Ask Sophie, Bright Data's support assistant, about products, APIs, zones, errors or account setup. Pass the returned `dialog_id` to ask a follow-up in the same thread | default / every group |
 
 </details>
 

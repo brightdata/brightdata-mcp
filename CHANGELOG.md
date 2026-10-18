@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [4.0.0] - 2026-10-18
 
+### Added
+- `ask_brightdata_assistant`: ask Sophie, Bright Data's support
+  assistant, about products, zones, errors or setup. Pass the returned
+  `dialog_id` to ask a follow-up. On by default and in every group, as
+  on the hosted server.
+
 ### Removed
 - **BREAKING**: The `discover` tool and its Discover API integration.
   It was in every tool group and on by default, so it is no longer

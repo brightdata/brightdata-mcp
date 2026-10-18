@@ -40,6 +40,7 @@
     {"name": "scrape_batch", "description": "Scrape multiple webpage URLs with advanced options for content extraction and get back the results in Markdown. This tool can unlock any webpage even if it uses bot detection or CAPTCHA. Processes up to 10 URLs."},
     {"name": "scrape_as_html", "description": "Scrape a single webpage URL with advanced options for content extraction and get back the results in HTML. This tool can unlock any webpage even if it uses bot detection or CAPTCHA."},
     {"name": "extract", "description": "Scrape a webpage and extract structured data as JSON. First scrapes the page as markdown, then uses AI sampling to convert it to structured JSON format. This tool can unlock any webpage even if it uses bot detection or CAPTCHA."},
+    {"name": "ask_brightdata_assistant", "description": "Ask Bright Data's support assistant (Sophie) about Bright Data products, APIs, MCP usage, zones, scraping, or account setup. Supports threaded follow-ups via dialog_id."},
     {"name": "search_scrapers", "description": "Find a pre-built Bright Data scraper (Web Scraper API, 1,200+ sites) by site or data type."},
     {"name": "get_scraper_details", "description": "Show a scraper's description, input fields, example input and main output fields for one collection method."},
     {"name": "run_scraper", "description": "Run any pre-built scraper. Waits up to 45 seconds, then returns a snapshot ID to check later."},
