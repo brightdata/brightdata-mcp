@@ -295,12 +295,27 @@ export class Browser_session {
                     .first().describe(element);
             }
             const snapshot = await page.ariaSnapshot({mode: 'ai'});
-            if (!snapshot.includes(`[ref=${ref}]`))
-                throw new Error('Ref '+ref+' not found in the current page '
-                    +'snapshot. Try capturing new snapshot.');
+            const occurrences = snapshot.split(`[ref=${ref}]`).length-1;
+            if (!occurrences)
+            {
+                throw new Error(`Ref ${ref} not found in the current page `
+                    +`snapshot. Try capturing new snapshot.`);
+            }
+            // A ref names exactly one element, so the marker appears once
+            // on that element's line. A second occurrence can only be page
+            // text that contains the same characters, and the text may
+            // describe the ref differently from the element it resolves to.
+            if (occurrences>1)
+            {
+                throw new Error(`Ref ${ref} appears more than once in the `
+                    +`current page snapshot and cannot be resolved `
+                    +`unambiguously. Capture a new snapshot and use the ref `
+                    +`from an element line, not from page text.`);
+            }
             return page.locator(`aria-ref=${ref}`).describe(element);
         } catch(e){
-            throw new Error(`Error creating ref locator for ${element} with ref ${ref}: ${e.message}`);
+            throw new Error(`Error creating ref locator for ${element} with `
+                +`ref ${ref}: ${e.message}`);
         }
     }
 
