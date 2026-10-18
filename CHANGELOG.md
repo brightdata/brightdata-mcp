@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
   `dialog_id` to ask a follow-up. On by default and in every group, as
   on the hosted server.
 
+### Changed
+- Playwright is pinned to 1.64.1, the same version as the hosted server.
+
 ### Removed
 - **BREAKING**: The `discover` tool and its Discover API integration.
   It was in every tool group and on by default, so it is no longer
