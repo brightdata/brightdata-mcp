@@ -4,6 +4,7 @@ import {z} from 'zod';
 import axios from 'axios';
 import {Browser_session} from './browser_session.js';
 let browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
+const browser_filtered_snapshot = process.env.BROWSER_FILTERED_SNAPSHOT=='on';
 
 let open_session;
 let open_session_country = null;
@@ -139,7 +140,9 @@ let scraping_browser_snapshot = {
         'This provides accurate element references that can be used with '
         +'ref-based tools.',
         'Use this before interacting with elements to get proper refs instead '
-        +'of guessing selectors.'
+        +'of guessing selectors.',
+        ...browser_filtered_snapshot ? ['Page text is not included; call '
+            +'scraping_browser_get_text to read it.'] : [],
     ].join('\n'),
     annotations: {
         title: 'Browser Snapshot',
@@ -147,15 +150,16 @@ let scraping_browser_snapshot = {
     },
     parameters: z.object({
         filtered: z.boolean().optional().describe(
-            'Whether to apply filtering/compaction (default: false). '
-            +'Set to true to get a compacted version of the snapshot.'),
+            'List only buttons, links and fields (default: false). '
+            +'Saves tokens. Use true for sensitive actions (payments, '
+            +'account changes) so page text cannot pose as an element.'),
     }),
     execute: async({filtered=false})=>{
         const browser_session = await require_browser();
         const page = await browser_session.get_page();
         try {
             const snapshot = await browser_session.capture_snapshot(
-                {filtered});
+                {filtered: browser_filtered_snapshot || filtered});
             const lines = [
                 `Page: ${snapshot.url}`,
                 `Title: ${snapshot.title}`,
