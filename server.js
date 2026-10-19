@@ -241,6 +241,7 @@ addTool({
     annotations: {
         title: 'Search Engine',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({
@@ -290,6 +291,7 @@ addTool({
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({url: z.string().url()}),
@@ -321,6 +323,7 @@ addTool({
     annotations: {
         title: 'Search Engine Batch',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({
@@ -399,6 +402,7 @@ addTool({
    annotations: {
        title: 'Scrape Batch',
        readOnlyHint: true,
+       destructiveHint: false,
        openWorldHint: true,
    },
    parameters: z.object({
@@ -443,6 +447,7 @@ addTool({
     annotations: {
         title: 'Scrape as HTML',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({url: z.string().url()}),
@@ -471,6 +476,7 @@ addTool({
     annotations: {
         title: 'Extract Structured Data',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({
@@ -540,7 +546,8 @@ addTool({
     annotations: {
         title: 'List Dataset Fields',
         readOnlyHint: true,
-        openWorldHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
     },
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
@@ -568,7 +575,8 @@ addTool({
     annotations: {
         title: 'Search Dataset',
         readOnlyHint: true,
-        openWorldHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
     },
     parameters: z.object({
         dataset_id: dataset_id_schema,
@@ -626,6 +634,8 @@ addTool({
     annotations: {
         title: 'Session Stats',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
     },
     parameters: z.object({}),
     execute: tool_fn('session_stats', async()=>{
@@ -688,7 +698,8 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         description,
         annotations: {
             title: dataset_id_to_title(id),
-            readOnlyHint: true,
+            readOnlyHint: false,
+            destructiveHint: false,
             openWorldHint: true,
         },
         parameters: z.object(parameters),

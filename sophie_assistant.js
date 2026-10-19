@@ -66,7 +66,8 @@ export const sophie_assistant_tool = {
     annotations: {
         title: 'Ask Bright Data Assistant',
         readOnlyHint: true,
-        openWorldHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
     },
     parameters: z.object({
         question: z.string().min(1).max(20480)
