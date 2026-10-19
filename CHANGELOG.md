@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.0] - 2026-10-19
+
+### Added
+- The server sends MCP `instructions` telling the model which tool to
+  use when: a pre-built scraper first for known sites, then
+  `scrape_as_markdown` / `scrape_batch`, and the browser tools only for
+  clicks, typing or screenshots.
+
+### Changed
+- Every tool sets `readOnlyHint`, `destructiveHint` and `openWorldHint`
+  explicitly, following OpenAI's plugin rules. `run_scraper` and the AI
+  insights tools are no longer read-only (they start a collection job),
+  browser navigation and scrolling are no longer destructive, and
+  `scraping_browser_click_ref` / `scraping_browser_type_ref` are
+  destructive. Clients may ask for confirmation before those tools.
+- Tool errors are token-redacted, stripped of stack traces and capped
+  at 500 characters, including browser tool errors and upstream error
+  pages.
+- Tool descriptions no longer claim to unlock any page "even if it uses
+  bot detection or CAPTCHA".
+- `scraping_browser_screenshot` describes the `full_page` option.
+
+### Fixed
+- The startup zone check times out (`BASE_TIMEOUT`, default 10s)
+  instead of hanging the server when the API does not answer.
+- A failed snapshot in `run_scraper` and the AI insights tools is
+  reported as an error instead of being returned as data.
+
 ## [4.0.0] - 2026-10-18
 
 ### Added
