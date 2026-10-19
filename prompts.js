@@ -18,7 +18,6 @@ STEP 1 -- Check for a pre-built scraper (fastest, structured JSON):
   run_scraper with input shaped like sample_input.
 
 STEP 2 -- If no scraper matches, use scrape_as_markdown (default):
-  This handles anti-bot protection and CAPTCHA automatically.
   Retry once if the first attempt returns empty or blocked content.
 
 STEP 3 -- If scrape_as_markdown fails twice, escalate to

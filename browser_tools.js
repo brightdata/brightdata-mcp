@@ -254,7 +254,8 @@ let scraping_browser_type_ref = {
 
 let scraping_browser_screenshot = {
     name: 'scraping_browser_screenshot',
-    description: 'Take a screenshot of the current page',
+    description: 'Take a screenshot of the current page. Set '
+        +'full_page to capture the whole scrollable page.',
     annotations: {
         title: 'Browser Screenshot',
         readOnlyHint: true,

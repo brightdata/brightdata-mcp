@@ -214,9 +214,19 @@ async function ensure_required_zones(){
 
 await ensure_required_zones();
 
+const instructions = 'Bright Data tools fetch live web data. For a known '
+    +'site (Amazon, LinkedIn, Instagram, Zillow, ...), call search_scrapers '
+    +'first, then get_scraper_details and run_scraper for structured JSON. '
+    +'Otherwise use scrape_as_markdown, or scrape_batch for several URLs. '
+    +'Use the scraping_browser_* tools only when the task needs clicks, '
+    +'typing or screenshots. If run_scraper returns a snapshot_id that is '
+    +'still running, poll get_scraper_progress, then call '
+    +'get_scraper_results.';
+
 let server = new FastMCP({
     name: 'Bright Data',
     version: package_json.version,
+    instructions,
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
@@ -292,9 +302,7 @@ addTool({
 addTool({
     name: 'scrape_as_markdown',
     description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in MarkDown language. '
-    +'This tool can unlock any webpage even if it uses bot detection or '
-    +'CAPTCHA.',
+    +'content extraction and get back the results in MarkDown language.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
@@ -403,9 +411,7 @@ addTool({
 addTool({
    name: 'scrape_batch',
    description: 'Scrape multiple webpages URLs with advanced options for '
-        +'content extraction and get back the results in MarkDown language. '
-        +'This tool can unlock any webpage even if it uses bot detection or '
-        +'CAPTCHA.',
+        +'content extraction and get back the results in MarkDown language.',
    annotations: {
        title: 'Scrape Batch',
        readOnlyHint: true,
@@ -448,9 +454,7 @@ addTool({
 addTool({
     name: 'scrape_as_html',
     description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in HTML. '
-    +'This tool can unlock any webpage even if it uses bot detection or '
-    +'CAPTCHA.',
+    +'content extraction and get back the results in HTML.',
     annotations: {
         title: 'Scrape as HTML',
         readOnlyHint: true,
@@ -478,8 +482,7 @@ addTool({
     name: 'extract',
     description: 'Scrape a webpage and extract structured data as JSON. '
         + 'First scrapes the page as markdown, then uses AI sampling to convert '
-        + 'it to structured JSON format. This tool can unlock any webpage even '
-        + 'if it uses bot detection or CAPTCHA.',
+        + 'it to structured JSON format.',
     annotations: {
         title: 'Extract Structured Data',
         readOnlyHint: true,
