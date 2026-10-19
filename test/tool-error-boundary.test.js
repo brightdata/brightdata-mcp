@@ -146,3 +146,25 @@ test('tool_fn error boundary sanitizes a single-tool failure whose '
             await client.close();
         }
     });
+
+test('tool_fn caps a long upstream error body', async t=>{
+    const stub = await start_stub_server();
+    t.after(()=>close_stub_server(stub));
+    const env = {...process.env, API_TOKEN: 'long-error-token',
+        __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`};
+    delete env.GROUPS;
+    delete env.TOOLS;
+    const client = new Client({name: 'long-error-test', version: '0'},
+        {capabilities: {tools: {}}});
+    t.after(()=>client.close());
+    await client.connect(new StdioClientTransport({cwd: repo_root, env,
+        command: process.execPath,
+        args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
+    const res = await client.callTool({name: 'scrape_as_html',
+        arguments: {url: 'https://long-error.example/'}});
+    const text = res.content.find(b=>b.type=='text').text;
+    assert.equal(res.isError, true);
+    assert.match(text, /HTTP 400/);
+    assert.match(text, /x{400}/);
+    assert.doesNotMatch(text, /x{495}/);
+});

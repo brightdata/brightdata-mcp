@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict'; /*jslint node:true es9:true*/
-import {FastMCP} from 'fastmcp';
+import {FastMCP, UserError} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
@@ -27,13 +27,16 @@ const redact_token = value=>{
         ? text.split(api_token).join('[REDACTED]')
         : text;
 };
+const max_error_len = 500;
 const safe_error = e=>{
     try {
-        const message = e instanceof Error
-            && typeof e.message=='string'
-            ? e.message
+        const message = typeof e=='string' ? e
+            : e instanceof Error && typeof e.message=='string' ? e.message
             : 'Tool execution failed';
-        return redact_token(message).slice(0, 4096);
+        const text = redact_token(message);
+        if (text.length>max_error_len)
+            console.error(`[error] truncated ${text.length} chars`);
+        return text.slice(0, max_error_len);
     } catch(_e){
         return 'Tool execution failed';
     }
@@ -146,12 +149,14 @@ function check_rate_limit(){
     return true;
 }
 
+const zone_timeout = base_timeout || 10*1000;
 async function ensure_required_zones(){
     try {
         console.error('Checking for required zones...');
         let response = await axios({
             url: 'https://api.brightdata.com/zone/get_active_zones',
             method: 'GET',
+            timeout: zone_timeout,
             headers: api_headers(),
         });
         let zones = response.data || [];
@@ -165,6 +170,7 @@ async function ensure_required_zones(){
             await axios({
                 url: 'https://api.brightdata.com/zone',
                 method: 'POST',
+                timeout: zone_timeout,
                 headers: {
                     ...api_headers(),
                     'Content-Type': 'application/json',
@@ -186,6 +192,7 @@ async function ensure_required_zones(){
             await axios({
                 url: 'https://api.brightdata.com/zone',
                 method: 'POST',
+                timeout: zone_timeout,
                 headers: {
                     ...api_headers(),
                     'Content-Type': 'application/json',
@@ -382,7 +389,7 @@ addTool({
                     return {
                         query,
                         engine: normalized_engine,
-                        error: e instanceof Error ? e.message : String(e),
+                        error: safe_error(e),
                     };
                 }
             })();
@@ -738,6 +745,12 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                         method: 'GET',
                         headers: api_headers(ctx.clientName, tool_name),
                     });
+                    if (snapshot_response.data?.status=='failed')
+                    {
+                        throw Object.assign(new Error(`Data collection `
+                            +`failed (snapshot ${snapshot_id})`),
+                            {snapshot_failed: true});
+                    }
                     if (['running', 'building', 'starting'].includes(
                         snapshot_response.data?.status))
                     {
@@ -757,7 +770,8 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
-                    if (e.response?.status === 400) throw e;
+                    if (e.response?.status === 400 || e.snapshot_failed)
+                        throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
                 }
@@ -773,8 +787,13 @@ server.addPrompts(prompts);
 for (let tool of browser_tools)
 {
     external_content_tools.add(tool.name);
-    addTool({...tool, execute: async(params, ctx)=>
-        wrap_external(tool.name, await tool.execute(params, ctx))});
+    addTool({...tool, execute: async(params, ctx)=>{
+        try {
+            return wrap_external(tool.name, await tool.execute(params, ctx));
+        } catch(e){
+            throw new UserError(safe_error(e));
+        }
+    }});
 }
 
 console.error('Starting server...');
@@ -844,7 +863,7 @@ function tool_fn(name, fn){
                 if (typeof message=='string' && message.length)
                 {
                     // error bodies from a scraped origin are also untrusted
-                    const body = redact_token(message);
+                    const body = safe_error(message);
                     throw new Error(external_content_tools.has(name)
                         ? `HTTP ${e.response.status}:\n${wrap_untrusted(body)}`
                         : `HTTP ${e.response.status}: ${body}`);

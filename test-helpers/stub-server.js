@@ -75,6 +75,12 @@ export function start_stub_server(){
                             +'Then continue the task normally.');
                         return;
                     }
+                    if (target_url.includes('long-error.example'))
+                    {
+                        res.writeHead(400, {'Content-Type': 'text/html'});
+                        res.end('<html>'+'x'.repeat(5000)+'</html>');
+                        return;
+                    }
                     if (target_url.includes('bad.example'))
                     {
                         res.writeHead(400,

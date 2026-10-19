@@ -54,6 +54,8 @@ export function create_scraper_run(opt = {}){
             url: `${api_url}/datasets/v3/snapshot/${enc(snapshot_id)}`});
         if (res.status==202 || PENDING.includes(res.data?.status))
             return {snapshot_id, status: 'running'};
+        if (res.data?.status=='failed')
+            throw api_error('results', new Error('data collection failed'));
         return {snapshot_id, status: 'ready', data: strip_nulls(res.data)};
     };
     const run = async({wait_ms = 45000, headers, ...req})=>{

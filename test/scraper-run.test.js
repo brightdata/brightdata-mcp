@@ -28,6 +28,8 @@ const route = (state, req, res, body)=>{
         return send(res, 200, {snapshot_id: 's_1', status: 'running'});
     if (path=='/datasets/v3/snapshot/s_1')
     {
+        if (state.failed)
+            return send(res, 200, {status: 'failed'});
         if (state.polls++<state.ready_after)
             return send(res, 202, {status: 'running', message: 'not ready'});
         return send(res, 200, [{title: 'a', price: null}]);
@@ -156,4 +158,11 @@ test('trigger without snapshot_id is an error', async t=>{
     await assert.rejects(sr.trigger({dataset_id: 'gd_1',
         method: 'collect_by_url', input: {}}),
         /trigger failed: no snapshot_id returned/);
+});
+
+test('a failed snapshot is an error, not data', async t=>{
+    const {sr, state} = await setup(t);
+    state.failed = true;
+    await assert.rejects(sr.results('s_1', headers),
+        /results failed: data collection failed/);
 });
