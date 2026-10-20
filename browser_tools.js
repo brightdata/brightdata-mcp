@@ -55,7 +55,8 @@ let scraping_browser_navigate = {
     description: 'Navigate a scraping browser session to a new URL',
     annotations: {
         title: 'Browser Navigate',
-        destructiveHint: true,
+        readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({
@@ -91,7 +92,9 @@ let scraping_browser_go_back = {
     description: 'Go back to the previous page',
     annotations: {
         title: 'Browser Go Back',
-        destructiveHint: true,
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -114,7 +117,9 @@ const scraping_browser_go_forward = {
     description: 'Go forward to the next page',
     annotations: {
         title: 'Browser Go Forward',
-        destructiveHint: true,
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -147,6 +152,8 @@ let scraping_browser_snapshot = {
     annotations: {
         title: 'Browser Snapshot',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({
         filtered: z.boolean().optional().describe(
@@ -189,7 +196,9 @@ let scraping_browser_click_ref = {
     ].join('\n'),
     annotations: {
         title: 'Browser Click Element',
+        readOnlyHint: false,
         destructiveHint: true,
+        openWorldHint: true,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -216,7 +225,9 @@ let scraping_browser_type_ref = {
     ].join('\n'),
     annotations: {
         title: 'Browser Type Text',
+        readOnlyHint: false,
         destructiveHint: true,
+        openWorldHint: true,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -243,10 +254,13 @@ let scraping_browser_type_ref = {
 
 let scraping_browser_screenshot = {
     name: 'scraping_browser_screenshot',
-    description: 'Take a screenshot of the current page',
+    description: 'Take a screenshot of the current page. Set '
+        +'full_page to capture the whole scrollable page.',
     annotations: {
         title: 'Browser Screenshot',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({
         full_page: z.boolean().optional().describe([
@@ -274,6 +288,8 @@ let scraping_browser_get_html = {
     annotations: {
         title: 'Browser Get HTML',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({
         full_page: z.boolean().optional().describe([
@@ -303,6 +319,8 @@ let scraping_browser_get_text = {
     annotations: {
         title: 'Browser Get Text',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -317,7 +335,9 @@ let scraping_browser_scroll = {
     description: 'Scroll to the bottom of the current page',
     annotations: {
         title: 'Browser Scroll',
-        destructiveHint: true,
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -342,7 +362,9 @@ let scraping_browser_scroll_to_ref = {
     ].join('\n'),
     annotations: {
         title: 'Browser Scroll to Element',
-        destructiveHint: true,
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -372,6 +394,8 @@ let scraping_browser_network_requests = {
     annotations: {
         title: 'Browser Network Requests',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -412,6 +436,8 @@ let scraping_browser_wait_for_ref = {
     annotations: {
         title: 'Browser Wait for Element',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -438,6 +464,12 @@ let scraping_browser_fill_form = {
         'Use scraping_browser_snapshot first to get the correct ref values.',
         'This is more efficient than filling fields one by one.'
     ].join('\n'),
+    annotations: {
+        title: 'Browser Fill Form',
+        readOnlyHint: false,
+        destructiveHint: false,
+        openWorldHint: true,
+    },
     parameters: z.object({
         fields: z.array(z.object({
             name: z.string().describe('Human-readable field name'),

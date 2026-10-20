@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.0] - 2026-10-20
+
+### Added
+- The server sends MCP `instructions` telling the model which tool to
+  use when: a pre-built scraper first for known sites, then
+  `scrape_as_markdown` / `scrape_batch`, and the browser tools only for
+  clicks, typing or screenshots.
+
+### Changed
+- Every tool sets `readOnlyHint`, `destructiveHint` and `openWorldHint`
+  explicitly, following OpenAI's plugin rules. `run_scraper` and the AI
+  insights tools are no longer read-only (they start a collection job),
+  browser navigation and scrolling are no longer destructive, and
+  `scraping_browser_click_ref` / `scraping_browser_type_ref` are
+  destructive. Clients may ask for confirmation before those tools.
+- Tool errors are token-redacted, stripped of stack traces and capped
+  at 500 characters, including browser tool errors and upstream error
+  pages.
+- Tool descriptions no longer claim to unlock any page "even if it uses
+  bot detection or CAPTCHA".
+- `scraping_browser_screenshot` describes the `full_page` option.
+
+### Fixed
+- sophie_assistant.js file was missing from the npm package.
+- Passwords in URLs (`user:pass@`), such as the browser zone password,
+  are redacted from every tool error and from the server's error logs,
+  not only when the browser fails to connect.
+- `search_dataset` accepts `is_null` and `is_not_null` filters without
+  a `value`. They were listed as operators but rejected by the schema.
+- The startup zone check times out (`BASE_TIMEOUT`, default 10s)
+  instead of hanging the server when the API does not answer.
+
 ## [4.0.0] - 2026-10-18
 
 ### Added

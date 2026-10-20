@@ -5,7 +5,11 @@ export const scraper_tool_names = ['search_scrapers', 'get_scraper_details',
     'run_scraper', 'get_scraper_progress', 'get_scraper_results',
     'refresh_scrapers'];
 
-const read_only = title=>({title, readOnlyHint: true, openWorldHint: true});
+const annotations = (name, title)=>{
+    const job = name=='run_scraper';
+    return {title, readOnlyHint: !job, destructiveHint: false,
+        openWorldHint: job};
+};
 const dataset_id = z.string().describe('dataset_id from search_scrapers');
 const method = z.string().describe('One of the scraper collection_methods, '
     +'exactly as listed (some names are misspelled on purpose)');
@@ -13,7 +17,7 @@ const snapshot_id = z.string().describe('snapshot_id from run_scraper');
 
 export function scraper_tools({catalog, runner, tool_fn, headers}){
     const tool = (name, title, description, parameters, fn)=>({name,
-        description, annotations: read_only(title),
+        description, annotations: annotations(name, title),
         parameters: z.object(parameters),
         execute: tool_fn(name, async(data, ctx)=>{
             const meta = ctx.tool_meta||{};

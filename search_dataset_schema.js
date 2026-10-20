@@ -25,7 +25,8 @@ const leaf_schema = z.object({
         +'names from the list_dataset_fields tool.'),
     operator: z.string().describe('Filter operator, one of: '
         +FILTER_OPERATORS.join(', ')),
-    value: leaf_value_schema,
+    value: leaf_value_schema.optional()
+        .describe('Value to compare against. Omit for is_null / is_not_null.'),
 });
 
 function build_node_schema(depth){

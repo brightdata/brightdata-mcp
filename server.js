@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 'use strict'; /*jslint node:true es9:true*/
-import {FastMCP} from 'fastmcp';
+import {FastMCP, UserError} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {gate_page_content, refusal_text} from './content_gate.js';
 import {wrap_untrusted} from './untrusted_content.js';
+import {redact_url_creds, safe_error} from './safe_error.js';
 import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
@@ -21,23 +22,6 @@ import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
-const redact_token = value=>{
-    const text = String(value);
-    return api_token
-        ? text.split(api_token).join('[REDACTED]')
-        : text;
-};
-const safe_error = e=>{
-    try {
-        const message = e instanceof Error
-            && typeof e.message=='string'
-            ? e.message
-            : 'Tool execution failed';
-        return redact_token(message).slice(0, 4096);
-    } catch(_e){
-        return 'Tool execution failed';
-    }
-};
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const base_timeout = process.env.BASE_TIMEOUT
@@ -146,12 +130,14 @@ function check_rate_limit(){
     return true;
 }
 
+const zone_timeout = base_timeout || 10*1000;
 async function ensure_required_zones(){
     try {
         console.error('Checking for required zones...');
         let response = await axios({
             url: 'https://api.brightdata.com/zone/get_active_zones',
             method: 'GET',
+            timeout: zone_timeout,
             headers: api_headers(),
         });
         let zones = response.data || [];
@@ -165,6 +151,7 @@ async function ensure_required_zones(){
             await axios({
                 url: 'https://api.brightdata.com/zone',
                 method: 'POST',
+                timeout: zone_timeout,
                 headers: {
                     ...api_headers(),
                     'Content-Type': 'application/json',
@@ -186,6 +173,7 @@ async function ensure_required_zones(){
             await axios({
                 url: 'https://api.brightdata.com/zone',
                 method: 'POST',
+                timeout: zone_timeout,
                 headers: {
                     ...api_headers(),
                     'Content-Type': 'application/json',
@@ -207,9 +195,19 @@ async function ensure_required_zones(){
 
 await ensure_required_zones();
 
+const instructions = 'Bright Data tools fetch live web data. For a known '
+    +'site (Amazon, LinkedIn, Instagram, Zillow, ...), call search_scrapers '
+    +'first, then get_scraper_details and run_scraper for structured JSON. '
+    +'Otherwise use scrape_as_markdown, or scrape_batch for several URLs. '
+    +'Use the scraping_browser_* tools only when the task needs clicks, '
+    +'typing or screenshots. If run_scraper returns a snapshot_id that is '
+    +'still running, poll get_scraper_progress, then call '
+    +'get_scraper_results.';
+
 let server = new FastMCP({
     name: 'Bright Data',
     version: package_json.version,
+    instructions,
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
@@ -241,6 +239,7 @@ addTool({
     annotations: {
         title: 'Search Engine',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({
@@ -284,12 +283,11 @@ addTool({
 addTool({
     name: 'scrape_as_markdown',
     description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in MarkDown language. '
-    +'This tool can unlock any webpage even if it uses bot detection or '
-    +'CAPTCHA.',
+    +'content extraction and get back the results in MarkDown language.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({url: z.string().url()}),
@@ -321,6 +319,7 @@ addTool({
     annotations: {
         title: 'Search Engine Batch',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({
@@ -379,7 +378,7 @@ addTool({
                     return {
                         query,
                         engine: normalized_engine,
-                        error: e instanceof Error ? e.message : String(e),
+                        error: safe_error(e, api_token),
                     };
                 }
             })();
@@ -393,12 +392,11 @@ addTool({
 addTool({
    name: 'scrape_batch',
    description: 'Scrape multiple webpages URLs with advanced options for '
-        +'content extraction and get back the results in MarkDown language. '
-        +'This tool can unlock any webpage even if it uses bot detection or '
-        +'CAPTCHA.',
+        +'content extraction and get back the results in MarkDown language.',
    annotations: {
        title: 'Scrape Batch',
        readOnlyHint: true,
+       destructiveHint: false,
        openWorldHint: true,
    },
    parameters: z.object({
@@ -429,7 +427,7 @@ addTool({
        const settled = await Promise.allSettled(scrapePromises);
        const results = settled.map(result=>result.status=='fulfilled'
            ? result
-           : {status: 'rejected', reason: safe_error(result.reason)});
+           : {status: 'rejected', reason: safe_error(result.reason, api_token)});
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -437,12 +435,11 @@ addTool({
 addTool({
     name: 'scrape_as_html',
     description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in HTML. '
-    +'This tool can unlock any webpage even if it uses bot detection or '
-    +'CAPTCHA.',
+    +'content extraction and get back the results in HTML.',
     annotations: {
         title: 'Scrape as HTML',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({url: z.string().url()}),
@@ -466,11 +463,11 @@ addTool({
     name: 'extract',
     description: 'Scrape a webpage and extract structured data as JSON. '
         + 'First scrapes the page as markdown, then uses AI sampling to convert '
-        + 'it to structured JSON format. This tool can unlock any webpage even '
-        + 'if it uses bot detection or CAPTCHA.',
+        + 'it to structured JSON format.',
     annotations: {
         title: 'Extract Structured Data',
         readOnlyHint: true,
+        destructiveHint: false,
         openWorldHint: true,
     },
     parameters: z.object({
@@ -540,7 +537,8 @@ addTool({
     annotations: {
         title: 'List Dataset Fields',
         readOnlyHint: true,
-        openWorldHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
     },
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
@@ -568,7 +566,8 @@ addTool({
     annotations: {
         title: 'Search Dataset',
         readOnlyHint: true,
-        openWorldHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
     },
     parameters: z.object({
         dataset_id: dataset_id_schema,
@@ -626,6 +625,8 @@ addTool({
     annotations: {
         title: 'Session Stats',
         readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
     },
     parameters: z.object({}),
     execute: tool_fn('session_stats', async()=>{
@@ -688,7 +689,8 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         description,
         annotations: {
             title: dataset_id_to_title(id),
-            readOnlyHint: true,
+            readOnlyHint: false,
+            destructiveHint: false,
             openWorldHint: true,
         },
         parameters: z.object(parameters),
@@ -727,6 +729,12 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                         method: 'GET',
                         headers: api_headers(ctx.clientName, tool_name),
                     });
+                    if (snapshot_response.data?.status=='failed')
+                    {
+                        throw Object.assign(new Error(`Data collection `
+                            +`failed (snapshot ${snapshot_id})`),
+                            {snapshot_failed: true});
+                    }
                     if (['running', 'building', 'starting'].includes(
                         snapshot_response.data?.status))
                     {
@@ -746,7 +754,8 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
-                    if (e.response?.status === 400) throw e;
+                    if (e.response?.status === 400 || e.snapshot_failed)
+                        throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
                 }
@@ -762,8 +771,13 @@ server.addPrompts(prompts);
 for (let tool of browser_tools)
 {
     external_content_tools.add(tool.name);
-    addTool({...tool, execute: async(params, ctx)=>
-        wrap_external(tool.name, await tool.execute(params, ctx))});
+    addTool({...tool, execute: async(params, ctx)=>{
+        try {
+            return wrap_external(tool.name, await tool.execute(params, ctx));
+        } catch(e){
+            throw new UserError(safe_error(e, api_token));
+        }
+    }});
 }
 
 console.error('Starting server...');
@@ -809,7 +823,7 @@ function tool_fn(name, fn){
         if (e.response)
             {
                 console.error(`[%s] error %s %s: %s`, name, e.response.status,
-                    e.response.statusText, e.response.data);
+                    e.response.statusText, redact_url_creds(e.response.data));
 
                 const headers = e.response.headers;
                 const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
@@ -833,15 +847,15 @@ function tool_fn(name, fn){
                 if (typeof message=='string' && message.length)
                 {
                     // error bodies from a scraped origin are also untrusted
-                    const body = redact_token(message);
+                    const body = safe_error(message, api_token);
                     throw new Error(external_content_tools.has(name)
                         ? `HTTP ${e.response.status}:\n${wrap_untrusted(body)}`
                         : `HTTP ${e.response.status}: ${body}`);
                 }
             }
             else
-                console.error(`[%s] error %s`, name, e.stack);
-            throw new Error(safe_error(e));
+                console.error(`[%s] error %s`, name, redact_url_creds(e.stack));
+            throw new Error(safe_error(e, api_token));
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);
