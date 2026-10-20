@@ -25,8 +25,7 @@ All notable changes to this project will be documented in this file.
 - `scraping_browser_screenshot` describes the `full_page` option.
 
 ### Fixed
-- 4.0.0 crashed on startup with `Cannot find module
-  sophie_assistant.js`: the file was missing from the npm package.
+- sophie_assistant.js file was missing from the npm package.
 - Passwords in URLs (`user:pass@`), such as the browser zone password,
   are redacted from every tool error and from the server's error logs,
   not only when the browser fails to connect.
