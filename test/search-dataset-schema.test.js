@@ -107,3 +107,11 @@ test('filter_schema rejects nesting deeper than 3', ()=>{
 test('filter_schema rejects an empty object', ()=>{
     assert.throws(()=>filter_schema.parse({}));
 });
+
+test('filter_schema accepts is_null and is_not_null without a value', ()=>{
+    for (const operator of ['is_null', 'is_not_null'])
+    {
+        const filter = {name: 'email', operator};
+        assert.deepEqual(filter_schema.parse(filter), filter);
+    }
+});
