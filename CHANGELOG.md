@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.1.0] - 2026-10-19
+## [4.1.0] - 2026-10-20
 
 ### Added
 - The server sends MCP `instructions` telling the model which tool to
@@ -25,10 +25,15 @@ All notable changes to this project will be documented in this file.
 - `scraping_browser_screenshot` describes the `full_page` option.
 
 ### Fixed
+- 4.0.0 crashed on startup with `Cannot find module
+  sophie_assistant.js`: the file was missing from the npm package.
+- Passwords in URLs (`user:pass@`), such as the browser zone password,
+  are redacted from every tool error and from the server's error logs,
+  not only when the browser fails to connect.
+- `search_dataset` accepts `is_null` and `is_not_null` filters without
+  a `value`. They were listed as operators but rejected by the schema.
 - The startup zone check times out (`BASE_TIMEOUT`, default 10s)
   instead of hanging the server when the API does not answer.
-- A failed snapshot in `run_scraper` and the AI insights tools is
-  reported as an error instead of being returned as data.
 
 ## [4.0.0] - 2026-10-18
 
