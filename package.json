@@ -48,6 +48,7 @@
         "content_gate.js",
         "scraper_catalog.js",
         "scraper_run.js",
+        "safe_error.js",
         "scraper_tools.js",
         "prompts.js",
         "sophie_assistant.js",

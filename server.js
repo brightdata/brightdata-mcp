@@ -7,6 +7,7 @@ import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {gate_page_content, refusal_text} from './content_gate.js';
 import {wrap_untrusted} from './untrusted_content.js';
+import {redact_url_creds, safe_error} from './safe_error.js';
 import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
@@ -21,26 +22,6 @@ import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
-const redact_token = value=>{
-    const text = String(value);
-    return api_token
-        ? text.split(api_token).join('[REDACTED]')
-        : text;
-};
-const max_error_len = 500;
-const safe_error = e=>{
-    try {
-        const message = typeof e=='string' ? e
-            : e instanceof Error && typeof e.message=='string' ? e.message
-            : 'Tool execution failed';
-        const text = redact_token(message);
-        if (text.length>max_error_len)
-            console.error(`[error] truncated ${text.length} chars`);
-        return text.slice(0, max_error_len);
-    } catch(_e){
-        return 'Tool execution failed';
-    }
-};
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const base_timeout = process.env.BASE_TIMEOUT
@@ -397,7 +378,7 @@ addTool({
                     return {
                         query,
                         engine: normalized_engine,
-                        error: safe_error(e),
+                        error: safe_error(e, api_token),
                     };
                 }
             })();
@@ -446,7 +427,7 @@ addTool({
        const settled = await Promise.allSettled(scrapePromises);
        const results = settled.map(result=>result.status=='fulfilled'
            ? result
-           : {status: 'rejected', reason: safe_error(result.reason)});
+           : {status: 'rejected', reason: safe_error(result.reason, api_token)});
        return JSON.stringify(results, null, 2);
    }),
 });
@@ -794,7 +775,7 @@ for (let tool of browser_tools)
         try {
             return wrap_external(tool.name, await tool.execute(params, ctx));
         } catch(e){
-            throw new UserError(safe_error(e));
+            throw new UserError(safe_error(e, api_token));
         }
     }});
 }
@@ -842,7 +823,7 @@ function tool_fn(name, fn){
         if (e.response)
             {
                 console.error(`[%s] error %s %s: %s`, name, e.response.status,
-                    e.response.statusText, e.response.data);
+                    e.response.statusText, redact_url_creds(e.response.data));
 
                 const headers = e.response.headers;
                 const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
@@ -866,15 +847,15 @@ function tool_fn(name, fn){
                 if (typeof message=='string' && message.length)
                 {
                     // error bodies from a scraped origin are also untrusted
-                    const body = safe_error(message);
+                    const body = safe_error(message, api_token);
                     throw new Error(external_content_tools.has(name)
                         ? `HTTP ${e.response.status}:\n${wrap_untrusted(body)}`
                         : `HTTP ${e.response.status}: ${body}`);
                 }
             }
             else
-                console.error(`[%s] error %s`, name, e.stack);
-            throw new Error(safe_error(e));
+                console.error(`[%s] error %s`, name, redact_url_creds(e.stack));
+            throw new Error(safe_error(e, api_token));
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);

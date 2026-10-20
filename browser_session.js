@@ -1,11 +1,7 @@
 'use strict'; /*jslint node:true es9:true*/
 import * as playwright from 'playwright';
 import {Aria_snapshot_filter} from './aria_snapshot_filter.js';
-
-const cred_url_re = /((?:wss?|https?):\/\/)[^/@\s]+@/gi;
-
-const redact_url_creds = value=>
-    String(value).replace(cred_url_re, '$1[REDACTED]@');
+import {redact_url_creds} from './safe_error.js';
 
 const connect_over_cdp = async endpoint=>{
     try { return await playwright.chromium.connectOverCDP(endpoint); }

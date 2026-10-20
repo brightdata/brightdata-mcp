@@ -168,3 +168,29 @@ test('tool_fn caps a long upstream error body', async t=>{
     assert.match(text, /x{400}/);
     assert.doesNotMatch(text, /x{495}/);
 });
+
+test('tool errors and logs never carry URL credentials', async t=>{
+    const stub = await start_stub_server();
+    t.after(()=>close_stub_server(stub));
+    const env = {...process.env, API_TOKEN: 'cred-test-token',
+        __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`};
+    delete env.GROUPS;
+    delete env.TOOLS;
+    const client = new Client({name: 'cred-redaction-test', version: '0'},
+        {capabilities: {tools: {}}});
+    const transport = new StdioClientTransport({cwd: repo_root, env,
+        command: process.execPath, stderr: 'pipe',
+        args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']});
+    let logs = '';
+    transport.stderr.on('data', d=>{ logs += d; });
+    t.after(()=>client.close());
+    await client.connect(transport);
+    const result = await client.callTool({name: 'scrape_as_markdown',
+        arguments: {url: 'https://cred-error.example/'}});
+    const text = result.content.find(b=>b.type=='text').text;
+    assert.equal(result.isError, true);
+    assert.match(text, /wss:\/\/\[REDACTED\]@brd\.superproxy\.io/);
+    assert.doesNotMatch(text, /zone-pass-canary/);
+    assert.match(logs, /\[REDACTED\]@/);
+    assert.doesNotMatch(logs, /zone-pass-canary/);
+});

@@ -81,6 +81,13 @@ export function start_stub_server(){
                         res.end('<html>'+'x'.repeat(5000)+'</html>');
                         return;
                     }
+                    if (target_url.includes('cred-error.example'))
+                    {
+                        res.writeHead(400, {'Content-Type': 'text/plain'});
+                        res.end('connect failed: wss://brd-customer-c1-zone-'
+                            +'z1:zone-pass-canary@brd.superproxy.io:9222');
+                        return;
+                    }
                     if (target_url.includes('bad.example'))
                     {
                         res.writeHead(400,
