@@ -68,6 +68,7 @@ export const sophie_assistant_tool = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
+        idempotentHint: false,
     },
     parameters: z.object({
         question: z.string().min(1).max(20480)

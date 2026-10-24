@@ -58,6 +58,7 @@ let scraping_browser_navigate = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         url: z.string().describe('The URL to navigate to'),
@@ -95,6 +96,7 @@ let scraping_browser_go_back = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: false,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -120,6 +122,7 @@ const scraping_browser_go_forward = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: false,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -154,6 +157,7 @@ let scraping_browser_snapshot = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         filtered: z.boolean().optional().describe(
@@ -199,6 +203,7 @@ let scraping_browser_click_ref = {
         readOnlyHint: false,
         destructiveHint: true,
         openWorldHint: true,
+        idempotentHint: false,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -228,6 +233,7 @@ let scraping_browser_type_ref = {
         readOnlyHint: false,
         destructiveHint: true,
         openWorldHint: true,
+        idempotentHint: false,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -261,6 +267,7 @@ let scraping_browser_screenshot = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         full_page: z.boolean().optional().describe([
@@ -290,6 +297,7 @@ let scraping_browser_get_html = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         full_page: z.boolean().optional().describe([
@@ -321,6 +329,7 @@ let scraping_browser_get_text = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -338,6 +347,7 @@ let scraping_browser_scroll = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -365,6 +375,7 @@ let scraping_browser_scroll_to_ref = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -396,6 +407,7 @@ let scraping_browser_network_requests = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({}),
     execute: async()=>{
@@ -438,6 +450,7 @@ let scraping_browser_wait_for_ref = {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
@@ -467,8 +480,9 @@ let scraping_browser_fill_form = {
     annotations: {
         title: 'Browser Fill Form',
         readOnlyHint: false,
-        destructiveHint: false,
+        destructiveHint: true,
         openWorldHint: true,
+        idempotentHint: false,
     },
     parameters: z.object({
         fields: z.array(z.object({

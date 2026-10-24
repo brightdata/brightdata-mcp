@@ -241,6 +241,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         query: z.string(),
@@ -289,6 +290,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
@@ -321,6 +323,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         queries: z.array(z.object({
@@ -398,6 +401,7 @@ addTool({
        readOnlyHint: true,
        destructiveHint: false,
        openWorldHint: true,
+       idempotentHint: true,
    },
    parameters: z.object({
        urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
@@ -441,6 +445,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({url: z.string().url()}),
     execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
@@ -469,6 +474,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         url: z.string().url(),
@@ -539,6 +545,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
+        idempotentHint: true,
     },
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
@@ -568,6 +575,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
+        idempotentHint: true,
     },
     parameters: z.object({
         dataset_id: dataset_id_schema,
@@ -627,6 +635,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
+        idempotentHint: true,
     },
     parameters: z.object({}),
     execute: tool_fn('session_stats', async()=>{
@@ -692,6 +701,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
             readOnlyHint: false,
             destructiveHint: false,
             openWorldHint: true,
+            idempotentHint: false,
         },
         parameters: z.object(parameters),
         execute: tool_fn(tool_name, async(data, ctx)=>{

@@ -8,7 +8,8 @@ export const scraper_tool_names = ['search_scrapers', 'get_scraper_details',
 const annotations = (name, title)=>{
     const job = name=='run_scraper';
     return {title, readOnlyHint: !job, destructiveHint: false,
-        openWorldHint: job};
+        openWorldHint: job || name=='get_scraper_results',
+        idempotentHint: !job};
 };
 const dataset_id = z.string().describe('dataset_id from search_scrapers');
 const method = z.string().describe('One of the scraper collection_methods, '
