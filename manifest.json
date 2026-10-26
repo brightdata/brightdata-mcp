@@ -35,10 +35,10 @@
   },
   "tools": [
     {"name": "search_engine", "description": "Scrape search results from Google, Bing or Yandex. Returns SERP results in JSON or Markdown (URL, title, description). Ideal for gathering current information, news, and detailed search results."},
-    {"name": "scrape_as_markdown", "description": "Scrape a single webpage URL with advanced options for content extraction and get back the results in Markdown."},
+    {"name": "scrape_as_markdown", "description": "Scrape a single webpage URL and get back the results in Markdown."},
     {"name": "search_engine_batch", "description": "Run multiple search queries simultaneously. Returns JSON for Google, Markdown for Bing/Yandex. Processes up to 10 queries in parallel."},
-    {"name": "scrape_batch", "description": "Scrape multiple webpage URLs with advanced options for content extraction and get back the results in Markdown. Processes up to 10 URLs."},
-    {"name": "scrape_as_html", "description": "Scrape a single webpage URL with advanced options for content extraction and get back the results in HTML."},
+    {"name": "scrape_batch", "description": "Scrape multiple webpage URLs and get back the results in Markdown. Processes up to 10 URLs."},
+    {"name": "scrape_as_html", "description": "Scrape a single webpage URL and get back the results in HTML."},
     {"name": "extract", "description": "Scrape a webpage and extract structured data as JSON. First scrapes the page as markdown, then uses AI sampling to convert it to structured JSON format."},
     {"name": "ask_brightdata_assistant", "description": "Ask Bright Data's support assistant (Sophie) about Bright Data products, APIs, MCP usage, zones, scraping, or account setup. Supports threaded follow-ups via dialog_id."},
     {"name": "search_scrapers", "description": "Find a pre-built Bright Data scraper (Web Scraper API, 1,200+ sites) by site or data type."},
