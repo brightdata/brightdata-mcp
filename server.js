@@ -131,6 +131,10 @@ function check_rate_limit(){
 }
 
 const zone_timeout = base_timeout || 10*1000;
+const USAGE_LIMIT_MESSAGE = 'Request failed: Your Bright Data account has '
+    +'used its 5,000 free monthly credits. Check your plan and usage details '
+    +'here: https://docs.brightdata.com/general/account/billing-and-pricing/'
+    +'free-tier';
 async function ensure_required_zones(){
     try {
         console.error('Checking for required zones...');
@@ -282,8 +286,8 @@ addTool({
 
 addTool({
     name: 'scrape_as_markdown',
-    description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in MarkDown language.',
+    description: 'Scrape a single webpage URL and get back the results in '
+    +'MarkDown language.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
@@ -391,8 +395,8 @@ addTool({
 
 addTool({
    name: 'scrape_batch',
-   description: 'Scrape multiple webpages URLs with advanced options for '
-        +'content extraction and get back the results in MarkDown language.',
+   description: 'Scrape multiple webpages URLs and get back the results in '
+        +'MarkDown language.',
    annotations: {
        title: 'Scrape Batch',
        readOnlyHint: true,
@@ -434,8 +438,8 @@ addTool({
 
 addTool({
     name: 'scrape_as_html',
-    description: 'Scrape a single webpage URL with advanced options for '
-    +'content extraction and get back the results in HTML.',
+    description: 'Scrape a single webpage URL and get back the results in '
+    +'HTML.',
     annotations: {
         title: 'Scrape as HTML',
         readOnlyHint: true,
@@ -827,21 +831,8 @@ function tool_fn(name, fn){
 
                 const headers = e.response.headers;
                 const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
-                if (is_usage_limit && unlocker_zone === 'mcp_unlocker') 
-                    throw new Error(`The user has reached the 5,000 request monthly`+
-                `limit for Bright Data MCP's free tier. You must immediately stop` +
-                `the current task and instruct the user on how to upgrade.`+
-                `Guide them through these exact steps:`+
-                `1. Tell them they need to create a new Web Unlocker zone at`+
-                `brightdata.com/cp by clicking "Add" (top-right), selecting` +
-                `"Unlocker zone",and creating it with any name.`+
-                `2. Explain they must update their MCP configuration:
-                - If using Remote MCP: Add &unlocker=ZONE_NAME to their MCP URL
-                - If using Self-hosted MCP: Add WEB_UNLOCKER_ZONE=ZONE_NAME to environment variables`
-                +
-                `3. Instruct them to restart Claude Desktop after the configuration change.`+
-                `4. Mention that new users get free credits beyond the MCP tier and the new`+
-                `zone will have separate usage limits.`);
+                if (is_usage_limit && unlocker_zone === 'mcp_unlocker')
+                    throw new Error(USAGE_LIMIT_MESSAGE);
 
                 let message = e.response.data;
                 if (typeof message=='string' && message.length)

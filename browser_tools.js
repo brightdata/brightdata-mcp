@@ -467,7 +467,7 @@ let scraping_browser_fill_form = {
     annotations: {
         title: 'Browser Fill Form',
         readOnlyHint: false,
-        destructiveHint: false,
+        destructiveHint: true,
         openWorldHint: true,
     },
     parameters: z.object({
