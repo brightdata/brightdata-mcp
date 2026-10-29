@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.1] - 2026-10-29
+
+### Fixed
+- Browser element refs stay unique across repeated snapshots, so a
+  click or type can no longer act on a different element than the one
+  it names. Ambiguous matches are rejected instead of picking the first.
+
+### Changed
+- Free-tier message, `fill_form` hint and tool descriptions updated
+  for OpenAI store compliance.
+- `ask_brightdata_assistant` polls every 2s and waits up to 60s for a
+  reply (was 30s).
+- CI installs the packed npm package and runs tests before publishing.
+
 ## [4.1.0] - 2026-10-20
 
 ### Added
