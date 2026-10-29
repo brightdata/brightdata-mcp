@@ -4,8 +4,8 @@ import axios from 'axios';
 import {z} from 'zod';
 
 const SOPHIE_BASE = 'https://api.brightdata.com/sophie/dialog';
-const POLL_INTERVAL_MS = 1500;
-const POLL_MAX_ATTEMPTS = 20;
+const POLL_INTERVAL_MS = 2000;
+const POLL_MAX_ATTEMPTS = 30;
 
 const sleep = ms=>new Promise(r=>setTimeout(r, ms));
 
@@ -50,7 +50,7 @@ export const ask_sophie = async({question, dialog_id, api_token,
         if (reply)
             return {answer: reply.message, dialog_id: returned_dialog_id};
     }
-    throw new Error('Bright Data assistant timed out after 30s; '
+    throw new Error('Bright Data assistant timed out after 60s; '
         +`retry with dialog_id=${returned_dialog_id} to fetch the reply `
         +`later`);
 };

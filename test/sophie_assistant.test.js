@@ -96,7 +96,7 @@ test('ask_sophie throws with dialog_id when polling times out',
 {
     const dialog_id = 'd'.repeat(24);
     const responses = [{dialog_id, message_id: 'm4'}];
-    for (let i = 0; i < 20; i++)
+    for (let i = 0; i < 30; i++)
         responses.push([{type: 'human', role: 'user', ts: 100, message: 'q'}]);
     const axios_impl = make_axios_mock(responses);
     await assert.rejects(
@@ -142,7 +142,7 @@ test('ask_sophie treats non-array GET body as empty and times out',
 {
     const dialog_id = 'e'.repeat(24);
     const responses = [{dialog_id, message_id: 'm6'}];
-    for (let i = 0; i < 20; i++)
+    for (let i = 0; i < 30; i++)
         responses.push({error: 'not found'});
     const axios_impl = make_axios_mock(responses);
     await assert.rejects(
