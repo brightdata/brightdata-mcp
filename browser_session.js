@@ -1,5 +1,6 @@
 'use strict'; /*jslint node:true es9:true*/
 import * as playwright from 'playwright';
+import {randomBytes} from 'node:crypto';
 import {Aria_snapshot_filter} from './aria_snapshot_filter.js';
 import {redact_url_creds} from './safe_error.js';
 
@@ -147,7 +148,13 @@ export class Browser_session {
             }
             const filtered_snapshot = Aria_snapshot_filter.filter_snapshot(
                 full_snapshot);
-            const dom_snapshot = await page.evaluate(()=>{
+            const dom_snapshot = await page.evaluate(prefix=>{
+                // Wrappers sharing a document must share its node identities.
+                const state_key = Symbol.for(
+                    'brightdata.mcp.domRefState.v2');
+                const state = window[state_key] ||= {
+                    prefix, counter: 0, refs: new WeakMap(),
+                };
                 const selectors = [
                     'a[href]', 'button', 'input', 'select', 'textarea',
                     'option', '.radio-item', '[role]', '[tabindex]',
@@ -158,7 +165,6 @@ export class Browser_session {
                 const nodes = Array.from(document.querySelectorAll(
                     selectors.join(',')));
                 const elements = [];
-                let counter = 0;
 
                 const collapse = text => (text || '')
                     .replace(/\s+/g, ' ').trim();
@@ -257,8 +263,15 @@ export class Browser_session {
 
                     if (!name && !url)
                         continue;
-                    if (!el.dataset.fastmcpRef)
-                        el.dataset.fastmcpRef = `dom-${++counter}`;
+                    if (!state.refs.has(el))
+                    {
+                        state.refs.set(el,
+                            `dom-${state.prefix}-${++state.counter}`);
+                    }
+                    const ref = state.refs.get(el);
+                    // Equal-value writes still notify MutationObservers.
+                    if (el.dataset.fastmcpRef!==ref)
+                        el.dataset.fastmcpRef = ref;
                     elements.push({
                         ref: el.dataset.fastmcpRef,
                         role: el.getAttribute('role')
@@ -268,7 +281,7 @@ export class Browser_session {
                     });
                 }
                 return elements;
-            });
+            }, randomBytes(12).toString('base64url'));
             this._dom_refs = new Set(dom_snapshot.map(el=>el.ref));
             return {
                 url: page.url(),
@@ -287,8 +300,9 @@ export class Browser_session {
         try {
             if (this._dom_refs.has(ref))
             {
+                // Ambiguous refs must fail rather than act on the first match.
                 return page.locator(`[data-fastmcp-ref="${ref}"]`)
-                    .first().describe(element);
+                    .describe(element);
             }
             const snapshot = await page.ariaSnapshot({mode: 'ai'});
             const occurrences = snapshot.split(`[ref=${ref}]`).length-1;
