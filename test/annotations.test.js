@@ -10,12 +10,23 @@ import {start_stub_server, close_stub_server}
 
 const repo_root = resolve(dirname(url.fileURLToPath(import.meta.url)), '..');
 
-const web = {readOnlyHint: true, destructiveHint: false, openWorldHint: true};
+// idempotentHint follows the MCP definition: repeating a call with the
+// same arguments has no additional effect. Pure reads and queries are
+// idempotent, as are absolute browser reads (snapshot, scroll to a fixed
+// target). Anything that starts a billed job, posts a message, acts on a
+// page, or moves through browser history is not.
+const web = {readOnlyHint: true, destructiveHint: false, openWorldHint: true,
+    idempotentHint: true};
 const closed = {readOnlyHint: true, destructiveHint: false,
-    openWorldHint: false};
+    openWorldHint: false, idempotentHint: true};
 const write = {readOnlyHint: false, destructiveHint: false,
-    openWorldHint: true};
-const act = {readOnlyHint: false, destructiveHint: true, openWorldHint: true};
+    openWorldHint: true, idempotentHint: false};
+const act = {readOnlyHint: false, destructiveHint: true, openWorldHint: true,
+    idempotentHint: false};
+const nav = {readOnlyHint: true, destructiveHint: false, openWorldHint: true,
+    idempotentHint: false};
+const assistant = {readOnlyHint: true, destructiveHint: false,
+    openWorldHint: false, idempotentHint: false};
 
 const expected = {
     search_engine: web,
@@ -27,18 +38,18 @@ const expected = {
     list_dataset_fields: closed,
     search_dataset: closed,
     session_stats: closed,
-    ask_brightdata_assistant: closed,
+    ask_brightdata_assistant: assistant,
     search_scrapers: closed,
     get_scraper_details: closed,
     get_scraper_progress: closed,
-    get_scraper_results: closed,
+    get_scraper_results: web,
     refresh_scrapers: closed,
     run_scraper: write,
     chatgpt_ai_insights: write,
     perplexity_ai_insights: write,
     scraping_browser_navigate: web,
-    scraping_browser_go_back: web,
-    scraping_browser_go_forward: web,
+    scraping_browser_go_back: nav,
+    scraping_browser_go_forward: nav,
     scraping_browser_snapshot: web,
     scraping_browser_screenshot: web,
     scraping_browser_get_html: web,
@@ -52,7 +63,7 @@ const expected = {
     scraping_browser_type_ref: act,
 };
 
-test('every tool sets all three hints to the expected values', async t=>{
+test('every tool sets all four hints to the expected values', async t=>{
     const stub = await start_stub_server();
     t.after(()=>close_stub_server(stub));
     const env = {...process.env, API_TOKEN: 'annotations-test-token',
@@ -70,8 +81,9 @@ test('every tool sets all three hints to the expected values', async t=>{
         Object.keys(expected).sort());
     for (const {name, annotations: a = {}} of tools)
     {
-        const {readOnlyHint, destructiveHint, openWorldHint} = a;
-        assert.deepEqual({readOnlyHint, destructiveHint, openWorldHint},
-            expected[name], name);
+        const {readOnlyHint, destructiveHint, openWorldHint,
+            idempotentHint} = a;
+        assert.deepEqual({readOnlyHint, destructiveHint, openWorldHint,
+            idempotentHint}, expected[name], name);
     }
 });
