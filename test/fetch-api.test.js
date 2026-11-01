@@ -1,7 +1,8 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page, request_error} from '../fetch_api.js';
+import {to_page, request_error, header_snapshot_id}
+    from '../fetch_api.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
 const record = (extra = {})=>({url: 'https://a.example/',
@@ -76,4 +77,11 @@ test('request_error maps HTTP and network failures', ()=>{
     assert.equal(err(400), 'invalid_url: https://a.example/: bad');
     assert.equal(err(402), null);
     assert.equal(request_error(new Error('bug'), url), null);
+});
+
+test('header_snapshot_id reads the snapshot_id from the header', ()=>{
+    assert.equal(header_snapshot_id({'content-disposition':
+        'attachment; filename="sd_mvs3765b1ctuseg2dl.json"'}),
+        'sd_mvs3765b1ctuseg2dl');
+    assert.equal(header_snapshot_id({}), undefined);
 });

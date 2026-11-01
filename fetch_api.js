@@ -138,3 +138,10 @@ export const request_error = (e, url)=>{
         return `invalid_url: ${url}: ${body_text(e.response.data)}`;
     return null;
 };
+
+export const no_data_error = url=>`no_data: ${url} returned nothing. Retry `
+    +'once; if it fails again, use the browser tools.';
+
+export const header_snapshot_id = headers=>
+    /filename="?(s[a-z]_[a-z0-9]+)/i
+        .exec(headers?.['content-disposition']||'')?.[1];
