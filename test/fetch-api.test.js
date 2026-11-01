@@ -1,8 +1,8 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page, request_error, to_items, batch_timeout_error}
-    from '../fetch_api.js';
+import {to_page, request_error, to_items, batch_timeout_error, max_chars,
+    single_max_chars} from '../fetch_api.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
 const record = (extra = {})=>({url: 'https://a.example/',
@@ -107,4 +107,18 @@ test('to_items maps cancelled pages to timeouts', ()=>{
         rec('https://b.example/', 'uncrawled_page')]);
     assert.equal(aborted.error, batch_timeout_error('https://a.example/'));
     assert.match(uncrawled.error, /was not reached within 35 s/);
+});
+
+test('to_page cuts very large pages', ()=>{
+    const page = to_page(record({markdown: 'x'.repeat(max_chars+50)}));
+    assert.equal(page.content.length, max_chars);
+    assert.equal(page.note, `content cut to the first ${max_chars} of `
+        +`${max_chars+50} characters`);
+    assert.equal('note' in to_page(record()), false);
+});
+
+test('to_page takes a larger cap for a single page', ()=>{
+    const big = record({markdown: 'x'.repeat(max_chars+50)});
+    assert.equal(to_page(big, 'markdown', single_max_chars).content.length,
+        max_chars+50);
 });

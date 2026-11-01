@@ -14,7 +14,8 @@ import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, request_error,
-    timeout_error, no_data_error, batch_pages, batch_cancel_s}
+    timeout_error, no_data_error, batch_pages, batch_cancel_s,
+    single_max_chars}
     from './fetch_api.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
@@ -308,7 +309,7 @@ async function fetch_scrape(url, headers){
     }
 }
 
-async function fetch_page(url, format, headers){
+async function fetch_page(url, format, headers, max){
     let response;
     try { response = await fetch_scrape(url, headers); }
     catch(e){
@@ -320,11 +321,12 @@ async function fetch_page(url, format, headers){
     if (response.status==202)
         return {url, error: timeout_error(url)};
     const record = Array.isArray(response.data) && response.data[0];
-    return record ? to_page(record, format) : {url, error: no_data_error(url)};
+    return record ? to_page(record, format, max)
+        : {url, error: no_data_error(url)};
 }
 
 async function scrape_page(url, format, headers){
-    const page = await fetch_page(url, format, headers);
+    const page = await fetch_page(url, format, headers, single_max_chars);
     if (page.error)
         throw new UserError(page.error);
     return JSON.stringify(page);

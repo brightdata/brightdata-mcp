@@ -7,6 +7,8 @@ export const fetch_formats = {markdown: 'markdown', text: 'html2text',
     html: 'page_html', ld_json: 'ld_json'};
 const fallback_formats = ['markdown', 'text'];
 const short_len = 100;
+export const max_chars = 100000;
+export const single_max_chars = 200000;
 export const batch_cancel_s = 35;
 const details_len = 200;
 
@@ -67,7 +69,7 @@ const record_error = (record, url)=>{
 const short_note = len=>`Note: only ${len} characters of text. If you `
     +'expected more, the page needs JavaScript.';
 
-export const to_page = (record, format = 'markdown')=>{
+export const to_page = (record, format = 'markdown', max = max_chars)=>{
     const url = record.input?.url||record.url;
     const error = record_error(record, url);
     if (error)
@@ -105,6 +107,12 @@ export const to_page = (record, format = 'markdown')=>{
     }
     if (len<short_len && (format=='markdown' || format=='text'))
         notes.push(short_note(len));
+    if (content.length>max)
+    {
+        notes.push(`content cut to the first ${max} of `
+            +`${content.length} characters`);
+        content = content.slice(0, max);
+    }
     const page = {url};
     if (record.final_url && record.final_url!=url)
         page.final_url = record.final_url;
