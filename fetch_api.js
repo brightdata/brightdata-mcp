@@ -1,4 +1,5 @@
 'use strict'; /*jslint node:true es9:true*/
+import {UserError} from 'fastmcp';
 import {redact_url_creds} from './safe_error.js';
 
 export const fetch_dataset_id = 'gd_m6gjtfmeh43we6cqc';
@@ -6,7 +7,7 @@ export const fetch_formats = {markdown: 'markdown', text: 'html2text',
     html: 'page_html', ld_json: 'ld_json'};
 const fallback_formats = ['markdown', 'text'];
 const short_len = 100;
-export const batch_cancel_s = 40;
+export const batch_cancel_s = 35;
 const details_len = 200;
 
 const field_text = (record, format)=>{
@@ -159,4 +160,62 @@ export const to_items = (urls, records, format)=>{
     const by_url = new Map(records.map(r=>[r.input?.url||r.url, r]));
     return urls.map(url=>by_url.has(url) ? to_page(by_url.get(url), format)
         : {url, error: no_data_error(url)});
+};
+
+export const batch_timing = {cancel_ms: batch_cancel_s*1000,
+    deadline_ms: 57000, poll_ms: 1000};
+const sleep = ms=>new Promise(done=>setTimeout(done, ms));
+
+const batch_records = async(runner, snapshot_id, headers, timing, start)=>{
+    const {cancel_ms, deadline_ms, poll_ms} = timing;
+    let status;
+    for (;;)
+    {
+        status = (await runner.progress(snapshot_id, headers)
+            .catch(()=>null))?.status;
+        if (status=='ready' || status=='failed'
+            || Date.now()-start>=cancel_ms)
+        {
+            break;
+        }
+        await sleep(poll_ms);
+    }
+    if (status=='failed')
+        return null;
+    if (status!='ready')
+        await runner.cancel(snapshot_id, headers).catch(()=>null);
+    while (Date.now()-start<deadline_ms)
+    {
+        const res = await runner.results(snapshot_id, headers)
+            .catch(()=>null);
+        if (res?.status=='ready' || res?.status=='canceled')
+            return res.data;
+        await sleep(poll_ms);
+    }
+    return [];
+};
+
+export const batch_pages = async({runner, urls, format, headers,
+    timing = batch_timing})=>
+{
+    const start = Date.now();
+    let snapshot_id;
+    try {
+        snapshot_id = await runner.trigger({dataset_id: fetch_dataset_id,
+            method: 'collect_by_url', headers,
+            input: [...new Set(urls)].map(url=>({url}))});
+    } catch(e){
+        const error = request_error(e.cause, 'one of the URLs');
+        throw error ? new UserError(error) : e;
+    }
+    const records = await batch_records(runner, snapshot_id, headers, timing,
+        start);
+    if (!records)
+    {
+        return urls.map(url=>({url, error: `fetch_failed: ${url}: the batch `
+            +`job failed on Bright Data's side. Retry once.`}));
+    }
+    if (!records.length)
+        return urls.map(url=>({url, error: batch_timeout_error(url)}));
+    return to_items(urls, records, format);
 };

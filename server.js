@@ -14,13 +14,12 @@ import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, request_error,
-    timeout_error, no_data_error} from './fetch_api.js';
+    timeout_error, no_data_error, batch_pages, batch_cancel_s}
+    from './fetch_api.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
 import {createRequire} from 'node:module';
-import {remark} from 'remark';
-import strip from 'strip-markdown';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
@@ -309,22 +308,38 @@ async function fetch_scrape(url, headers){
     }
 }
 
-async function scrape_page(url, format, headers){
+async function fetch_page(url, format, headers){
     let response;
     try { response = await fetch_scrape(url, headers); }
     catch(e){
-        const message = request_error(e, url);
-        throw message ? new UserError(message) : e;
+        const error = request_error(e, url);
+        if (!error)
+            throw e;
+        return {url, error};
     }
     if (response.status==202)
-        throw new UserError(timeout_error(url));
+        return {url, error: timeout_error(url)};
     const record = Array.isArray(response.data) && response.data[0];
-    if (!record)
-        throw new UserError(no_data_error(url));
-    const page = to_page(record, format);
+    return record ? to_page(record, format) : {url, error: no_data_error(url)};
+}
+
+async function scrape_page(url, format, headers){
+    const page = await fetch_page(url, format, headers);
     if (page.error)
         throw new UserError(page.error);
     return JSON.stringify(page);
+}
+
+const fetch_runner = create_scraper_run();
+
+async function scrape_urls(urls, format, headers){
+    const unique = [...new Set(urls)];
+    if (unique.length==1)
+    {
+        const page = await fetch_page(unique[0], format, headers);
+        return urls.map(()=>page);
+    }
+    return batch_pages({runner: fetch_runner, urls, format, headers});
 }
 
 const format_param = z.enum(Object.keys(fetch_formats)).optional()
@@ -431,46 +446,34 @@ addTool({
 });
 
 addTool({
-   name: 'scrape_batch',
-   description: 'Scrape multiple webpages URLs and get back the results in '
-        +'MarkDown language.',
-   annotations: {
-       title: 'Scrape Batch',
-       readOnlyHint: true,
-       destructiveHint: false,
-       openWorldHint: true,
-   },
-   parameters: z.object({
-       urls: z.array(z.string().url()).min(1).max(5).describe('Array of URLs to scrape (max 5)')
-   }),
-   execute: tool_fn('scrape_batch', async ({urls}, ctx)=>{
-       const scrapePromises = urls.map(url =>
-           base_request({
-               url: 'https://api.brightdata.com/request',
-               method: 'POST',
-               data: {
-                   url,
-                   zone: unlocker_zone,
-                   format: 'raw',
-                   data_format: 'markdown',
-               },
-               headers: api_headers(ctx.clientName, 'scrape_batch'),
-               responseType: 'text',
-           }).then(async response=>({
-               url,
-               content: (await remark()
-                   .use(strip, {keep: ['link', 'linkReference', 'code',
-                       'inlineCode']})
-                   .process(response.data)).value,
-           }))
-       );
-
-       const settled = await Promise.allSettled(scrapePromises);
-       const results = settled.map(result=>result.status=='fulfilled'
-           ? result
-           : {status: 'rejected', reason: safe_error(result.reason, api_token)});
-       return JSON.stringify(results, null, 2);
-   }),
+    name: 'scrape_batch',
+    description: 'Fetch up to 5 web pages at once. Returns a JSON array in '
+    +'input order, one item per URL: url, title, format, content, or url '
+    +'and error if that page failed. content is the page in one format, '
+    +'markdown by default. Pick another with the format param:\n'
+    +'- text: plain text, no links or headings\n'
+    +'- html: raw HTML, for CSS selectors or data hidden in the markup\n'
+    +'- ld_json: schema.org data (price, rating, author...)\n'
+    +'If a page has no data in that format, markdown is returned instead, '
+    +'with a note. No JavaScript rendering. Pages that take longer than '
+    +`${batch_cancel_s} s time out.`,
+    annotations: {
+        title: 'Scrape Batch',
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        urls: z.array(z.string().url()).min(1).max(5),
+        format: format_param,
+    }),
+    execute: tool_fn('scrape_batch', async({urls, format}, ctx)=>{
+        const items = await scrape_urls(urls, format,
+            api_headers(ctx.clientName, 'scrape_batch'));
+        if (items.every(item=>item.error))
+            throw new UserError(items.map(item=>item.error).join('\n'));
+        return JSON.stringify(items);
+    }),
 });
 
 addTool({

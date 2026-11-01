@@ -13,6 +13,7 @@ const api_error = (step, e)=>{
         +(e.response ? ` (HTTP ${e.response.status}): ${msg.slice(0, 500)}`
         : `: ${e.message}`));
     err.step = step;
+    err.cause = e;
     err.error_code = e.response?.status??e.code;
     return err;
 };

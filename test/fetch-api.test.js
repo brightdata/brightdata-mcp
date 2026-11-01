@@ -106,5 +106,5 @@ test('to_items maps cancelled pages to timeouts', ()=>{
         'https://b.example/'], [rec('https://a.example/', 'aborted_page'),
         rec('https://b.example/', 'uncrawled_page')]);
     assert.equal(aborted.error, batch_timeout_error('https://a.example/'));
-    assert.match(uncrawled.error, /was not reached within 40 s/);
+    assert.match(uncrawled.error, /was not reached within 35 s/);
 });

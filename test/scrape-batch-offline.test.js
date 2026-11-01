@@ -53,22 +53,19 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
             const parsed = JSON.parse(unwrap(text_block.text));
             assert.equal(parsed.length, 2, 'both URLs produced a result, '
                 +'order and partial success are preserved');
-            assert.equal(parsed[0].status, 'fulfilled',
+            assert.equal(parsed[0].url, 'https://good.example/success',
                 'the first (successful) URL keeps its original position');
-            assert.equal(parsed[1].status, 'rejected',
+            assert.equal(parsed[1].url, 'https://bad.example/fail',
                 'the second (failing) URL keeps its original position');
-
-            assert.deepEqual(Object.keys(parsed[0]).sort(),
-                ['status', 'value'].sort(),
-                'fulfilled entry keeps the allSettled shape');
-            assert.equal(typeof parsed[0].value.url, 'string');
-            assert.equal(typeof parsed[0].value.content, 'string');
+            assert.equal(parsed[0].content, '# Example\n\nHello world.');
 
             const rejected = parsed[1];
-            assert.equal(typeof rejected.reason, 'string',
-                'reason must be a sanitized string, not a raw error object');
-            assert.equal(rejected.reason, 'Request failed with status code '
-                +'400');
+            assert.equal(rejected.error, 'fetch_failed: '
+                +'https://bad.example/fail could not be fetched (blocked or '
+                +'empty page). Details: Could not resolve host');
+            assert.equal(stub.observed_requests.filter(r=>r.url
+                ?.startsWith('/datasets/v3/trigger')).length, 1,
+                'all URLs go in one trigger');
             assert.equal('config' in rejected, false,
                 'rejected entry must not carry a raw axios config');
             assert.equal('request' in rejected, false,

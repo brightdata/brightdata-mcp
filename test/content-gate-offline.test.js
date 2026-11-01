@@ -108,12 +108,10 @@ test('scrape_batch: a declined item is withheld, the rest survive, one dialog',
                 assert.equal(recorded.length, 1);
                 const items = JSON.parse(unwrap(text_of(result)));
                 assert.equal(items.length, 2);
-                assert.equal(items[0].status, 'fulfilled');
-                assert.match(items[0].value.content, /Hello world\./);
-                assert.equal(items[1].status, 'rejected');
+                assert.match(items[0].content, /Hello world\./);
                 assert.equal(items[1].url, POISONED);
-                assert.match(items[1].reason, /was not returned/);
-                assert.doesNotMatch(items[1].reason, /helper-demo|npx -y/);
+                assert.match(items[1].error, /was not returned/);
+                assert.doesNotMatch(items[1].error, /helper-demo|npx -y/);
             });
     });
 

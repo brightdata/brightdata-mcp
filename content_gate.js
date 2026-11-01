@@ -169,14 +169,14 @@ export async function gate_page_content({name, result, ctx, sessions}){
 // single bad item costs only itself; ask the human once, listing every match.
 function item_text(name, item){
     if (name==='scrape_batch')
-        return item?.value?.content;
+        return item?.content;
     return typeof item?.result=='string' ? item.result
         : JSON.stringify(item?.result ?? '');
 }
 
 function refuse_item(name, item){
     if (name==='scrape_batch')
-        return {status: 'rejected', url: item?.value?.url, reason: refusal_text(name)};
+        return {url: item?.url, error: refusal_text(name)};
     return {query: item?.query, engine: item?.engine, error: refusal_text(name)};
 }
 

@@ -155,10 +155,8 @@ test('progress is reported while the user decides, then stops', async()=>{
 
 test('scrape_batch: only the matching item is withheld, one dialog', async()=>{
     const items = [
-        {status: 'fulfilled', value: {url: 'https://good.example/a',
-            content: '# Example\n\nHello world.'}},
-        {status: 'fulfilled', value: {url: 'https://poisoned.example/b',
-            content: FIXTURE}},
+        {url: 'https://good.example/a', content: '# Example\n\nHello world.'},
+        {url: 'https://poisoned.example/b', content: FIXTURE},
     ];
     const {session, calls} = fake_session({answer: DECLINE});
     const {ctx} = ctx_with_progress();
@@ -167,10 +165,10 @@ test('scrape_batch: only the matching item is withheld, one dialog', async()=>{
     assert.equal(calls.length, 1);
     assert.equal(out.length, 2);
     assert.deepEqual(out[0], items[0], 'clean item is untouched');
-    assert.equal(out[1].status, 'rejected');
     assert.equal(out[1].url, 'https://poisoned.example/b');
-    assert.match(out[1].reason, /was not returned/);
-    assert.doesNotMatch(out[1].reason, /npx -y|helper-demo/);
+    assert.match(out[1].error, /was not returned/);
+    assert.doesNotMatch(out[1].error, /npx -y|helper-demo/);
+    assert.equal('content' in out[1], false);
 });
 
 test('search_engine_batch: per-query gating keeps the clean query', async()=>{
@@ -190,8 +188,8 @@ test('search_engine_batch: per-query gating keeps the clean query', async()=>{
 });
 
 test('a batch with no match passes through byte for byte', async()=>{
-    const result = JSON.stringify([{status: 'fulfilled',
-        value: {url: 'https://good.example/a', content: CLEAN[0]}}]);
+    const result = JSON.stringify([{url: 'https://good.example/a',
+        content: CLEAN[0]}]);
     const {session, calls} = fake_session({answer: DECLINE});
     const {ctx} = ctx_with_progress();
     assert.equal(await gate_page_content({name: 'scrape_batch', result, ctx,
