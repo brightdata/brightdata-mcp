@@ -1,8 +1,7 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page, request_error, header_snapshot_id}
-    from '../fetch_api.js';
+import {to_page, request_error} from '../fetch_api.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
 const record = (extra = {})=>({url: 'https://a.example/',
@@ -10,11 +9,9 @@ const record = (extra = {})=>({url: 'https://a.example/',
     page_title: 'A', markdown: long_md, html2text: 'Title Some text',
     page_html: '<html></html>', ld_json: [], ...extra});
 
-test('to_page returns markdown and the other non-empty formats', ()=>{
-    assert.deepEqual(to_page(record(), 'markdown', 'sd_1'), {
-        url: 'https://a.example/', title: 'A', format: 'markdown',
-        content: long_md, snapshot_id: 'sd_1',
-        other_formats: ['text', 'html']});
+test('to_page returns markdown by default', ()=>{
+    assert.deepEqual(to_page(record()), {url: 'https://a.example/',
+        title: 'A', format: 'markdown', content: long_md});
 });
 
 test('to_page returns the requested format', ()=>{
@@ -22,7 +19,6 @@ test('to_page returns the requested format', ()=>{
         'ld_json');
     assert.equal(page.format, 'ld_json');
     assert.equal(page.content, '[{"@type":"Product"}]');
-    assert.equal('snapshot_id' in page, false);
 });
 
 test('to_page shows final_url only after a redirect', ()=>{
@@ -37,7 +33,6 @@ test('to_page falls back to plain text when markdown is nearly empty', ()=>{
     assert.equal(page.format, 'text');
     assert.equal(page.content, text);
     assert.match(page.note, /markdown was nearly empty/);
-    assert.deepEqual(page.other_formats, ['markdown', 'html']);
 });
 
 test('to_page adds a note on a short page', ()=>{
@@ -77,13 +72,6 @@ test('request_error maps HTTP and network failures', ()=>{
     assert.equal(err(400), 'invalid_url: https://a.example/: bad');
     assert.equal(err(402), null);
     assert.equal(request_error(new Error('bug'), url), null);
-});
-
-test('header_snapshot_id reads the snapshot_id from the header', ()=>{
-    assert.equal(header_snapshot_id({'content-disposition':
-        'attachment; filename="sd_mvs3765b1ctuseg2dl.json"'}),
-        'sd_mvs3765b1ctuseg2dl');
-    assert.equal(header_snapshot_id({}), undefined);
 });
 
 test('to_page returns another format when the one asked for is missing',

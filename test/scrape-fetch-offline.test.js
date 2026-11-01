@@ -37,10 +37,9 @@ test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
     assert.equal(ok.is_error, false);
     assert.deepEqual(JSON.parse(unwrap(ok.text)), {
         url: 'https://good.example/', title: 'Stub', format: 'markdown',
-        content: '# Example\n\nHello world.', snapshot_id: 'sd_stub1',
-        other_formats: ['text'],
+        content: '# Example\n\nHello world.',
         note: 'Note: only 23 characters of text. If you expected more, the '
-            +'page renders with JavaScript; use the browser tools.'});
+            +'page needs JavaScript.'});
 
     const slow = await scrape('https://slow.example/');
     assert.equal(slow.is_error, true);

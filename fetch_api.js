@@ -43,7 +43,7 @@ const record_error = (record, url)=>{
             +`retrying won't help.`;
     case 'proxy':
         return `fetch_failed: ${url} could not be fetched (blocked or empty `
-            +`page). Use the browser tools to open it. Details: `
+            +`page). Details: `
             +details(record);
     case 'bad_cmd_arg':
         return `invalid_url: ${url} can't be fetched: IP addresses and local `
@@ -58,9 +58,9 @@ const record_error = (record, url)=>{
 };
 
 const short_note = len=>`Note: only ${len} characters of text. If you `
-    +'expected more, the page renders with JavaScript; use the browser tools.';
+    +'expected more, the page needs JavaScript.';
 
-export const to_page = (record, format = 'markdown', snapshot_id)=>{
+export const to_page = (record, format = 'markdown')=>{
     const url = record.input?.url||record.url;
     const error = record_error(record, url);
     if (error)
@@ -89,7 +89,7 @@ export const to_page = (record, format = 'markdown', snapshot_id)=>{
     if (!len)
     {
         return {url, error: `empty_page: ${url} returned no text. It probably `
-            +'needs JavaScript or blocked the request. Use the browser tools.'};
+            +'needs JavaScript or blocked the request.'};
     }
     if (is_binary(content))
     {
@@ -104,18 +104,13 @@ export const to_page = (record, format = 'markdown', snapshot_id)=>{
     if (record.page_title)
         page.title = record.page_title;
     Object.assign(page, {format, content});
-    if (snapshot_id)
-        page.snapshot_id = snapshot_id;
-    page.other_formats = Object.keys(fetch_formats)
-        .filter(f=>f!=format && field_text(record, f).trim());
     if (notes.length)
         page.note = notes.join('. ');
     return page;
 };
 
 export const timeout_error = url=>`timeout: ${url} did not load within `
-    +'45 s. The page is likely blocked or very slow. Use the browser tools '
-    +'to open it.';
+    +'45 s. The page is likely blocked or very slow.';
 
 const body_text = data=>redact_url_creds(typeof data=='string' ? data
     : JSON.stringify(data?.errors ?? data)).slice(0, details_len);
@@ -149,8 +144,4 @@ export const request_error = (e, url)=>{
 };
 
 export const no_data_error = url=>`no_data: ${url} returned nothing. Retry `
-    +'once; if it fails again, use the browser tools.';
-
-export const header_snapshot_id = headers=>
-    /filename="?(s[a-z]_[a-z0-9]+)/i
-        .exec(headers?.['content-disposition']||'')?.[1];
+    +'once.';

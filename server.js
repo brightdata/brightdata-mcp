@@ -14,7 +14,7 @@ import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, request_error,
-    timeout_error, no_data_error, header_snapshot_id} from './fetch_api.js';
+    timeout_error, no_data_error} from './fetch_api.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -321,27 +321,26 @@ async function scrape_page(url, format, headers){
     const record = Array.isArray(response.data) && response.data[0];
     if (!record)
         throw new UserError(no_data_error(url));
-    const page = to_page(record, format,
-        header_snapshot_id(response.headers));
+    const page = to_page(record, format);
     if (page.error)
         throw new UserError(page.error);
     return JSON.stringify(page);
 }
 
 const format_param = z.enum(Object.keys(fetch_formats)).optional()
-    .default('markdown').describe('markdown (default) is best for reading. '
-    +'text: plain text. html: raw HTML, for selectors or hidden data. '
-    +'ld_json: schema.org data, if the page has it.');
+    .default('markdown');
 
 addTool({
     name: 'scrape_as_markdown',
-    description: 'Fetch one web page and return it as JSON: url, title and '
-    +'the content in one format (markdown by default). There is no '
-    +'JavaScript rendering: for pages that need JavaScript, POST requests, '
-    +'clicks or screenshots, use the scraping_browser_* tools. Pages that '
-    +'take longer than 45 s fail with a timeout. other_formats lists what '
-    +'get_scraper_results(snapshot_id, format) can return without fetching '
-    +'the page again.',
+    description: 'Fetch one web page. Returns JSON: url, title, format, '
+    +'content. content is the page in one format, markdown by default. '
+    +'Pick another with the format param:\n'
+    +'- text: plain text, no links or headings\n'
+    +'- html: raw HTML, for CSS selectors or data hidden in the markup\n'
+    +'- ld_json: schema.org data (price, rating, author...)\n'
+    +'If the page has no data in that format, markdown is returned instead, '
+    +'with a note. No JavaScript rendering. Pages that take longer than '
+    +'45 s time out.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,

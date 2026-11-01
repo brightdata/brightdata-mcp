@@ -86,7 +86,7 @@ test('get_scraper_results returns Fetch API records as pages', async()=>{
     const res = JSON.parse(await call('get_scraper_results',
         {snapshot_id: 'sd_1', format: 'html'}));
     assert.deepEqual(res.data, [{url: 'https://a.example/', format: 'html',
-        content: '<h1>A</h1>', other_formats: ['markdown', 'text']}]);
+        content: '<h1>A</h1>'}]);
     const raw = JSON.parse(await call('get_scraper_results',
         {snapshot_id: 's_2'}));
     assert.deepEqual(raw.data, [other], 'other scrapers are untouched');
