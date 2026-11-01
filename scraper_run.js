@@ -50,13 +50,24 @@ export function create_scraper_run(opt = {}){
         return res.data;
     };
     const results = async(snapshot_id, headers)=>{
-        const res = await call('results', {headers, params: {format: 'json'},
-            url: `${api_url}/datasets/v3/snapshot/${enc(snapshot_id)}`});
+        let res;
+        try {
+            res = await call('results', {headers, params: {format: 'json'},
+                url: `${api_url}/datasets/v3/snapshot/${enc(snapshot_id)}`});
+        } catch(e){
+            if (e.error_code==422 && /canceled/i.test(e.message))
+                return {snapshot_id, status: 'canceled', data: []};
+            throw e;
+        }
         if (res.status==202 || PENDING.includes(res.data?.status))
             return {snapshot_id, status: 'running'};
         if (res.data?.status=='failed')
             throw api_error('results', new Error('data collection failed'));
         return {snapshot_id, status: 'ready', data: strip_nulls(res.data)};
+    };
+    const cancel = async(snapshot_id, headers)=>{
+        await call('cancel', {method: 'POST', headers,
+            url: `${api_url}/datasets/v3/snapshot/${enc(snapshot_id)}/cancel`});
     };
     const run = async({wait_ms = 45000, headers, ...req})=>{
         const deadline = Date.now()+wait_ms;
@@ -71,5 +82,5 @@ export function create_scraper_run(opt = {}){
             await new Promise(done=>setTimeout(done, poll_ms));
         }
     };
-    return {trigger, progress, results, run};
+    return {trigger, progress, results, cancel, run};
 }

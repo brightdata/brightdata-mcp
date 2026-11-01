@@ -26,8 +26,15 @@ const route = (state, req, res, body)=>{
     }
     if (path=='/datasets/v3/progress/s_1')
         return send(res, 200, {snapshot_id: 's_1', status: 'running'});
+    if (path=='/datasets/v3/snapshot/s_1/cancel')
+    {
+        state.canceled = true;
+        return send(res, 200, 'OK');
+    }
     if (path=='/datasets/v3/snapshot/s_1')
     {
+        if (state.canceled)
+            return send(res, 422, 'Snapshot is canceled');
         if (state.failed)
             return send(res, 200, {status: 'failed'});
         if (state.polls++<state.ready_after)
@@ -165,4 +172,19 @@ test('a failed snapshot is an error, not data', async t=>{
     state.failed = true;
     await assert.rejects(sr.results('s_1', headers),
         /results failed: data collection failed/);
+});
+
+test('cancel stops the run, a canceled snapshot has no records', async t=>{
+    const {sr, state} = await setup(t);
+    state.ready_after = 5;
+    await sr.cancel('s_1', headers);
+    assert.equal(state.paths.pop(), '/datasets/v3/snapshot/s_1/cancel');
+    assert.deepEqual(await sr.results('s_1'),
+        {snapshot_id: 's_1', status: 'canceled', data: []});
+});
+
+test('other 422 errors still throw', async t=>{
+    const {sr, state} = await setup(t);
+    state.fail.snapshot = 422;
+    await assert.rejects(sr.results('s_1'), /HTTP 422/);
 });
