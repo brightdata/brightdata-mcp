@@ -3,7 +3,7 @@
 |search_engine|Scrape search results from Google, Bing, or Yandex. Returns SERP results in JSON for Google and Markdown for Bing/Yandex; supports pagination with the cursor parameter.|
 |scrape_as_markdown|Scrape a single webpage. Returns the content as markdown (default), text, html or ld_json.|
 |search_engine_batch|Run up to 10 search queries in parallel. Returns JSON for Google results and Markdown for Bing/Yandex.|
-|scrape_batch|Scrape up to 10 webpages at once. Returns the content as markdown (default), text, html or ld_json.|
+|scrape_batch|Scrape up to 5 webpages at once. Returns the content as markdown (default), text, html or ld_json.|
 |scrape_as_html|Scrape a single webpage with advanced extraction and return the HTML response body. Handles sites protected by bot detection or CAPTCHA.|
 |extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|
 |ask_brightdata_assistant|Ask Bright Data's support assistant (Sophie) about Bright Data products, APIs, MCP usage, zones, scraping, or account setup. Supports threaded follow-ups via dialog_id.|

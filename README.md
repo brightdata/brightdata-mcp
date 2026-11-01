@@ -344,7 +344,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 | Task | Tools |
 |------|-------|
-| Collect multiple sources in one call | `scrape_batch` (up to 10 URLs) |
+| Collect multiple sources in one call | `scrape_batch` (up to 5 URLs) |
 | News and finance data | `search_engine` with news queries, `run_scraper` with the Yahoo Finance scraper |
 
 ---
@@ -428,7 +428,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 
 ### Which tool to use
 
-- **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 10): `scrape_batch`
+- **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 5): `scrape_batch`
 - **Need to find information:** `search_engine`. Multiple queries (up to 10): `search_engine_batch`
 - **Structured data from a known platform (Amazon, LinkedIn, TikTok, npm, PyPI, etc.):** `search_scrapers` → `get_scraper_details` → `run_scraper` — returns clean JSON, faster and more reliable than scraping the same page
 - **Structured JSON from a page no scraper covers:** `extract`
@@ -452,7 +452,7 @@ Notes on scraper runs:
 | `search_engine` | Search Google, Bing, or Yandex. Google returns JSON (URL, title, description); Bing and Yandex return Markdown. Paginate with the `cursor` parameter | default / every group |
 | `search_engine_batch` | Up to 10 search queries in one call | default / `advanced_scraping` |
 | `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json | default / every group |
-| `scrape_batch` | Up to 10 URLs in one call. Returns the content as markdown (default), text, html or ld_json | default / `advanced_scraping` |
+| `scrape_batch` | Up to 5 URLs in one call. Returns the content as markdown (default), text, html or ld_json | default / `advanced_scraping` |
 | `scrape_as_html` | Any URL as raw HTML | default / `advanced_scraping` |
 | `extract` | Scrape a page and convert it to structured JSON using AI, with an optional custom extraction prompt | default / `advanced_scraping` |
 | `session_stats` | Tool usage counts for the current session | default / `advanced_scraping` |
