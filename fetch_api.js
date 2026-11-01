@@ -6,6 +6,7 @@ export const fetch_formats = {markdown: 'markdown', text: 'html2text',
     html: 'page_html', ld_json: 'ld_json'};
 const fallback_formats = ['markdown', 'text'];
 const short_len = 100;
+export const batch_cancel_s = 40;
 const details_len = 200;
 
 const field_text = (record, format)=>{
@@ -48,6 +49,11 @@ const record_error = (record, url)=>{
     case 'bad_cmd_arg':
         return `invalid_url: ${url} can't be fetched: IP addresses and local `
             +`hosts are not allowed. Use a public domain name.`;
+    case 'aborted_page':
+        return batch_timeout_error(url);
+    case 'uncrawled_page':
+        return `timeout: ${url} was not reached within ${batch_cancel_s} s. `
+            +'Retry it in a smaller batch.';
     case 'bucket_rate_limit':
     case 'global_rate_limit':
         return `rate_limited: ${host(url)} is limiting requests. Wait about a `
@@ -145,3 +151,12 @@ export const request_error = (e, url)=>{
 
 export const no_data_error = url=>`no_data: ${url} returned nothing. Retry `
     +'once.';
+
+export const batch_timeout_error = url=>`timeout: ${url} did not load `
+    +`within ${batch_cancel_s} s. The page is likely blocked or very slow.`;
+
+export const to_items = (urls, records, format)=>{
+    const by_url = new Map(records.map(r=>[r.input?.url||r.url, r]));
+    return urls.map(url=>by_url.has(url) ? to_page(by_url.get(url), format)
+        : {url, error: no_data_error(url)});
+};

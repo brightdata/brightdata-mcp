@@ -1,7 +1,8 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page, request_error} from '../fetch_api.js';
+import {to_page, request_error, to_items, batch_timeout_error}
+    from '../fetch_api.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
 const record = (extra = {})=>({url: 'https://a.example/',
@@ -85,3 +86,25 @@ test('to_page returns another format when the one asked for is missing',
         assert.equal(html.format, 'text');
         assert.match(html.note, /^html is not available/);
     });
+
+test('to_items keeps input order and matches records by input.url', ()=>{
+    const a = record(), b = record({url: 'https://b.example/',
+        input: {url: 'https://b.example/'}, final_url: 'https://c.example/'});
+    const items = to_items(['https://b.example/', 'https://a.example/',
+        'https://b.example/', 'https://x.example/'], [a, b]);
+    assert.deepEqual(items.map(i=>i.url), ['https://b.example/',
+        'https://a.example/', 'https://b.example/', 'https://x.example/']);
+    assert.equal(items[0].final_url, 'https://c.example/');
+    assert.equal(items[1].content, long_md);
+    assert.match(items[3].error, /^no_data: /);
+});
+
+test('to_items maps cancelled pages to timeouts', ()=>{
+    const rec = (url, error_code)=>({url, input: {url}, error_code,
+        error: 'Crawl aborted on job cancel'});
+    const [aborted, uncrawled] = to_items(['https://a.example/',
+        'https://b.example/'], [rec('https://a.example/', 'aborted_page'),
+        rec('https://b.example/', 'uncrawled_page')]);
+    assert.equal(aborted.error, batch_timeout_error('https://a.example/'));
+    assert.match(uncrawled.error, /was not reached within 40 s/);
+});
