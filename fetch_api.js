@@ -103,3 +103,38 @@ export const to_page = (record, format = 'markdown', snapshot_id)=>{
         page.note = notes.join('. ');
     return page;
 };
+
+export const timeout_error = url=>`timeout: ${url} did not load within `
+    +'45 s. The page is likely blocked or very slow. Use the browser tools '
+    +'to open it.';
+
+const body_text = data=>redact_url_creds(typeof data=='string' ? data
+    : JSON.stringify(data?.errors ?? data)).slice(0, details_len);
+
+export const request_error = (e, url)=>{
+    if (!e?.isAxiosError)
+        return null;
+    if (e.code=='ERR_CANCELED')
+        return timeout_error(url);
+    const status = e.response?.status;
+    if (!status)
+    {
+        return `network_error: could not reach Bright Data `
+            +`(${e.code||'no response'}). Try again.`;
+    }
+    if (status==401)
+        return 'auth_failed: Bright Data rejected the API key. Check API_TOKEN.';
+    if (status==429)
+    {
+        return 'busy: Bright Data is handling too many requests from this '
+            +'account. Wait 30 s before the next scrape.';
+    }
+    if (status>=500)
+    {
+        return `service_error: Bright Data returned HTTP ${status}. Try again `
+            +'in a minute.';
+    }
+    if (status==400)
+        return `invalid_url: ${url}: ${body_text(e.response.data)}`;
+    return null;
+};

@@ -1,7 +1,7 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page} from '../fetch_api.js';
+import {to_page, request_error} from '../fetch_api.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
 const record = (extra = {})=>({url: 'https://a.example/',
@@ -61,4 +61,19 @@ test('to_page flags empty and binary pages', ()=>{
     assert.match(err({markdown: '', html2text: ' '}), /^empty_page: /);
     assert.match(err({markdown: '%PDF-1.4 '+'x'.repeat(200)}),
         /^unsupported_content: /);
+});
+
+test('request_error maps HTTP and network failures', ()=>{
+    const url = 'https://a.example/';
+    const err = (status, extra = {})=>request_error({isAxiosError: true,
+        response: status && {status, data: 'bad'}, ...extra}, url);
+    assert.match(err(0, {code: 'ERR_CANCELED'}), /^timeout: /);
+    assert.match(err(0, {code: 'ECONNRESET'}),
+        /^network_error: .*\(ECONNRESET\)/);
+    assert.match(err(401), /^auth_failed: /);
+    assert.match(err(429), /^busy: /);
+    assert.match(err(502), /^service_error: .*HTTP 502/);
+    assert.equal(err(400), 'invalid_url: https://a.example/: bad');
+    assert.equal(err(402), null);
+    assert.equal(request_error(new Error('bug'), url), null);
 });
