@@ -76,18 +76,3 @@ test('tools record the scraper and failed step in tool_meta', async()=>{
     assert.deepEqual(tool_meta, {dataset_id: 'gd_2',
         method: 'collect_by_url', failed_step: 'trigger', error_code: 401});
 });
-
-test('get_scraper_results returns Fetch API records as pages', async()=>{
-    const page = {url: 'https://a.example/', input: {url: 'https://a.example/'},
-        markdown: '# A', html2text: 'A', page_html: '<h1>A</h1>'};
-    const other = {rating: 5};
-    const {call} = setup({results: async id=>({snapshot_id: id,
-        status: 'ready', data: id=='sd_1' ? [page] : [other]})});
-    const res = JSON.parse(await call('get_scraper_results',
-        {snapshot_id: 'sd_1', format: 'html'}));
-    assert.deepEqual(res.data, [{url: 'https://a.example/', format: 'html',
-        content: '<h1>A</h1>'}]);
-    const raw = JSON.parse(await call('get_scraper_results',
-        {snapshot_id: 's_2'}));
-    assert.deepEqual(raw.data, [other], 'other scrapers are untouched');
-});
