@@ -52,7 +52,8 @@
         "scraper_tools.js",
         "prompts.js",
         "sophie_assistant.js",
-        "untrusted_content.js"
+        "untrusted_content.js",
+        "fetch_api.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"
 }
