@@ -451,8 +451,8 @@ Notes on scraper runs:
 |------|-------------|-------|
 | `search_engine` | Search Google, Bing, or Yandex. Google returns JSON (URL, title, description); Bing and Yandex return Markdown. Paginate with the `cursor` parameter | default / every group |
 | `search_engine_batch` | Up to 10 search queries in one call | default / `advanced_scraping` |
-| `scrape_as_markdown` | Any URL as Markdown. Bot protection and CAPTCHA handled automatically | default / every group |
-| `scrape_batch` | Up to 10 URLs in one call; returns an array of URL/content pairs in Markdown | default / `advanced_scraping` |
+| `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json | default / every group |
+| `scrape_batch` | Up to 10 URLs in one call. Returns the content as markdown (default), text, html or ld_json | default / `advanced_scraping` |
 | `scrape_as_html` | Any URL as raw HTML | default / `advanced_scraping` |
 | `extract` | Scrape a page and convert it to structured JSON using AI, with an optional custom extraction prompt | default / `advanced_scraping` |
 | `session_stats` | Tool usage counts for the current session | default / `advanced_scraping` |

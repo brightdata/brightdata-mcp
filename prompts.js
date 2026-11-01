@@ -6,7 +6,7 @@ const web_scraping_strategy = {
     description: 'Decision tree for picking the right Bright Data tool. '
         +'Invoke at the start of any scraping session to learn the correct '
         +'tool selection order '
-        +'(pre-built scrapers -> Web Unlocker -> Browser API).',
+        +'(pre-built scrapers -> Fetch API -> Browser API).',
     arguments: [],
     load: ()=>`\
 You have access to Bright Data tools at three tiers of cost and capability.
@@ -18,7 +18,8 @@ STEP 1 -- Check for a pre-built scraper (fastest, structured JSON):
   run_scraper with input shaped like sample_input.
 
 STEP 2 -- If no scraper matches, use scrape_as_markdown (default):
-  Retry once if the first attempt returns empty or blocked content.
+  It does not run JavaScript. Retry once if the first attempt returns
+  empty or blocked content.
 
 STEP 3 -- If scrape_as_markdown fails twice, escalate to
 scraping_browser_navigate:
@@ -33,7 +34,7 @@ NEVER use scrape_as_markdown when a pre-built scraper covers the site.`,
 const diagnose_scraping_approach = {
     name: 'diagnose_scraping_approach',
     description: 'Run a two-step diagnostic to discover the correct '
-        +'Bright Data product for a new website. Tries Web Unlocker first, '
+        +'Bright Data product for a new website. Tries the Fetch API first, '
         +'then Browser API, then reports which succeeded.',
     arguments: [],
     load: ()=>`\
@@ -41,7 +42,7 @@ To discover the correct Bright Data product for a new website, run this
 diagnostic:
 
 1. Try scrape_as_markdown on the target URL.
-   - If it returns useful content -> Web Unlocker is the correct
+   - If it returns useful content -> the Fetch API is the correct
      integration. Stop.
    - If it returns empty, blocked, or low-quality content -> continue
      to step 2.

@@ -447,7 +447,7 @@ addTool({
 
 addTool({
     name: 'scrape_batch',
-    description: 'Fetch up to 5 web pages at once. Returns a JSON array in '
+    description: 'Fetch up to 10 web pages at once. Returns a JSON array in '
     +'input order, one item per URL: url, title, format, content, or url '
     +'and error if that page failed. content is the page in one format, '
     +'markdown by default. Pick another with the format param:\n'
@@ -464,7 +464,7 @@ addTool({
         openWorldHint: true,
     },
     parameters: z.object({
-        urls: z.array(z.string().url()).min(1).max(5),
+        urls: z.array(z.string().url()).min(1).max(10),
         format: format_param,
     }),
     execute: tool_fn('scrape_batch', async({urls, format}, ctx)=>{
