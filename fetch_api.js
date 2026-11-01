@@ -4,6 +4,7 @@ import {redact_url_creds} from './safe_error.js';
 export const fetch_dataset_id = 'gd_m6gjtfmeh43we6cqc';
 export const fetch_formats = {markdown: 'markdown', text: 'html2text',
     html: 'page_html', ld_json: 'ld_json'};
+const fallback_formats = ['markdown', 'text'];
 const short_len = 100;
 const details_len = 200;
 
@@ -66,6 +67,14 @@ export const to_page = (record, format = 'markdown', snapshot_id)=>{
         return {url, error};
     let content = field_text(record, format);
     const notes = [];
+    const alt = !content.trim() && fallback_formats
+        .find(f=>f!=format && field_text(record, f).trim());
+    if (alt)
+    {
+        notes.push(`${format} is not available on this page; returned ${alt}`);
+        format = alt;
+        content = field_text(record, alt);
+    }
     if (format=='markdown' && content.trim().length<short_len)
     {
         const text = field_text(record, 'text');

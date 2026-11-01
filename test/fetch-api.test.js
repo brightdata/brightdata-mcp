@@ -85,3 +85,15 @@ test('header_snapshot_id reads the snapshot_id from the header', ()=>{
         'sd_mvs3765b1ctuseg2dl');
     assert.equal(header_snapshot_id({}), undefined);
 });
+
+test('to_page returns another format when the one asked for is missing',
+    ()=>{
+        const page = to_page(record(), 'ld_json');
+        assert.equal(page.format, 'markdown');
+        assert.equal(page.content, long_md);
+        assert.equal(page.note,
+            'ld_json is not available on this page; returned markdown');
+        const html = to_page(record({page_html: '', markdown: ''}), 'html');
+        assert.equal(html.format, 'text');
+        assert.match(html.note, /^html is not available/);
+    });
