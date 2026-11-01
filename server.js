@@ -13,6 +13,8 @@ import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
+import {fetch_dataset_id, fetch_formats, to_page, request_error,
+    timeout_error, no_data_error, header_snapshot_id} from './fetch_api.js';
 import {parse_google_search_response} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -284,36 +286,72 @@ addTool({
     }),
 });
 
+const fetch_deadline_ms = 45000;
+const scrape_url = 'https://api.brightdata.com/datasets/v3/scrape';
+
+async function fetch_scrape(url, headers){
+    const deadline = Date.now()+fetch_deadline_ms;
+    for (let attempt = 0; ; attempt++)
+    {
+        try {
+            return await axios({url: scrape_url, method: 'POST',
+                params: {dataset_id: fetch_dataset_id, format: 'json',
+                    include_errors: true},
+                data: [{url}], headers,
+                signal: AbortSignal.timeout(deadline-Date.now())});
+        } catch(e){
+            if (attempt || !(e.response?.status>=500)
+                || deadline-Date.now()<1000)
+            {
+                throw e;
+            }
+        }
+    }
+}
+
+async function scrape_page(url, format, headers){
+    let response;
+    try { response = await fetch_scrape(url, headers); }
+    catch(e){
+        const message = request_error(e, url);
+        throw message ? new UserError(message) : e;
+    }
+    if (response.status==202)
+        throw new UserError(timeout_error(url));
+    const record = Array.isArray(response.data) && response.data[0];
+    if (!record)
+        throw new UserError(no_data_error(url));
+    const page = to_page(record, format,
+        header_snapshot_id(response.headers));
+    if (page.error)
+        throw new UserError(page.error);
+    return JSON.stringify(page);
+}
+
+const format_param = z.enum(Object.keys(fetch_formats)).optional()
+    .default('markdown').describe('markdown (default) is best for reading. '
+    +'text: plain text. html: raw HTML, for selectors or hidden data. '
+    +'ld_json: schema.org data, if the page has it.');
+
 addTool({
     name: 'scrape_as_markdown',
-    description: 'Scrape a single webpage URL and get back the results in '
-    +'MarkDown language.',
+    description: 'Fetch one web page and return it as JSON: url, title and '
+    +'the content in one format (markdown by default). There is no '
+    +'JavaScript rendering: for pages that need JavaScript, POST requests, '
+    +'clicks or screenshots, use the scraping_browser_* tools. Pages that '
+    +'take longer than 45 s fail with a timeout. other_formats lists what '
+    +'get_scraper_results(snapshot_id, format) can return without fetching '
+    +'the page again.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
     },
-    parameters: z.object({url: z.string().url()}),
-    execute: tool_fn('scrape_as_markdown', async({url}, ctx)=>{
-        let response = await base_request({
-            url: 'https://api.brightdata.com/request',
-            method: 'POST',
-            data: {
-                url,
-                zone: unlocker_zone,
-                format: 'raw',
-                data_format: 'markdown',
-            },
-            headers: api_headers(ctx.clientName, 'scrape_as_markdown'),
-            responseType: 'text',
-        });
-        const minified_data = await remark()
-            .use(strip, {keep: ['link', 'linkReference', 'code',
-                'inlineCode']})
-            .process(response.data);
-        return minified_data.value;
-    }),
+    parameters: z.object({url: z.string().url(), format: format_param}),
+    execute: tool_fn('scrape_as_markdown', async({url, format}, ctx)=>
+        scrape_page(url, format,
+            api_headers(ctx.clientName, 'scrape_as_markdown'))),
 });
 
 addTool({
@@ -824,6 +862,12 @@ function tool_fn(name, fn){
             return wrap_external(name, result);
         }
         catch(e){
+            if (e instanceof UserError)
+            {
+                const message = safe_error(e, api_token);
+                console.error(`[%s] error %s`, name, message);
+                throw new UserError(message);
+            }
         if (e.response)
             {
                 console.error(`[%s] error %s %s: %s`, name, e.response.status,
