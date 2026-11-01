@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.2.0] - 2026-11-01
+
+### Changed
+- `scrape_as_markdown` and `scrape_batch` use Bright Data's Fetch API
+  instead of Web Unlocker. There is no JavaScript rendering.
+- Both tools return JSON: `url`, `title`, `format`, `content`, plus
+  `final_url` after a redirect and a `note` when relevant.
+  `scrape_batch` returns an array in input order; a failed URL is
+  `{url, error}`.
+- New `format` param: `markdown` (default), `text`, `html` or
+  `ld_json`. If the page has no data in that format, markdown is
+  returned with a note.
+- `scrape_as_markdown` stops at 45 s with a `timeout` error.
+  `scrape_batch` sends all URLs in one request, cancels at 35 s and
+  returns the pages that finished; the rest get a `timeout` error.
+- Clear one-line errors: `page_not_found`, `fetch_failed`,
+  `invalid_url`, `rate_limited`, `empty_page`, `unsupported_content`
+  (PDF/binary), `no_data`, `timeout`, `auth_failed`, `busy` (429, never
+  retried), `service_error` (one retry on 5xx), `network_error`.
+- Page content is cut at 200,000 characters (`scrape_as_markdown`) or
+  100,000 per page (`scrape_batch`), with a note.
+- Markdown is no longer stripped of headings.
+
+### Removed
+- `remark` and `strip-markdown` dependencies.
+
 ## [4.1.1] - 2026-10-29
 
 ### Fixed
