@@ -17,7 +17,7 @@ import {fetch_dataset_id, fetch_formats, to_page, request_error,
     timeout_error, no_data_error, batch_pages, batch_cancel_s,
     single_max_chars}
     from './fetch_api.js';
-import {search_schema, search_request, parse_search_response}
+import {search_schema, search_request, parse_search_response, search_batch}
     from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
@@ -219,13 +219,14 @@ addTool({
     }),
 });
 
-async function run_search(args, ctx, tool){
+async function run_search(args, ctx, tool, signal){
     const response = await base_request({
         url: 'https://api.brightdata.com/request',
         method: 'POST',
         data: {...search_request(args), zone: serp_zone},
         headers: api_headers(ctx.clientName, tool),
         responseType: 'text',
+        signal,
     });
     return parse_search_response(response.data, args.engine);
 }
@@ -335,7 +336,8 @@ addTool({
     name: 'search_engine_batch',
     description: 'Run up to 5 searches at once, on Bing (default) or '
     +'Google. Returns a JSON array in input order: query, engine, and '
-    +'result (organic link, title, description) or error.',
+    +'result (organic link, title, description) or error. Searches not '
+    +'done within 45 s return a timeout error.',
     annotations: {
         title: 'Search Engine Batch',
         readOnlyHint: true,
@@ -343,19 +345,11 @@ addTool({
         openWorldHint: true,
     },
     parameters: z.object({queries: z.array(search_schema).min(1).max(5)}),
-    execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
-        const results = await Promise.all(queries.map(async q=>{
-            try {
-                const result = await run_search(q, ctx,
-                    'search_engine_batch');
-                return {query: q.query, engine: q.engine, result};
-            } catch(e){
-                return {query: q.query, engine: q.engine,
-                    error: safe_error(e, api_token)};
-            }
-        }));
-        return JSON.stringify(results, null, 2);
-    }),
+    execute: tool_fn('search_engine_batch', async({queries}, ctx)=>
+        JSON.stringify(await search_batch({queries,
+            run: (q, signal)=>run_search(q, ctx, 'search_engine_batch',
+                signal),
+            to_error: e=>safe_error(e, api_token)}), null, 2)),
 });
 
 addTool({

@@ -16,6 +16,8 @@ All notable changes to this project will be documented in this file.
 - New `time_range`: `hour`, `day`, `week`, `month`, `year`, `any`
   (default). Bing supports only `day`, `week` and `year`.
 - A search that returns no data gives a `service_unavailable` error.
+- `search_engine_batch` stops at 45 s and returns the searches that
+  finished; the rest get a `timeout` error.
 - Each zone is created on its own, so one failed zone no longer skips
   the others.
 

@@ -3,7 +3,11 @@ import {UserError} from 'fastmcp';
 import {z} from 'zod';
 import {line} from './fetch_api.js';
 
-const google_tbs = {hour: 'h', day: 'd', week: 'w', month: 'm', year: 'y'};
+export const search_batch_s = 45;
+export const search_timeout_error = line('timeout', 'The search did not '
+    +`finish within ${search_batch_s} s`, 'Retry this query.');
+
+const google_tbs ={hour: 'h', day: 'd', week: 'w', month: 'm', year: 'y'};
 const bing_filters = {day: 'ez1', week: 'ez2', year: 'ez3'};
 const renamed = {geo_location: 'country', cursor: 'page (a number from 0)'};
 
@@ -86,4 +90,18 @@ export const parse_search_response = (response_text, engine)=>{
             +(engine=='google' ? ', or use engine bing.' : '.')));
     }
     return clean_search_payload(data);
+};
+
+export const search_batch = async({queries, run, to_error,
+    ms = search_batch_s*1000})=>
+{
+    const signal = AbortSignal.timeout(ms);
+    return Promise.all(queries.map(async q=>{
+        const item = {query: q.query, engine: q.engine};
+        try { item.result = await run(q, signal); }
+        catch(e){
+            item.error = signal.aborted ? search_timeout_error : to_error(e);
+        }
+        return item;
+    }));
 };
