@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [4.3.0] - 2026-11-02
 
 ### Changed
 - `search_engine` and `search_engine_batch` use a SERP API zone instead
@@ -20,6 +20,12 @@ All notable changes to this project will be documented in this file.
   finished; the rest get a `timeout` error.
 - Each zone is created on its own, so one failed zone no longer skips
   the others.
+- Fetch API (`scrape_as_markdown`, `scrape_batch`) request errors use
+  the same codes and texts as the hosted server: `rate_limited` (was
+  `busy`), `service_unavailable` (was `service_error`), `invalid_input`
+  (was `invalid_url`), `quota_exceeded` (new, usage limit reached) and a
+  generic `auth_failed` (also on 407). A site limiting requests is now
+  `site_rate_limited`.
 
 ### Removed
 - Yandex.
