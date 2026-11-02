@@ -130,7 +130,7 @@ export const timeout_error = url=>`timeout: ${url} did not load within `
 const body_text = data=>redact_url_creds(typeof data=='string' ? data
     : JSON.stringify(data?.errors ?? data)).slice(0, details_len);
 
-const line = (code, what, todo)=>`${code}: ${what}. ${todo}`;
+export const line = (code, what, todo)=>`${code}: ${what}. ${todo}`;
 
 export const request_error = (e, url)=>{
     if (!e?.isAxiosError)

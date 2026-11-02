@@ -17,7 +17,8 @@ import {fetch_dataset_id, fetch_formats, to_page, request_error,
     timeout_error, no_data_error, batch_pages, batch_cancel_s,
     single_max_chars}
     from './fetch_api.js';
-import {parse_google_search_response} from './search_utils.js';
+import {search_schema, search_request, parse_search_response}
+    from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
 import {createRequire} from 'node:module';
@@ -26,6 +27,7 @@ const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
 const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
+const serp_zone = process.env.SERP_ZONE || 'mcp_serp';
 const base_timeout = process.env.BASE_TIMEOUT
     ? parseInt(process.env.BASE_TIMEOUT, 10) * 1000 : 0;
 const base_max_retries = Math.min(
@@ -137,66 +139,46 @@ const USAGE_LIMIT_MESSAGE = 'Request failed: Your Bright Data account has '
     +'used its 5,000 free monthly credits. Check your plan and usage details '
     +'here: https://docs.brightdata.com/general/account/billing-and-pricing/'
     +'free-tier';
+async function ensure_zone(zones, name, zone, plan){
+    if (zones.some(z=>z.name==name))
+        return console.error(`Required zone "${name}" already exists`);
+    console.error(`Required zone "${name}" not found, creating it...`);
+    try {
+        await axios({
+            url: 'https://api.brightdata.com/zone',
+            method: 'POST',
+            timeout: zone_timeout,
+            headers: {...api_headers(), 'Content-Type': 'application/json'},
+            data: {zone: {name, ...zone}, plan},
+        });
+        console.error(`Zone "${name}" created successfully`);
+    } catch(e){
+        console.error(`Error creating zone "${name}":`,
+            e.response?.data||e.message);
+    }
+}
+
 async function ensure_required_zones(){
+    let zones;
     try {
         console.error('Checking for required zones...');
-        let response = await axios({
+        const response = await axios({
             url: 'https://api.brightdata.com/zone/get_active_zones',
             method: 'GET',
             timeout: zone_timeout,
             headers: api_headers(),
         });
-        let zones = response.data || [];
-        let has_unlocker_zone = zones.some(zone=>zone.name==unlocker_zone);
-        let has_browser_zone = zones.some(zone=>zone.name==browser_zone);
-        
-        if (!has_unlocker_zone)
-        {
-            console.error(`Required zone "${unlocker_zone}" not found, `
-                +`creating it...`);
-            await axios({
-                url: 'https://api.brightdata.com/zone',
-                method: 'POST',
-                timeout: zone_timeout,
-                headers: {
-                    ...api_headers(),
-                    'Content-Type': 'application/json',
-                },
-                data: {
-                    zone: {name: unlocker_zone, type: 'unblocker'},
-                    plan: {type: 'unblocker', ub_premium: true},
-                },
-            });
-            console.error(`Zone "${unlocker_zone}" created successfully`);
-        }
-        else
-            console.error(`Required zone "${unlocker_zone}" already exists`);
-            
-        if (!has_browser_zone)
-        {
-            console.error(`Required zone "${browser_zone}" not found, `
-                +`creating it...`);
-            await axios({
-                url: 'https://api.brightdata.com/zone',
-                method: 'POST',
-                timeout: zone_timeout,
-                headers: {
-                    ...api_headers(),
-                    'Content-Type': 'application/json',
-                },
-                data: {
-                    zone: {name: browser_zone, type: 'browser_api'},
-                    plan: {type: 'browser_api'},
-                },
-            });
-            console.error(`Zone "${browser_zone}" created successfully`);
-        }
-        else
-            console.error(`Required zone "${browser_zone}" already exists`);
+        zones = response.data || [];
     } catch(e){
-        console.error('Error checking/creating zones:',
+        return console.error('Error checking zones:',
             e.response?.data||e.message);
     }
+    await ensure_zone(zones, serp_zone, {type: 'unblocker'},
+        {type: 'unblocker', serp: true});
+    await ensure_zone(zones, unlocker_zone, {type: 'unblocker'},
+        {type: 'unblocker', ub_premium: true});
+    await ensure_zone(zones, browser_zone, {type: 'browser_api'},
+        {type: 'browser_api'});
 }
 
 await ensure_required_zones();
@@ -237,10 +219,21 @@ addTool({
     }),
 });
 
+async function run_search(args, ctx, tool){
+    const response = await base_request({
+        url: 'https://api.brightdata.com/request',
+        method: 'POST',
+        data: {...search_request(args), zone: serp_zone},
+        headers: api_headers(ctx.clientName, tool),
+        responseType: 'text',
+    });
+    return parse_search_response(response.data, args.engine);
+}
+
 addTool({
     name: 'search_engine',
-    description: 'Scrape search results from Google, Bing or Yandex. Returns '
-        +'SERP results in JSON or Markdown (URL, title, description),Ideal for'
+    description: 'Search Bing (default) or Google. Returns JSON: organic '
+        +'results with link, title and description, 10 per page. Ideal for '
         +'gathering current information, news, and detailed search results.',
     annotations: {
         title: 'Search Engine',
@@ -248,42 +241,10 @@ addTool({
         destructiveHint: false,
         openWorldHint: true,
     },
-    parameters: z.object({
-        query: z.string(),
-        engine: z.enum(['google', 'bing', 'yandex'])
-            .optional()
-            .default('google'),
-        cursor: z.string()
-            .optional()
-            .describe('Pagination cursor for next page'),
-        geo_location: z.string()
-            .length(2)
-            .optional()
-            .describe('2-letter country code for geo-targeted results '
-                +'(e.g., "us", "uk")'),
-    }),
-    execute: tool_fn('search_engine', async({query, engine, cursor,
-        geo_location}, ctx)=>
-    {
-        const is_google = engine=='google';
-        const url = search_url(engine, query, cursor, geo_location);
-        let response = await base_request({
-            url: 'https://api.brightdata.com/request',
-            method: 'POST',
-            data: {
-                url: is_google ? `${url}&brd_json=1` : url,
-                zone: unlocker_zone,
-                format: 'raw',
-                data_format: is_google ? 'parsed_light' : 'markdown',
-            },
-            headers: api_headers(ctx.clientName, 'search_engine'),
-            responseType: 'text',
-        });
-        if (!is_google)
-            return response.data;
-        return JSON.stringify(parse_google_search_response(response.data,
-            'search_engine'), null, 2);
-    }),
+    parameters: search_schema,
+    execute: tool_fn('search_engine', async(args, ctx)=>
+        JSON.stringify(await run_search(args, ctx, 'search_engine'), null,
+            2)),
 });
 
 const fetch_deadline_ms = 45000;
@@ -372,77 +333,27 @@ addTool({
 
 addTool({
     name: 'search_engine_batch',
-    description: 'Run multiple search queries simultaneously. Returns '
-    +'JSON for Google, Markdown for Bing/Yandex.',
+    description: 'Run up to 5 searches at once, on Bing (default) or '
+    +'Google. Returns a JSON array in input order: query, engine, and '
+    +'result (organic link, title, description) or error.',
     annotations: {
         title: 'Search Engine Batch',
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
     },
-    parameters: z.object({
-        queries: z.array(z.object({
-            query: z.string(),
-            engine: z.enum(['google', 'bing', 'yandex'])
-                .optional()
-                .default('google'),
-            cursor: z.string()
-                .optional(),
-            geo_location: z.string()
-                .length(2)
-                .optional()
-                .describe('2-letter country code for geo-targeted results '
-                    +'(e.g., "us", "uk")'),
-        })).min(1).max(5),
-    }),
+    parameters: z.object({queries: z.array(search_schema).min(1).max(5)}),
     execute: tool_fn('search_engine_batch', async({queries}, ctx)=>{
-        const search_promises = queries.map(({query, engine, cursor,
-            geo_location})=>{
-            const normalized_engine = engine || 'google';
-            const is_google = normalized_engine === 'google';
-            const url = search_url(normalized_engine, query, cursor,
-                geo_location);
-            return (async()=>{
-                try {
-                    const response = await base_request({
-                        url: 'https://api.brightdata.com/request',
-                        method: 'POST',
-                        data: {
-                            url: is_google ? `${url}&brd_json=1` : url,
-                            zone: unlocker_zone,
-                            format: 'raw',
-                            data_format: is_google ? 'parsed_light'
-                                : 'markdown',
-                        },
-                        headers: api_headers(ctx.clientName,
-                            'search_engine_batch'),
-                        responseType: 'text',
-                    });
-                    if (is_google)
-                    {
-                        return {
-                            query,
-                            engine: normalized_engine,
-                            result: parse_google_search_response(response.data,
-                                'search_engine_batch'),
-                        };
-                    }
-                    return {
-                        query,
-                        engine: normalized_engine,
-                        result: response.data,
-                    };
-                } catch(e){
-                    return {
-                        query,
-                        engine: normalized_engine,
-                        error: safe_error(e, api_token),
-                    };
-                }
-            })();
-        });
-
-        const results = await Promise.all(search_promises);
+        const results = await Promise.all(queries.map(async q=>{
+            try {
+                const result = await run_search(q, ctx,
+                    'search_engine_batch');
+                return {query: q.query, engine: q.engine, result};
+            } catch(e){
+                return {query: q.query, engine: q.engine,
+                    error: safe_error(e, api_token)};
+            }
+        }));
         return JSON.stringify(results, null, 2);
     }),
 });
@@ -900,16 +811,4 @@ function tool_fn(name, fn){
             console.error(`[%s] tool finished in %sms`, name, dur);
         }
     };
-}
-
-function search_url(engine, query, cursor, geo_location){
-    let q = encodeURIComponent(query);
-    let page = cursor ? parseInt(cursor) : 0;
-    let start = page * 10;
-    if (engine=='yandex')
-        return `https://yandex.com/search/?text=${q}&p=${page}`;
-    if (engine=='bing')
-        return `https://www.bing.com/search?q=${q}&first=${start + 1}`;
-    let gl = geo_location ? `&gl=${geo_location}` : '';
-    return `https://www.google.com/search?q=${q}&start=${start}${gl}`;
 }
