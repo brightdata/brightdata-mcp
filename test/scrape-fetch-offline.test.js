@@ -50,6 +50,6 @@ test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
     assert.equal(calls('https://flaky.example/'), 2);
 
     const busy = await scrape('https://busy.example/');
-    assert.match(busy.text, /^busy: /);
+    assert.match(busy.text, /^rate_limited: /);
     assert.equal(calls('https://busy.example/'), 1, '429 is never retried');
 });

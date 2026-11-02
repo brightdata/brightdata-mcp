@@ -49,7 +49,8 @@ test('to_page maps API error codes', ()=>{
     assert.match(err('proxy', 'Could not resolve host'),
         /^fetch_failed: .* Details: Could not resolve host$/);
     assert.match(err('bad_cmd_arg'), /^invalid_url: /);
-    assert.match(err('bucket_rate_limit'), /^rate_limited: a.example is/);
+    assert.match(err('bucket_rate_limit'),
+        /^site_rate_limited: a.example is/);
     assert.equal(err('weird', 'raw text'), 'weird: raw text');
 });
 
@@ -65,12 +66,16 @@ test('request_error maps HTTP and network failures', ()=>{
     const err = (status, extra = {})=>request_error({isAxiosError: true,
         response: status && {status, data: 'bad'}, ...extra}, url);
     assert.match(err(0, {code: 'ERR_CANCELED'}), /^timeout: /);
-    assert.match(err(0, {code: 'ECONNRESET'}),
-        /^network_error: .*\(ECONNRESET\)/);
-    assert.match(err(401), /^auth_failed: /);
-    assert.match(err(429), /^busy: /);
-    assert.match(err(502), /^service_error: .*HTTP 502/);
-    assert.equal(err(400), 'invalid_url: https://a.example/: bad');
+    assert.match(err(0, {code: 'ECONNRESET'}), /^network_error: /);
+    assert.equal(err(401), 'auth_failed: Sign-in failed. Ask the user to '
+        +'reconnect Bright Data.');
+    assert.match(err(429), /^rate_limited: /);
+    assert.match(err(502), /^service_unavailable: /);
+    assert.equal(err(400), 'invalid_input: Bright Data rejected the request. '
+        +'Check the URL or query and try again. Details: bad');
+    assert.match(request_error({isAxiosError: true, response: {status: 402,
+        headers: {'x-brd-err-code': 'client_10100'}}}, url),
+        /^quota_exceeded: /);
     assert.equal(err(402), null);
     assert.equal(request_error(new Error('bug'), url), null);
 });

@@ -59,8 +59,8 @@ const record_error = (record, url)=>{
             +'Retry it in a smaller batch.';
     case 'bucket_rate_limit':
     case 'global_rate_limit':
-        return `rate_limited: ${host(url)} is limiting requests. Wait about a `
-            +`minute before fetching this site again.`;
+        return `site_rate_limited: ${host(url)} is limiting requests. Wait `
+            +`about a minute before fetching this site again.`;
     default:
         return `${record.error_code}: ${details(record)}`;
     }
@@ -130,6 +130,8 @@ export const timeout_error = url=>`timeout: ${url} did not load within `
 const body_text = data=>redact_url_creds(typeof data=='string' ? data
     : JSON.stringify(data?.errors ?? data)).slice(0, details_len);
 
+const line = (code, what, todo)=>`${code}: ${what}. ${todo}`;
+
 export const request_error = (e, url)=>{
     if (!e?.isAxiosError)
         return null;
@@ -138,26 +140,37 @@ export const request_error = (e, url)=>{
     const status = e.response?.status;
     if (!status)
     {
-        return `network_error: could not reach Bright Data `
-            +`(${e.code||'no response'}). Try again.`;
+        return line('network_error', 'Couldn\'t connect to Bright Data\'s '
+            +'service', 'Try again in a few seconds.');
     }
-    if (status==401)
+    if (e.response.headers?.['x-brd-err-code']=='client_10100')
     {
-        return 'auth_failed: Bright Data rejected the request. Check your '
-            +'connection to Bright Data.';
+        return line('quota_exceeded', 'The Bright Data account has reached '
+            +'its usage limit', 'Tell the user. Don\'t retry.');
+    }
+    if (status==401 || status==407)
+    {
+        return line('auth_failed', 'Sign-in failed', 'Ask the user to '
+            +'reconnect Bright Data.');
     }
     if (status==429)
     {
-        return 'busy: Bright Data is handling too many requests from this '
-            +'account. Wait 30 s before the next scrape.';
+        return line('rate_limited', 'Too many requests right now',
+            'Wait a few seconds, then retry.');
     }
     if (status>=500)
     {
-        return `service_error: Bright Data returned HTTP ${status}. Try again `
-            +'in a minute.';
+        return line('service_unavailable', 'Bright Data\'s service is '
+            +'temporarily unavailable', 'Try again in about 30 seconds. If '
+            +'it keeps failing, tell the user the service is down right '
+            +'now.');
     }
     if (status==400)
-        return `invalid_url: ${url}: ${body_text(e.response.data)}`;
+    {
+        return line('invalid_input', 'Bright Data rejected the request',
+            'Check the URL or query and try again.')
+            +` Details: ${body_text(e.response.data)}`;
+    }
     return null;
 };
 

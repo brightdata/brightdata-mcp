@@ -83,6 +83,6 @@ test('a trigger error is one tool error, never retried', async()=>{
         response: {status: 429}});
     const {runner, calls} = fake({trigger_error: Object.assign(
         new Error('trigger failed'), {cause})});
-    await assert.rejects(batch_pages({runner, urls, timing}), /^UserError: busy: /);
+    await assert.rejects(batch_pages({runner, urls, timing}), /^UserError: rate_limited: /);
     assert.equal(calls.length, 1);
 });
