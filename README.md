@@ -34,7 +34,7 @@
 
 The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **32 tools** covering:
 
-- **Web search** — Google, Bing, and Yandex results as structured data
+- **Web search** — Bing and Google results as structured data
 - **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
 - **Structured data (Web Scraper API)** — clean JSON from 1,200+ pre-built scrapers: Amazon, LinkedIn, Instagram, TikTok, YouTube, X, Reddit, Facebook, Crunchbase, Zillow, npm, PyPI and more, without parsing HTML. Six tools find and run any of them
 - **Browser automation** — navigate, click, type, screenshot, and read pages in a remote browser session
@@ -232,7 +232,7 @@ What's included free:
 
 - Fetch any webpage and extract as Markdown
 - Access to 60+ pre-built scrapers for popular domains
-- Web search (Google, Bing, Yandex)
+- Web search (Bing, Google)
 - Web unlocking (bot detection bypass, CAPTCHA solving, proxy rotation)
 - Browser automation
 - Geo-targeting
@@ -296,7 +296,7 @@ Replace built-in fetch/search tools that get blocked on protected sites. Every r
 |------|-------|
 | Drop-in replacement for built-in web search | `search_engine` |
 | Drop-in replacement for built-in URL fetch | `scrape_as_markdown` |
-| Parallel data collection (10 at a time) | `search_engine_batch`, `scrape_batch` |
+| Parallel data collection (5 at a time) | `search_engine_batch`, `scrape_batch` |
 | Interactive sites (login walls, infinite scroll, dynamic content) | `scraping_browser_*` (14 tools) |
 | Structured JSON from any page, no schema needed | `extract` |
 
@@ -356,7 +356,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 | Total tools | 32 | 2–10 |
 | Platform-specific structured JSON extractors | 1,200+ pre-built scrapers across e-commerce, social, business, finance, travel, app stores, through 6 tools | Rare; generic scraping only |
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
-| Search engines | Google, Bing, Yandex | Usually one |
+| Search engines | Bing, Google | Usually one |
 | Browser automation | 14 tools, remote browser, no local setup | Limited or none |
 | LLM response collection (ChatGPT, Perplexity) | Yes | Not offered |
 | Package registry data (npm, PyPI) | Yes | Not offered |
@@ -429,7 +429,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 ### Which tool to use
 
 - **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 5): `scrape_batch`
-- **Need to find information:** `search_engine`. Multiple queries (up to 10): `search_engine_batch`
+- **Need to find information:** `search_engine`. Multiple queries (up to 5): `search_engine_batch`
 - **Structured data from a known platform (Amazon, LinkedIn, TikTok, npm, PyPI, etc.):** `search_scrapers` → `get_scraper_details` → `run_scraper` — returns clean JSON, faster and more reliable than scraping the same page
 - **Structured JSON from a page no scraper covers:** `extract`
 - **Raw HTML:** `scrape_as_html`
@@ -449,8 +449,8 @@ Notes on scraper runs:
 
 | Tool | Description | Group |
 |------|-------------|-------|
-| `search_engine` | Search Google, Bing, or Yandex. Google returns JSON (URL, title, description); Bing and Yandex return Markdown. Paginate with the `cursor` parameter | default / every group |
-| `search_engine_batch` | Up to 10 search queries in one call | default / `advanced_scraping` |
+| `search_engine` | Search Bing (default) or Google. Returns JSON (link, title, description), 10 results per page. Params: `country`, `page` (from 0), `time_range` (`hour`, `day`, `week`, `month`, `year`, `any`; Bing supports only `day`, `week`, `year`) | default / every group |
+| `search_engine_batch` | Up to 5 search queries in one call | default / `advanced_scraping` |
 | `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json | default / every group |
 | `scrape_batch` | Up to 5 URLs in one call. Returns the content as markdown (default), text, html or ld_json | default / `advanced_scraping` |
 | `scrape_as_html` | Any URL as raw HTML | default / `advanced_scraping` |
@@ -585,6 +585,7 @@ Three of the highest-impact skills:
       "env": {
         "API_TOKEN": "your-token-here",
         "RATE_LIMIT": "100/1h",
+        "SERP_ZONE": "custom_serp",
         "WEB_UNLOCKER_ZONE": "custom",
         "BROWSER_ZONE": "custom_browser"
       }
@@ -599,6 +600,7 @@ Three of the highest-impact skills:
 |----------|-------------|---------|---------|
 | `API_TOKEN` | Your Bright Data API token (required) | - | `your-token-here` |
 | `RATE_LIMIT` | Custom rate limiting | unlimited | `100/1h`, `50/30m` |
+| `SERP_ZONE` | Custom SERP API zone name, used by the search tools | `mcp_serp` | `my_serp_zone` |
 | `WEB_UNLOCKER_ZONE` | Custom Web Unlocker zone name | `mcp_unlocker` | `my_custom_zone` |
 | `BROWSER_ZONE` | Custom Browser zone name | `mcp_browser` | `my_browser_zone` |
 | `CONTENT_GATE` | When page content returned by a data tool looks like instructions to change the MCP configuration, the server asks the user (via MCP elicitation) before returning it. Set to `off` to disable | `on` | `off` |

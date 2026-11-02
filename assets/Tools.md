@@ -1,8 +1,8 @@
 |Feature|Description|
 |---|---|
-|search_engine|Scrape search results from Google, Bing, or Yandex. Returns SERP results in JSON for Google and Markdown for Bing/Yandex; supports pagination with the cursor parameter.|
+|search_engine|Search Bing (default) or Google. Returns JSON organic results (link, title, description), 10 per page. Params: country, page (from 0), time_range (Bing: day, week, year only).|
 |scrape_as_markdown|Scrape a single webpage. Returns the content as markdown (default), text, html or ld_json.|
-|search_engine_batch|Run up to 10 search queries in parallel. Returns JSON for Google results and Markdown for Bing/Yandex.|
+|search_engine_batch|Run up to 5 searches in parallel, same params as search_engine. Returns a JSON array with a result or an error per query.|
 |scrape_batch|Scrape up to 5 webpages at once. Returns the content as markdown (default), text, html or ld_json.|
 |scrape_as_html|Scrape a single webpage with advanced extraction and return the HTML response body. Handles sites protected by bot detection or CAPTCHA.|
 |extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|

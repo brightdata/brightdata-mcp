@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- `search_engine` and `search_engine_batch` use a SERP API zone instead
+  of Web Unlocker. New `SERP_ZONE` env var (default `mcp_serp`); the
+  zone is created on startup if missing.
+- Bing is the default engine. Both engines return JSON:
+  `{organic: [{link, title, description}]}`.
+- `geo_location` is renamed to `country`, and `cursor` to `page` (a
+  number from 0, 10 results per page). The old names return an
+  `invalid_input` error.
+- New `time_range`: `hour`, `day`, `week`, `month`, `year`, `any`
+  (default). Bing supports only `day`, `week` and `year`.
+- A search that returns no data gives a `service_unavailable` error.
+- Each zone is created on its own, so one failed zone no longer skips
+  the others.
+
+### Removed
+- Yandex.
+
 ## [4.2.0] - 2026-11-01
 
 ### Changed
