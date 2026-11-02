@@ -142,7 +142,10 @@ export const request_error = (e, url)=>{
             +`(${e.code||'no response'}). Try again.`;
     }
     if (status==401)
-        return 'auth_failed: Bright Data rejected the API key. Check API_TOKEN.';
+    {
+        return 'auth_failed: Bright Data rejected the request. Check your '
+            +'connection to Bright Data.';
+    }
     if (status==429)
     {
         return 'busy: Bright Data is handling too many requests from this '
