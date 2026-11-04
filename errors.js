@@ -59,7 +59,15 @@ const json_text = body=>{
         : JSON.stringify(body);
 };
 
+const parse_json = text=>{
+    try { return JSON.parse(text); } catch(e){ return null; }
+};
+
 const body_text = body=>{
+    const parsed = typeof body=='string' && body.trim().startsWith('{')
+        ? parse_json(body) : null;
+    if (parsed)
+        return json_text(parsed);
     if (typeof body=='string')
         return body.trim();
     return body && typeof body=='object' ? json_text(body) : '';

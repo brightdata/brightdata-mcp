@@ -214,3 +214,26 @@ test('the free zone gets the free-tier message on a usage limit', async t=>{
     assert.equal(res.isError, true);
     assert.match(text, /^Free credits used up: .*\/free-tier Details: /);
 });
+
+test('Bright Data error details are not marked as untrusted site text',
+    async t=>{
+    const stub = await start_stub_server();
+    t.after(()=>close_stub_server(stub));
+    const env = {...process.env, API_TOKEN: 'wrap-token',
+        __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`};
+    delete env.GROUPS;
+    delete env.TOOLS;
+    const client = new Client({name: 'wrap-test', version: '0'},
+        {capabilities: {tools: {}}});
+    t.after(()=>client.close());
+    await client.connect(new StdioClientTransport({cwd: repo_root, env,
+        command: process.execPath,
+        args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
+    const res = await client.callTool({name: 'search_engine',
+        arguments: {query: 'bad.example'}});
+    const text = res.content.find(b=>b.type=='text').text;
+    assert.equal(res.isError, true);
+    assert.equal(text, 'Search rejected: Bright Data rejected the search for '
+        +'"bad.example". Read the details. Check the query and its options, '
+        +'then retry. Details: zone not found');
+});

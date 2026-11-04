@@ -57,6 +57,12 @@ test('details keep the readable parts of a JSON body', ()=>{
         'Invalid input provided: nourl: not allowed; url: Required field');
 });
 
+test('details read a JSON body that arrived as text', ()=>{
+    assert.equal(read_error(http(400, '{"error":"zone not found"}')).details,
+        'zone not found');
+    assert.equal(read_error(http(400, '{not json')).details, '{not json');
+});
+
 test('details hide URL credentials and stop at 300 characters', ()=>{
     assert.equal(read_error(new Error('at wss://u:p@h')).details,
         'at wss://[REDACTED]@h');

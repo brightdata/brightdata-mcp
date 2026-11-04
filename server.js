@@ -44,6 +44,9 @@ const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
 const external_content_tools = new Set(['search_engine',
     'scrape_as_markdown', 'scrape_as_html', 'search_engine_batch',
     'scrape_batch', 'extract']);
+// only an unlocker error body can be the target site's own page; other
+// error details are Bright Data's messages
+const site_error_tools = new Set(['scrape_as_html', 'extract']);
 const wrap_external = (name, result)=>
     external_content_tools.has(name) && typeof result=='string'
         ? wrap_untrusted(result) : result;
@@ -720,7 +723,7 @@ for (let tool of browser_tools)
         try {
             return wrap_external(tool.name, await tool.execute(params, ctx));
         } catch(e){
-            throw new UserError(error_text(e, [], params, true));
+            throw new UserError(error_text(e, [], params));
         }
     }});
 }
@@ -789,7 +792,7 @@ function tool_fn(name, fn, rules = []){
         catch(e){
             log_error(name, e);
             const message = error_text(e, rules, data,
-                external_content_tools.has(name));
+                site_error_tools.has(name));
             console.error(`[%s] error %s`, name, message);
             throw new UserError(message);
         } finally {
