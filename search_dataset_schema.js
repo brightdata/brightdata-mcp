@@ -9,6 +9,13 @@ export const DATASET_IDS = [
 
 export const dataset_id_schema = z.enum(DATASET_IDS);
 
+export const DATASET_RULES = [
+    {details: /unsupported filter/i, title: 'Filter rejected',
+        what: 'The dataset doesn\'t support this filter',
+        todo: 'Call list_dataset_fields for valid field names, fix the '
+            +'filter, then retry.'},
+];
+
 export const FILTER_OPERATORS = ['=', '!=', '<', '<=', '>', '>=', 'in',
     'not_in', 'includes', 'not_includes', 'array_includes',
     'not_array_includes', 'is_null', 'is_not_null'];

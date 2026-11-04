@@ -2,7 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DATASET_IDS, dataset_id_schema, metadata_to_fields, FILTER_OPERATORS,
-    filter_schema} from '../search_dataset_schema.js';
+    filter_schema, DATASET_RULES} from '../search_dataset_schema.js';
+import {api_error} from '../errors.js';
 
 test('DATASET_IDS lists the three supported datasets', ()=>{
     assert.deepEqual(DATASET_IDS, [
@@ -114,4 +115,11 @@ test('filter_schema accepts is_null and is_not_null without a value', ()=>{
         const filter = {name: 'email', operator};
         assert.deepEqual(filter_schema.parse(filter), filter);
     }
+});
+
+test('an unsupported filter is a filter error, not a service outage', ()=>{
+    const e = Object.assign(new Error('500'), {isAxiosError: true,
+        response: {status: 500, data: 'unsupported filters: nope_field'}});
+    assert.match(api_error(e, DATASET_RULES),
+        /^Filter rejected: .* list_dataset_fields .* Details: unsupported/);
 });

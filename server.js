@@ -18,7 +18,8 @@ import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
 import {api_error, describe, read_error} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch,
     SEARCH_RULES} from './search_utils.js';
-import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
+import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS,
+    DATASET_RULES}
     from './search_dataset_schema.js';
 import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
@@ -550,7 +551,7 @@ addTool({
         if (next_cursor!==undefined)
             result.search_after = next_cursor;
         return JSON.stringify(result);
-    }),
+    }, DATASET_RULES),
 });
 
 for (const tool of scraper_tools({catalog: create_scraper_catalog(),

@@ -46,7 +46,8 @@ const calculate_cdp_endpoint = async country=>{
     } catch(e){
         if (e.response?.status===422)
             throw new Error(`Browser zone '${browser_zone}' does not exist`);
-        throw new Error(`Error retrieving browser credentials: ${e.message}`);
+        throw new Error(`Error retrieving browser credentials: ${e.message}`,
+            {cause: e});
     }
 };
 
