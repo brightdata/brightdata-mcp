@@ -7,7 +7,7 @@ import {tools as browser_tools} from './browser_tools.js';
 import prompts from './prompts.js';
 import {gate_page_content, refusal_text} from './content_gate.js';
 import {wrap_untrusted} from './untrusted_content.js';
-import {redact_url_creds, safe_error} from './safe_error.js';
+import {redact_url_creds, redact_token, safe_error} from './safe_error.js';
 import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
@@ -15,7 +15,7 @@ import {scraper_tools} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
     batch_pages, batch_cancel_s, single_max_chars} from './fetch_api.js';
-import {api_error, describe} from './errors.js';
+import {api_error, describe, read_error} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch}
     from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
@@ -134,10 +134,6 @@ function check_rate_limit(){
 }
 
 const zone_timeout = base_timeout || 10*1000;
-const USAGE_LIMIT_MESSAGE = 'Request failed: Your Bright Data account has '
-    +'used its 5,000 free monthly credits. Check your plan and usage details '
-    +'here: https://docs.brightdata.com/general/account/billing-and-pricing/'
-    +'free-tier';
 async function ensure_zone(zones, name, zone, plan){
     if (zones.some(z=>z.name==name))
         return console.error(`Required zone "${name}" already exists`);
@@ -721,7 +717,7 @@ for (let tool of browser_tools)
         try {
             return wrap_external(tool.name, await tool.execute(params, ctx));
         } catch(e){
-            throw new UserError(safe_error(e, api_token));
+            throw new UserError(error_text(tool.name, e, [], params));
         }
     }});
 }
@@ -736,7 +732,29 @@ server.on('connect', (event)=>{
 });
 
 server.start({transportType: 'stdio'});
-function tool_fn(name, fn){
+function error_text(name, e, rules, vars){
+    if (e instanceof UserError)
+        return safe_error(e, api_token);
+    const facts = read_error(e);
+    if (facts.brd_code=='client_10100' && unlocker_zone=='mcp_unlocker')
+        facts.reason = 'free_tier';
+    // error bodies from a scraped origin are also untrusted
+    if (external_content_tools.has(name))
+        facts.details = '\n'+wrap_untrusted(facts.details);
+    return redact_token(describe(facts, rules, vars), api_token);
+}
+
+function log_error(name, e){
+    if (e.response)
+    {
+        console.error(`[%s] error %s %s: %s`, name, e.response.status,
+            e.response.statusText, redact_url_creds(e.response.data));
+    }
+    else if (!(e instanceof UserError))
+        console.error(`[%s] error %s`, name, redact_url_creds(e.stack));
+}
+
+function tool_fn(name, fn, rules = []){
     return async(data, ctx)=>{
         check_rate_limit();
         const clientInfo = global.mcpClientInfo;
@@ -766,35 +784,10 @@ function tool_fn(name, fn){
             return wrap_external(name, result);
         }
         catch(e){
-            if (e instanceof UserError)
-            {
-                const message = safe_error(e, api_token);
-                console.error(`[%s] error %s`, name, message);
-                throw new UserError(message);
-            }
-        if (e.response)
-            {
-                console.error(`[%s] error %s %s: %s`, name, e.response.status,
-                    e.response.statusText, redact_url_creds(e.response.data));
-
-                const headers = e.response.headers;
-                const is_usage_limit = headers?.['x-brd-err-code'] === 'client_10100'
-                if (is_usage_limit && unlocker_zone === 'mcp_unlocker')
-                    throw new Error(USAGE_LIMIT_MESSAGE);
-
-                let message = e.response.data;
-                if (typeof message=='string' && message.length)
-                {
-                    // error bodies from a scraped origin are also untrusted
-                    const body = safe_error(message, api_token);
-                    throw new Error(external_content_tools.has(name)
-                        ? `HTTP ${e.response.status}:\n${wrap_untrusted(body)}`
-                        : `HTTP ${e.response.status}: ${body}`);
-                }
-            }
-            else
-                console.error(`[%s] error %s`, name, redact_url_creds(e.stack));
-            throw new Error(safe_error(e, api_token));
+            log_error(name, e);
+            const message = error_text(name, e, rules, data);
+            console.error(`[%s] error %s`, name, message);
+            throw new UserError(message);
         } finally {
             let dur = Date.now()-ts;
             console.error(`[%s] tool finished in %sms`, name, dur);

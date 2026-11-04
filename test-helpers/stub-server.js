@@ -150,6 +150,13 @@ export function start_stub_server(){
                             +'z1:zone-pass-canary@brd.superproxy.io:9222');
                         return;
                     }
+                    if (target_url.includes('quota.example'))
+                    {
+                        res.writeHead(402, {'Content-Type': 'text/plain',
+                            'x-brd-err-code': 'client_10100'});
+                        res.end('usage limit reached');
+                        return;
+                    }
                     if (target_url.includes('bad.example'))
                     {
                         res.writeHead(400,
