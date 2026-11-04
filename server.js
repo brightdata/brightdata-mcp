@@ -13,10 +13,9 @@ import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
-import {fetch_dataset_id, fetch_formats, to_page, request_error,
-    timeout_error, no_data_error, batch_pages, batch_cancel_s,
-    single_max_chars}
-    from './fetch_api.js';
+import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
+    batch_pages, batch_cancel_s, single_max_chars} from './fetch_api.js';
+import {api_error, describe} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch}
     from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
@@ -274,17 +273,15 @@ async function fetch_scrape(url, headers){
 async function fetch_page(url, format, headers, max){
     let response;
     try { response = await fetch_scrape(url, headers); }
-    catch(e){
-        const error = request_error(e, url);
-        if (!error)
-            throw e;
-        return {url, error};
-    }
+    catch(e){ return {url, error: api_error(e, FETCH_RULES, {url})}; }
     if (response.status==202)
-        return {url, error: timeout_error(url)};
+    {
+        return {url, error: describe({kind: 'timeout',
+            details: 'HTTP 202: still running'}, FETCH_RULES, {url})};
+    }
     const record = Array.isArray(response.data) && response.data[0];
     return record ? to_page(record, format, max)
-        : {url, error: no_data_error(url)};
+        : {url, error: page_error('no_data', url, 'empty response')};
 }
 
 async function scrape_page(url, format, headers){
@@ -377,8 +374,6 @@ addTool({
     execute: tool_fn('scrape_batch', async({urls, format}, ctx)=>{
         const items = await scrape_urls(urls, format,
             api_headers(ctx.clientName, 'scrape_batch'));
-        if (items.every(item=>item.error))
-            throw new UserError(items.map(item=>item.error).join('\n'));
         return JSON.stringify(items);
     }),
 });

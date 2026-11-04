@@ -52,25 +52,24 @@ test('a slow batch is cancelled and keeps the finished pages', async()=>{
         results: {status: 'ready', data: [page(urls[0]), aborted]}});
     assert.ok(calls.some(c=>c[0]=='cancel'));
     assert.ok(items[0].content);
-    assert.match(items[1].error, /^timeout: https:\/\/b.example\/ did not/);
+    assert.match(items[1].error,
+        /^Page timed out: https:\/\/b.example\/ did not load within 35 s\./);
 });
 
-test('cancelled with nothing finished: every URL times out', async()=>{
-    const {items} = await run({status: 'running',
-        results: {status: 'canceled', data: []}});
-    assert.ok(items.every(i=>/^timeout: /.test(i.error)));
+test('cancelled with nothing finished: one batch timeout', async()=>{
+    await assert.rejects(run({status: 'running',
+        results: {status: 'canceled', data: []}}),
+        /^UserError: Batch timed out: /);
 });
 
-test('not downloadable by the deadline: every URL times out', async()=>{
-    const {items} = await run({status: 'running',
-        results: {status: 'running'}});
-    assert.ok(items.every(i=>/^timeout: /.test(i.error)));
+test('not downloadable by the deadline: one batch timeout', async()=>{
+    await assert.rejects(run({status: 'running',
+        results: {status: 'running'}}), /^UserError: Batch timed out: /);
 });
 
-test('a failed job fails every URL', async()=>{
-    const {items} = await run({status: 'failed'});
-    assert.ok(items.every(i=>/^fetch_failed: .* the batch job failed/
-        .test(i.error)));
+test('a failed job is one batch error', async()=>{
+    await assert.rejects(run({status: 'failed'}),
+        /^UserError: Batch failed: .* Details: snapshot status: failed$/);
 });
 
 test('a failed progress poll is not fatal', async()=>{
@@ -83,6 +82,6 @@ test('a trigger error is one tool error, never retried', async()=>{
         response: {status: 429}});
     const {runner, calls} = fake({trigger_error: Object.assign(
         new Error('trigger failed'), {cause})});
-    await assert.rejects(batch_pages({runner, urls, timing}), /^UserError: rate_limited: /);
+    await assert.rejects(batch_pages({runner, urls, timing}), /^UserError: Rate limited: /);
     assert.equal(calls.length, 1);
 });

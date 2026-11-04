@@ -60,9 +60,11 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
             assert.equal(parsed[0].content, '# Example\n\nHello world.');
 
             const rejected = parsed[1];
-            assert.equal(rejected.error, 'fetch_failed: '
-                +'https://bad.example/fail could not be fetched (blocked or '
-                +'empty page). Details: Could not resolve host');
+            assert.equal(rejected.error, 'Fetch failed: '
+                +'https://bad.example/fail could not be fetched. The site '
+                +'blocked the request or the page was empty. Retry once; if '
+                +'it fails again, use another source. Details: Could not '
+                +'resolve host');
             assert.equal(stub.observed_requests.filter(r=>r.url
                 ?.startsWith('/datasets/v3/trigger')).length, 1,
                 'all URLs go in one trigger');
@@ -84,6 +86,16 @@ test('scrape_batch sanitizes a partial batch (one success, one failure) '
                 'result must never contain raw axios config');
             assert.doesNotMatch(text_block.text, /"request"/i,
                 'result must never contain a raw axios request object');
+
+            const all_bad = await client.callTool({name: 'scrape_batch',
+                arguments: {urls: ['https://bad.example/a',
+                    'https://bad.example/b']}});
+            assert.equal(!!all_bad.isError, false,
+                'every page failing is still a per-URL result');
+            const bad_items = JSON.parse(unwrap(all_bad.content[0].text));
+            assert.deepEqual(bad_items.map(i=>i.url),
+                ['https://bad.example/a', 'https://bad.example/b']);
+            assert.ok(bad_items.every(i=>/^Fetch failed: /.test(i.error)));
 
             assert.ok(stub.observed_requests.length>0,
                 'the stub actually received requests');

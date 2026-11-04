@@ -1,8 +1,9 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page, request_error, to_items, batch_timeout_error, max_chars,
-    single_max_chars} from '../fetch_api.js';
+import {to_page, to_items, max_chars, single_max_chars, FETCH_RULES}
+    from '../fetch_api.js';
+import {api_error} from '../errors.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
 const record = (extra = {})=>({url: 'https://a.example/',
@@ -45,39 +46,38 @@ test('to_page adds a note on a short page', ()=>{
 test('to_page maps API error codes', ()=>{
     const err = (error_code, error)=>to_page(record({error_code, error,
         markdown: null})).error;
-    assert.match(err('dead_page'), /^page_not_found: https:\/\/a.example\//);
+    assert.equal(err('dead_page', 'dead page (404)'), 'Page not found: '
+        +'https://a.example/ does not exist (404). Check the URL; retrying '
+        +'won\'t help. Details: dead page (404)');
     assert.match(err('proxy', 'Could not resolve host'),
-        /^fetch_failed: .* Details: Could not resolve host$/);
-    assert.match(err('bad_cmd_arg'), /^invalid_url: /);
+        /^Fetch failed: .* Details: Could not resolve host$/);
+    assert.match(err('bad_cmd_arg'), /^URL not allowed: /);
     assert.match(err('bucket_rate_limit'),
-        /^site_rate_limited: a.example is/);
-    assert.equal(err('weird', 'raw text'), 'weird: raw text');
+        /^Site rate limited: a.example is/);
+    assert.equal(err('weird', 'raw text'), 'Fetch failed: https://a.example/ '
+        +'could not be fetched. Read the details. Retry once. Details: raw '
+        +'text');
 });
 
 test('to_page flags empty and binary pages', ()=>{
     const err = extra=>to_page(record(extra)).error;
-    assert.match(err({markdown: '', html2text: ' '}), /^empty_page: /);
+    assert.match(err({markdown: '', html2text: ' '}), /^Empty page: /);
     assert.match(err({markdown: '%PDF-1.4 '+'x'.repeat(200)}),
-        /^unsupported_content: /);
+        /^Not a web page: /);
 });
 
-test('request_error maps HTTP and network failures', ()=>{
+test('FETCH_RULES name the URL, the rest falls to the defaults', ()=>{
     const url = 'https://a.example/';
-    const err = (status, extra = {})=>request_error({isAxiosError: true,
-        response: status && {status, data: 'bad'}, ...extra}, url);
-    assert.match(err(0, {code: 'ERR_CANCELED'}), /^timeout: /);
-    assert.match(err(0, {code: 'ECONNRESET'}), /^network_error: /);
-    assert.equal(err(401), 'auth_failed: Sign-in failed. Ask the user to '
-        +'reconnect Bright Data.');
-    assert.match(err(429), /^rate_limited: /);
-    assert.match(err(502), /^service_unavailable: /);
-    assert.equal(err(400), 'invalid_input: Bright Data rejected the request. '
-        +'Check the URL or query and try again. Details: bad');
-    assert.match(request_error({isAxiosError: true, response: {status: 402,
-        headers: {'x-brd-err-code': 'client_10100'}}}, url),
-        /^quota_exceeded: /);
-    assert.equal(err(402), null);
-    assert.equal(request_error(new Error('bug'), url), null);
+    const err = (status, extra = {})=>api_error({isAxiosError: true,
+        response: status && {status, data: 'bad'}, ...extra},
+        FETCH_RULES, {url});
+    assert.match(err(0, {code: 'ERR_CANCELED'}),
+        /^Page timed out: https:\/\/a.example\/ did not load within 45 s/);
+    assert.equal(err(400), 'URL rejected: Bright Data rejected the request '
+        +'for https://a.example/. Read the details. Check the URL and retry. '
+        +'Details: bad');
+    assert.match(err(401), /^Sign-in failed: /);
+    assert.match(err(502), /^Service unavailable: .* Details: bad$/);
 });
 
 test('to_page returns another format when the one asked for is missing',
@@ -101,7 +101,7 @@ test('to_items keeps input order and matches records by input.url', ()=>{
         'https://a.example/', 'https://b.example/', 'https://x.example/']);
     assert.equal(items[0].final_url, 'https://c.example/');
     assert.equal(items[1].content, long_md);
-    assert.match(items[3].error, /^no_data: /);
+    assert.match(items[3].error, /^No data: /);
 });
 
 test('to_items maps cancelled pages to timeouts', ()=>{
@@ -110,7 +110,7 @@ test('to_items maps cancelled pages to timeouts', ()=>{
     const [aborted, uncrawled] = to_items(['https://a.example/',
         'https://b.example/'], [rec('https://a.example/', 'aborted_page'),
         rec('https://b.example/', 'uncrawled_page')]);
-    assert.equal(aborted.error, batch_timeout_error('https://a.example/'));
+    assert.match(aborted.error, /^Page timed out: .* within 35 s\./);
     assert.match(uncrawled.error, /was not reached within 35 s/);
 });
 

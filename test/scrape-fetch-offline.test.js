@@ -43,13 +43,14 @@ test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
 
     const slow = await scrape('https://slow.example/');
     assert.equal(slow.is_error, true);
-    assert.match(slow.text, /^timeout: https:\/\/slow.example\/ did not/);
+    assert.match(slow.text,
+        /^Page timed out: https:\/\/slow.example\/ did not load/);
 
     const flaky = await scrape('https://flaky.example/');
     assert.equal(flaky.is_error, false, 'one 5xx is retried');
     assert.equal(calls('https://flaky.example/'), 2);
 
     const busy = await scrape('https://busy.example/');
-    assert.match(busy.text, /^rate_limited: /);
+    assert.match(busy.text, /^Rate limited: .* Details: /);
     assert.equal(calls('https://busy.example/'), 1, '429 is never retried');
 });
