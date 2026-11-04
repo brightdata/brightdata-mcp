@@ -36,7 +36,12 @@ export const FETCH_RULES = [
         todo: 'Read the details. Check the URL and retry.'},
 ];
 
+const site_not_found = {details: /could not resolve host/i,
+    title: 'Site not found', what: '{host} doesn\'t resolve',
+    todo: 'Check the URL spelling; retrying won\'t help.'};
+
 export const PAGE_RULES = [
+    site_not_found,
     {page: 'dead_page', title: 'Page not found',
         what: '{url} does not exist (404)',
         todo: 'Check the URL; retrying won\'t help.'},
@@ -81,6 +86,34 @@ export const BATCH_RULES = [
 
 const batch_error = (reason, details)=>new UserError(describe({kind: 'other',
     reason, details}, BATCH_RULES));
+
+export const UNLOCKER_RULES = [
+    site_not_found,
+    {reason: 'site_error', title: 'Site error',
+        what: '{url} could not be loaded',
+        todo: 'Read the details. Retry once; if it fails again, use another '
+            +'source.'},
+    {reason: 'empty_page', title: 'Empty page',
+        what: '{url} returned no content',
+        todo: 'The site may have blocked the request. Retry once; if it '
+            +'fails again, use another source.'},
+];
+
+export const unlocker_body = response=>{
+    const headers = response.headers||{};
+    if (headers['x-brd-error'])
+    {
+        throw Object.assign(new Error(headers['x-brd-error']),
+            {reason: 'site_error'});
+    }
+    if (!String(response.data??'').trim())
+    {
+        const status = headers['x-brd-status-code']||response.status;
+        throw Object.assign(new Error(`site answered ${status} with an `
+            +'empty page'), {reason: 'empty_page'});
+    }
+    return response.data;
+};
 
 export const page_error = (page, url, details)=>
     describe({kind: 'page', page, details}, PAGE_RULES, {url});

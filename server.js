@@ -14,7 +14,8 @@ import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
-    batch_pages, batch_cancel_s, single_max_chars} from './fetch_api.js';
+    batch_pages, batch_cancel_s, single_max_chars, UNLOCKER_RULES,
+    unlocker_body} from './fetch_api.js';
 import {api_error, describe, read_error} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch,
     SEARCH_RULES} from './search_utils.js';
@@ -399,8 +400,8 @@ addTool({
             headers: api_headers(ctx.clientName, 'scrape_as_html'),
             responseType: 'text',
         });
-        return response.data;
-    }),
+        return unlocker_body(response);
+    }, UNLOCKER_RULES),
 });
 
 addTool({
@@ -435,7 +436,7 @@ addTool({
             responseType: 'text',
         });
 
-        let markdown_content = scrape_response.data;
+        let markdown_content = unlocker_body(scrape_response);
 
         let system_prompt = 'You are a data extraction specialist. You MUST respond with ONLY valid JSON, no other text or formatting. '
             + 'Extract the requested information from the markdown content and return it as a properly formatted JSON object. '
@@ -462,7 +463,7 @@ addTool({
         });
 
         return sampling_response.content.text;
-    }),
+    }, UNLOCKER_RULES),
 });
 
 const SEARCHABLE_DATASETS_DESC = [

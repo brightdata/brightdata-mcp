@@ -1,7 +1,8 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page, to_items, max_chars, single_max_chars, FETCH_RULES}
+import {to_page, to_items, max_chars, single_max_chars, FETCH_RULES,
+    UNLOCKER_RULES, unlocker_body}
     from '../fetch_api.js';
 import {api_error} from '../errors.js';
 
@@ -49,8 +50,8 @@ test('to_page maps API error codes', ()=>{
     assert.equal(err('dead_page', 'dead page (404)'), 'Page not found: '
         +'https://a.example/ does not exist (404). Check the URL; retrying '
         +'won\'t help. Details: dead page (404)');
-    assert.match(err('proxy', 'Could not resolve host'),
-        /^Fetch failed: .* Details: Could not resolve host$/);
+    assert.match(err('proxy', 'Access denied'),
+        /^Fetch failed: .* Details: Access denied$/);
     assert.match(err('bad_cmd_arg'), /^URL not allowed: /);
     assert.match(err('bucket_rate_limit'),
         /^Site rate limited: a.example is/);
@@ -126,4 +127,32 @@ test('to_page takes a larger cap for a single page', ()=>{
     const big = record({markdown: 'x'.repeat(max_chars+50)});
     assert.equal(to_page(big, 'markdown', single_max_chars).content.length,
         max_chars+50);
+});
+
+test('an unknown domain is "Site not found", for fetch and unlocker', ()=>{
+    const url = 'https://nope.example/';
+    assert.match(to_page({url, input: {url}, error_code: 'proxy',
+        error: 'Could not resolve host nope.example'}).error,
+        /^Site not found: nope.example doesn't resolve\. /);
+    let err;
+    try { unlocker_body({status: 200, data: '', headers: {'x-brd-error':
+        'Could not resolve host nope.example'}}); }
+    catch(e){ err = e; }
+    assert.match(api_error(err, UNLOCKER_RULES, {url}),
+        /^Site not found: nope.example .* Details: Could not resolve host/);
+});
+
+test('unlocker_body: header error, empty page, or the page', ()=>{
+    const err = response=>{
+        try { unlocker_body(response); } catch(e){ return e; }
+    };
+    const url = 'https://a.example/';
+    assert.match(api_error(err({status: 200, data: '', headers:
+        {'x-brd-error': 'response status was rejected: 500 status code'}}),
+        UNLOCKER_RULES, {url}), /^Site error: https:\/\/a.example\/ could not/);
+    assert.match(api_error(err({status: 200, data: ' ', headers:
+        {'x-brd-status-code': '204'}}), UNLOCKER_RULES, {url}),
+        /^Empty page: .* Details: site answered 204 with an empty page$/);
+    assert.equal(unlocker_body({status: 200, data: '<p>x</p>', headers: {}}),
+        '<p>x</p>');
 });
