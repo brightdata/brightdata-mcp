@@ -156,3 +156,14 @@ test('unlocker_body: header error, empty page, or the page', ()=>{
     assert.equal(unlocker_body({status: 200, data: '<p>x</p>', headers: {}}),
         '<p>x</p>');
 });
+
+test('a garbled page is text with a note, not a binary file', ()=>{
+    const text = 'Price 1,200 yen '+'�'.repeat(40)+' more text '
+        .repeat(10);
+    const page = to_page(record({markdown: text}));
+    assert.equal(page.error, undefined);
+    assert.equal(page.content, text);
+    assert.match(page.note, /^40 characters could not be decoded: the site/);
+    assert.equal('note' in to_page(record({markdown: long_md+'�'})),
+        false);
+});

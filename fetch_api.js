@@ -18,12 +18,18 @@ const field_text = (record, format)=>{
     return typeof value=='string' ? value : JSON.stringify(value);
 };
 
+const garbled_note = content=>{
+    const count = content.split('\ufffd').length-1;
+    return count/content.length>0.02 ? `${count} characters could not be `
+        +'decoded: the site\'s character encoding was misread, so non-Latin '
+        +'text is garbled' : null;
+};
+
 const is_binary = text=>{
     if (text.startsWith('%PDF'))
         return true;
     const sample = text.slice(0, 2000);
-    const bad = [...sample].filter(c=>c<'\t' || c>'\r' && c<' '
-        || c=='�').length;
+    const bad = [...sample].filter(c=>c<'\t' || c>'\r' && c<' ').length;
     return sample.length>0 && bad/sample.length>0.1;
 };
 
@@ -156,6 +162,9 @@ export const to_page = (record, format = 'markdown', max = max_chars)=>{
         return {url, error: page_error('binary', url,
             'the content is not text')};
     }
+    const garbled = garbled_note(content);
+    if (garbled)
+        notes.push(garbled);
     if (len<short_len && (format=='markdown' || format=='text'))
         notes.push(short_note(len));
     if (content.length>max)
