@@ -51,7 +51,8 @@
         "prompts.js",
         "sophie_assistant.js",
         "untrusted_content.js",
-        "fetch_api.js"
+        "fetch_api.js",
+        "errors.js"
     ],
     "mcpName": "io.github.brightdata/brightdata-mcp"
 }
