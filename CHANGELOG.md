@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [4.4.0] - 2026-11-04
 
 ### Changed
 - One error format for every tool: `<Title>: <what happened>. <what to
@@ -18,6 +18,20 @@ All notable changes to this project will be documented in this file.
   error.
 - `search_engine_batch` returns one error when every query fails the same
   way (e.g. a bad token), instead of a copy per query.
+
+### Fixed
+- `scrape_as_html` and `extract` report a failed page (unknown domain,
+  site error, empty page) as an error instead of empty content.
+- An unknown domain is reported as `Site not found` on fetch tools too.
+- `search_dataset` with an unsupported filter says `Filter rejected`
+  instead of reporting a service outage.
+- Browser tools with a bad token report `Sign-in failed`.
+- Bright Data's own error messages are no longer marked as untrusted web
+  content; only site error pages from `scrape_as_html` and `extract` are.
+- A page in a misread character encoding (e.g. Shift_JIS) is returned
+  with a note instead of being called a PDF or binary file.
+- URLs with a Unicode domain (e.g. `https://münchen.de/`) work: the host
+  is sent as punycode, results keep the URL as given.
 
 ## [4.3.0] - 2026-11-02
 
