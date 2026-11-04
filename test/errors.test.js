@@ -1,7 +1,7 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DEFAULT_RULES, api_error, describe, read_error, read_record,
+import {ACCOUNT_RULES, DEFAULT_RULES, api_error, describe, read_error, read_record,
     tool_error} from '../errors.js';
 
 const http = (status, data = '', headers = {})=>Object.assign(
@@ -82,6 +82,13 @@ test('tool rules come first, the rest falls through to defaults', ()=>{
     assert.equal(title(api_error(http(429), rules, vars)), 'Rate limited');
 });
 
+test('account rules win over tool rules', ()=>{
+    const rules = [{status: 400, title: 'Search rejected', what: 'w',
+        todo: 't'}];
+    assert.equal(title(api_error(http(400, 'zone "x" not found'), rules)),
+        'Zone not found');
+});
+
 test('rules match on step, reason and page', ()=>{
     const rules = [
         {step: 'trigger', status: 404, title: 'A', what: 'a', todo: 'a'},
@@ -104,7 +111,7 @@ test('tool_error fills {host} from {url}', ()=>{
 });
 
 test('default rules are well formed and name no tool input', ()=>{
-    for (const rule of DEFAULT_RULES)
+    for (const rule of [...ACCOUNT_RULES, ...DEFAULT_RULES])
     {
         assert.ok(rule.title && rule.what && rule.todo, rule.title);
         assert.ok(!rule.what.endsWith('.'), rule.title);

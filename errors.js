@@ -2,14 +2,9 @@
 import {redact_url_creds} from './safe_error.js';
 
 // Every error the agent sees: "<Title>: <what happened>. <what to do>
-// Details: <details>". Tools put their own rules in front of these; the
-// first rule that matches wins.
-export const DEFAULT_RULES = [
-    {kind: 'timeout', title: 'Timed out',
-        what: 'The request didn\'t finish in time', todo: 'Retry once.'},
-    {kind: 'network', title: 'Connection failed',
-        what: 'Couldn\'t connect to Bright Data\'s service',
-        todo: 'Try again in a few seconds.'},
+// Details: <details>". Rules are checked in order, first match wins:
+// account rules, then the tool's own rules, then the defaults.
+export const ACCOUNT_RULES = [
     {brd_code: 'client_10100', title: 'Usage limit reached',
         what: 'The Bright Data account has reached its usage limit',
         todo: 'Tell the user. Don\'t retry.'},
@@ -21,6 +16,14 @@ export const DEFAULT_RULES = [
         what: 'Bright Data didn\'t accept the credentials',
         todo: 'Ask the user to reconnect Bright Data or check their API '
             +'token.'},
+];
+
+export const DEFAULT_RULES = [
+    {kind: 'timeout', title: 'Timed out',
+        what: 'The request didn\'t finish in time', todo: 'Retry once.'},
+    {kind: 'network', title: 'Connection failed',
+        what: 'Couldn\'t connect to Bright Data\'s service',
+        todo: 'Try again in a few seconds.'},
     {status: 429, title: 'Rate limited', what: 'Too many requests right now',
         todo: 'Wait a few seconds, then retry.'},
     {status: 400, title: 'Request rejected',
@@ -105,7 +108,8 @@ export const tool_error = (rule, details, vars = {})=>{
 };
 
 export const describe = (facts, rules = [], vars = {})=>{
-    const rule = [...rules, ...DEFAULT_RULES].find(r=>matches(r, facts));
+    const rule = [...ACCOUNT_RULES, ...rules, ...DEFAULT_RULES]
+        .find(r=>matches(r, facts));
     return tool_error(rule, facts.details, vars);
 };
 
