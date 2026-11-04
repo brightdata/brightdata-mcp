@@ -82,8 +82,6 @@ export const BATCH_RULES = [
 const batch_error = (reason, details)=>new UserError(describe({kind: 'other',
     reason, details}, BATCH_RULES));
 
-export const line = (code, what, todo)=>`${code}: ${what}. ${todo}`;
-
 export const page_error = (page, url, details)=>
     describe({kind: 'page', page, details}, PAGE_RULES, {url});
 

@@ -2,8 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {clean_search_payload, parse_search_response, search_batch,
-    search_timeout_error, search_request, search_schema}
-    from '../search_utils.js';
+    search_request, search_schema, SEARCH_RULES} from '../search_utils.js';
+import {api_error} from '../errors.js';
+
+const to_error = (e, q)=>api_error(e, SEARCH_RULES, q);
 
 test('clean_search_payload keeps valid organic results', ()=>{
     const payload = clean_search_payload({
@@ -30,9 +32,13 @@ test('clean_search_payload keeps valid organic results', ()=>{
     });
 });
 
-test('parse_search_response throws service_unavailable on non-JSON', ()=>{
-    assert.throws(()=>parse_search_response('<html>blocked</html>',
-        'google'), /^UserError: service_unavailable: google search failed/);
+test('a non-JSON answer is a search failure, google suggests bing', ()=>{
+    let err;
+    try { parse_search_response('<html>blocked</html>', 'google'); }
+    catch(e){ err = e; }
+    assert.equal(to_error(err, {query: 'pizza'}), 'Search failed: Google '
+        +'search failed for "pizza". Try again in about 30 seconds, or use '
+        +'engine bing. Details: the search engine answer was not JSON');
 });
 
 const hang = (q, signal)=>new Promise((done, fail)=>
@@ -42,12 +48,14 @@ test('search_batch returns ready results and times out the rest',
     async()=>{
     const run = (q, signal)=>q.query=='slow' ? hang(q, signal)
         : Promise.resolve({organic: []});
-    const res = await search_batch({run, to_error: e=>e.message, ms: 50,
+    const res = await search_batch({run, to_error, ms: 50,
         queries: [{query: 'fast', engine: 'bing'},
             {query: 'slow', engine: 'google'}]});
     assert.deepEqual(res, [
         {query: 'fast', engine: 'bing', result: {organic: []}},
-        {query: 'slow', engine: 'google', error: search_timeout_error},
+        {query: 'slow', engine: 'google', error: 'Search timed out: The '
+            +'search for "slow" didn\'t finish within 45 s. Retry this '
+            +'query. Details: no answer within 0.05 s'},
     ]);
 });
 
@@ -60,6 +68,24 @@ test('search_batch keeps a per-query error before the deadline', async()=>{
     assert.deepEqual(res.map(r=>r.error||'ok'), ['boom', 'ok']);
 });
 
+test('search_batch: the same failure on every query is one error', async()=>{
+    const denied = Object.assign(new Error('401'), {isAxiosError: true,
+        response: {status: 401, data: 'Invalid token'}});
+    await assert.rejects(search_batch({run: ()=>Promise.reject(denied),
+        to_error, queries: [{query: 'a'}, {query: 'b'}]}),
+        /^UserError: Sign-in failed: .* Details: Invalid token$/);
+});
+
+test('search_batch: different failures stay per query', async()=>{
+    const rejected = Object.assign(new Error('400'), {isAxiosError: true,
+        response: {status: 400, data: 'bad'}});
+    const res = await search_batch({run: ()=>Promise.reject(rejected),
+        to_error, queries: [{query: 'a'}, {query: 'b'}]});
+    assert.deepEqual(res.map(r=>r.error.split('.')[0]), ['Search rejected: '
+        +'Bright Data rejected the search for "a"', 'Search rejected: '
+        +'Bright Data rejected the search for "b"']);
+});
+
 const parse = args=>search_schema.safeParse(args);
 const issue = args=>parse(args).error.issues[0].message;
 
@@ -70,11 +96,11 @@ test('search_schema defaults to bing, page 0, any time', ()=>{
 
 test('search_schema rejects the old argument names', ()=>{
     assert.match(issue({query: 'x', geo_location: 'us'}),
-        /^invalid_input: geo_location was renamed to country\./);
+        /^Invalid argument: geo_location was renamed to country\. .* got/);
     assert.match(issue({query: 'x', cursor: '1'}),
-        /^invalid_input: cursor was renamed to page/);
+        /^Invalid argument: cursor was renamed to page/);
     assert.match(issue({query: 'x', foo: 1}),
-        /^invalid_input: Unknown argument foo\./);
+        /^Invalid argument: Unknown argument foo\./);
 });
 
 test('search_schema rejects yandex and a negative page', ()=>{
@@ -86,7 +112,7 @@ test('search_schema allows on bing only day, week, year and any', ()=>{
     for (const time_range of ['hour', 'month'])
     {
         assert.match(issue({query: 'x', time_range}), new RegExp(
-            `^invalid_input: time_range ${time_range} is not supported`));
+            `^Invalid argument: time_range ${time_range} is not supported`));
     }
     for (const time_range of ['day', 'week', 'year', 'any'])
         assert.equal(parse({query: 'x', time_range}).success, true);
@@ -145,5 +171,10 @@ test('parse_search_response cleans a parsed bing answer', ()=>{
 
 test('parse_search_response treats an empty body as a failure', ()=>{
     assert.throws(()=>parse_search_response('', 'bing'),
-        /service_unavailable: bing search failed.*about 30 seconds\.$/);
+        e=>e.reason=='bing_failed');
+});
+
+test('search errors never mention a URL', ()=>{
+    for (const rule of SEARCH_RULES)
+        assert.ok(!/url/i.test(rule.what+rule.todo), rule.title);
 });

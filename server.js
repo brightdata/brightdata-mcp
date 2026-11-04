@@ -16,8 +16,8 @@ import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
     batch_pages, batch_cancel_s, single_max_chars} from './fetch_api.js';
 import {api_error, describe, read_error} from './errors.js';
-import {search_schema, search_request, parse_search_response, search_batch}
-    from './search_utils.js';
+import {search_schema, search_request, parse_search_response, search_batch,
+    SEARCH_RULES} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS}
     from './search_dataset_schema.js';
 import {createRequire} from 'node:module';
@@ -240,7 +240,7 @@ addTool({
     parameters: search_schema,
     execute: tool_fn('search_engine', async(args, ctx)=>
         JSON.stringify(await run_search(args, ctx, 'search_engine'), null,
-            2)),
+            2), SEARCH_RULES),
 });
 
 const fetch_deadline_ms = 45000;
@@ -342,7 +342,8 @@ addTool({
         JSON.stringify(await search_batch({queries,
             run: (q, signal)=>run_search(q, ctx, 'search_engine_batch',
                 signal),
-            to_error: e=>safe_error(e, api_token)}), null, 2)),
+            to_error: (e, q)=>error_text(e, SEARCH_RULES, q)}), null,
+            2)),
 });
 
 addTool({
@@ -717,7 +718,7 @@ for (let tool of browser_tools)
         try {
             return wrap_external(tool.name, await tool.execute(params, ctx));
         } catch(e){
-            throw new UserError(error_text(tool.name, e, [], params));
+            throw new UserError(error_text(e, [], params, true));
         }
     }});
 }
@@ -732,14 +733,14 @@ server.on('connect', (event)=>{
 });
 
 server.start({transportType: 'stdio'});
-function error_text(name, e, rules, vars){
+function error_text(e, rules, vars, untrusted){
     if (e instanceof UserError)
         return safe_error(e, api_token);
     const facts = read_error(e);
     if (facts.brd_code=='client_10100' && unlocker_zone=='mcp_unlocker')
         facts.reason = 'free_tier';
     // error bodies from a scraped origin are also untrusted
-    if (external_content_tools.has(name))
+    if (untrusted)
         facts.details = '\n'+wrap_untrusted(facts.details);
     return redact_token(describe(facts, rules, vars), api_token);
 }
@@ -785,7 +786,8 @@ function tool_fn(name, fn, rules = []){
         }
         catch(e){
             log_error(name, e);
-            const message = error_text(name, e, rules, data);
+            const message = error_text(e, rules, data,
+                external_content_tools.has(name));
             console.error(`[%s] error %s`, name, message);
             throw new UserError(message);
         } finally {

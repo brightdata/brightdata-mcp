@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- One error format for every tool: `<Title>: <what happened>. <what to
+  do> Details: <details>`, e.g. `Zone not found: ...` or `Rate limited:
+  ...`. Titles replace the old codes (`invalid_input`, `rate_limited`,
+  ...). Details carry the API's message, the HTTP status, or the error
+  text, on every error.
+- Search errors name the query, fetch errors name the URL.
+- A missing zone, a usage limit and a failed sign-in are reported as
+  such, never as a bad input.
+- `scrape_batch` returns one error per URL even when every URL fails. A
+  batch that fails as a whole (job failed, timed out, rejected) is one
+  error.
+- `search_engine_batch` returns one error when every query fails the same
+  way (e.g. a bad token), instead of a copy per query.
+
 ## [4.3.0] - 2026-11-02
 
 ### Changed

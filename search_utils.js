@@ -1,11 +1,36 @@
 'use strict'; /*jslint node:true es9:true*/
 import {UserError} from 'fastmcp';
 import {z} from 'zod';
-import {line} from './fetch_api.js';
+import {tool_error} from './errors.js';
 
 export const search_batch_s = 45;
-export const search_timeout_error = line('timeout', 'The search did not '
-    +`finish within ${search_batch_s} s`, 'Retry this query.');
+
+export const SEARCH_RULES = [
+    {kind: 'timeout', title: 'Search timed out',
+        what: `The search for "{query}" didn't finish within `
+            +`${search_batch_s} s`,
+        todo: 'Retry this query.'},
+    {status: 400, title: 'Search rejected',
+        what: 'Bright Data rejected the search for "{query}"',
+        todo: 'Read the details. Check the query and its options, then '
+            +'retry.'},
+    {reason: 'google_failed', title: 'Search failed',
+        what: 'Google search failed for "{query}"',
+        todo: 'Try again in about 30 seconds, or use engine bing.'},
+    {reason: 'bing_failed', title: 'Search failed',
+        what: 'Bing search failed for "{query}"',
+        todo: 'Try again in about 30 seconds.'},
+];
+
+const ARG_RULES = {
+    renamed: {title: 'Invalid argument', what: '{key} was renamed to {to}',
+        todo: 'Retry with the new name.'},
+    unknown: {title: 'Invalid argument', what: 'Unknown argument {keys}',
+        todo: 'Retry without it.'},
+    time_range: {title: 'Invalid argument',
+        what: 'time_range {time_range} is not supported on bing',
+        todo: 'Use day, week, year or any, or use engine google.'},
+};
 
 const google_tbs ={hour: 'h', day: 'd', week: 'w', month: 'm', year: 'y'};
 const bing_filters = {day: 'ez1', week: 'ez2', year: 'ez3'};
@@ -13,10 +38,9 @@ const renamed = {geo_location: 'country', cursor: 'page (a number from 0)'};
 
 const unknown_keys_error = keys=>{
     const key = keys.find(k=>renamed[k]);
-    return key ? line('invalid_input', `${key} was renamed to `
-        +renamed[key], 'Retry with the new name.')
-        : line('invalid_input', `Unknown argument ${keys.join(', ')}`,
-            'Retry without it.');
+    const details = `got ${keys.join(', ')}`;
+    return key ? tool_error(ARG_RULES.renamed, details, {key, to: renamed[key]})
+        : tool_error(ARG_RULES.unknown, details, {keys: keys.join(', ')});
 };
 
 const error_map = (issue, ctx)=>({message: issue.code=='unrecognized_keys'
@@ -37,9 +61,8 @@ export const search_schema = z.object({
         && !bing_filters[args.time_range])
     {
         ctx.addIssue({code: z.ZodIssueCode.custom, path: ['time_range'],
-            message: line('invalid_input', `time_range ${args.time_range} `
-                +'is not supported on bing', 'Use day, week, year or any, '
-                +'or use engine google.')});
+            message: tool_error(ARG_RULES.time_range,
+                `engine bing, time_range ${args.time_range}`, args)});
     }
 });
 
@@ -85,9 +108,8 @@ export const parse_search_response = (response_text, engine)=>{
     catch(e){ data = null; }
     if (!data || typeof data!='object')
     {
-        throw new UserError(line('service_unavailable', `${engine} search `
-            +'failed for this query', 'Try again in about 30 seconds'
-            +(engine=='google' ? ', or use engine bing.' : '.')));
+        throw Object.assign(new Error('the search engine answer was not '
+            +'JSON'), {reason: `${engine}_failed`});
     }
     return clean_search_payload(data);
 };
@@ -96,12 +118,16 @@ export const search_batch = async({queries, run, to_error,
     ms = search_batch_s*1000})=>
 {
     const signal = AbortSignal.timeout(ms);
-    return Promise.all(queries.map(async q=>{
+    const timeout = Object.assign(new Error(`no answer within ${ms/1000} s`),
+        {name: 'TimeoutError'});
+    const items = await Promise.all(queries.map(async q=>{
         const item = {query: q.query, engine: q.engine};
         try { item.result = await run(q, signal); }
-        catch(e){
-            item.error = signal.aborted ? search_timeout_error : to_error(e);
-        }
+        catch(e){ item.error = to_error(signal.aborted ? timeout : e, q); }
         return item;
     }));
+    const errors = new Set(items.map(item=>item.error));
+    if (items.every(item=>item.error) && errors.size==1)
+        throw new UserError(items[0].error);
+    return items;
 };
