@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {to_page, to_items, max_chars, single_max_chars, FETCH_RULES,
-    UNLOCKER_RULES, unlocker_body}
+    UNLOCKER_RULES, unlocker_body, ascii_url}
     from '../fetch_api.js';
 import {api_error} from '../errors.js';
 
@@ -155,6 +155,24 @@ test('unlocker_body: header error, empty page, or the page', ()=>{
         /^Empty page: .* Details: site answered 204 with an empty page$/);
     assert.equal(unlocker_body({status: 200, data: '<p>x</p>', headers: {}}),
         '<p>x</p>');
+});
+
+test('ascii_url turns only a Unicode host into punycode', ()=>{
+    assert.equal(ascii_url('https://münchen.de/a?q=ü'),
+        'https://xn--mnchen-3ya.de/a?q=ü');
+    for (const url of ['https://Example.com', 'https://a.example/ü path',
+        'not a url'])
+    {
+        assert.equal(ascii_url(url), url);
+    }
+});
+
+test('to_items matches a punycode record back to the Unicode URL', ()=>{
+    const idn = 'https://münchen.de/';
+    const [item] = to_items([idn], [record({url: 'https://xn--mnchen-3ya.de/',
+        input: {url: 'https://xn--mnchen-3ya.de/'}})]);
+    assert.equal(item.url, idn);
+    assert.equal(item.content, long_md);
 });
 
 test('a garbled page is text with a note, not a binary file', ()=>{

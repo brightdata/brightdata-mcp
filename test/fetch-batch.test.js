@@ -85,3 +85,9 @@ test('a trigger error is one tool error, never retried', async()=>{
     await assert.rejects(batch_pages({runner, urls, timing}), /^UserError: Rate limited: /);
     assert.equal(calls.length, 1);
 });
+
+test('a Unicode host is sent to the API as punycode', async()=>{
+    const {calls} = await run({}, ['https://münchen.de/']);
+    assert.deepEqual(calls.find(c=>c[0]=='trigger'),
+        ['trigger', [{url: 'https://xn--mnchen-3ya.de/'}]]);
+});

@@ -18,6 +18,19 @@ const field_text = (record, format)=>{
     return typeof value=='string' ? value : JSON.stringify(value);
 };
 
+const host_re = /^(\w+:\/\/)([^/?#]+)/;
+
+export const ascii_url = url=>{
+    const host = url.match(host_re)?.[2];
+    if (!host || /^[ -~]*$/.test(host))
+        return url;
+    try { return url.replace(host_re, `$1${new URL(url).host}`); }
+    catch(e){ return url; }
+};
+
+export const with_url = (record, url)=>({...record,
+    input: {...record.input, url}});
+
 const garbled_note = content=>{
     const count = content.split('\ufffd').length-1;
     return count/content.length>0.02 ? `${count} characters could not be `
@@ -186,8 +199,12 @@ export const to_page = (record, format = 'markdown', max = max_chars)=>{
 
 export const to_items = (urls, records, format)=>{
     const by_url = new Map(records.map(r=>[r.input?.url||r.url, r]));
-    return urls.map(url=>by_url.has(url) ? to_page(by_url.get(url), format)
-        : {url, error: page_error('no_data', url, 'no record for this URL')});
+    return urls.map(url=>{
+        const record = by_url.get(ascii_url(url));
+        return record ? to_page(with_url(record, url), format)
+            : {url, error: page_error('no_data', url, 'no record for this '
+                +'URL')};
+    });
 };
 
 export const batch_timing = {cancel_ms: batch_cancel_s*1000,
@@ -231,7 +248,7 @@ export const batch_pages = async({runner, urls, format, headers,
     try {
         snapshot_id = await runner.trigger({dataset_id: fetch_dataset_id,
             method: 'collect_by_url', headers,
-            input: [...new Set(urls)].map(url=>({url}))});
+            input: [...new Set(urls.map(ascii_url))].map(url=>({url}))});
     } catch(e){
         throw new UserError(api_error(e, BATCH_RULES));
     }
