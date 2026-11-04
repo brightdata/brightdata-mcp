@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- `search_engine_batch` waits up to 55 s (was 45 s) before returning a
+  timeout for the searches that haven't finished.
+
 ## [4.4.0] - 2026-11-04
 
 ### Changed

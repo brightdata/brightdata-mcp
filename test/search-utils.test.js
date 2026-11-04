@@ -54,7 +54,7 @@ test('search_batch returns ready results and times out the rest',
     assert.deepEqual(res, [
         {query: 'fast', engine: 'bing', result: {organic: []}},
         {query: 'slow', engine: 'google', error: 'Search timed out: The '
-            +'search for "slow" didn\'t finish within 45 s. Retry this '
+            +'search for "slow" didn\'t finish within 55 s. Retry this '
             +'query. Details: no answer within 0.05 s'},
     ]);
 });

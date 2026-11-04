@@ -3,7 +3,7 @@ import {UserError} from 'fastmcp';
 import {z} from 'zod';
 import {tool_error} from './errors.js';
 
-export const search_batch_s = 45;
+export const search_batch_s = 55;
 
 export const SEARCH_RULES = [
     {kind: 'timeout', title: 'Search timed out',

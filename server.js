@@ -335,7 +335,7 @@ addTool({
     description: 'Run up to 5 searches at once, on Bing (default) or '
     +'Google. Returns a JSON array in input order: query, engine, and '
     +'result (organic link, title, description) or error. Searches not '
-    +'done within 45 s return a timeout error.',
+    +'done within 55 s return a timeout error.',
     annotations: {
         title: 'Search Engine Batch',
         readOnlyHint: true,
