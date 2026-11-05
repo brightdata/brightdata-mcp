@@ -61,7 +61,9 @@ let scraping_browser_navigate = {
         openWorldHint: true,
     },
     parameters: z.object({
-        url: z.string().describe('The URL to navigate to'),
+        url: z.string().url()
+            .regex(/^https?:\/\//i, 'Only http and https URLs are supported')
+            .describe('The URL to navigate to'),
         country: z.string().regex(/^[A-Za-z]{2}$/)
             .optional()
             .describe('Optional 2-letter ISO country code to route the '
