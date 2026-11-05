@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [4.5.0] - 2026-11-05
 
 ### Changed
 - `search_engine_batch` waits up to 55 s (was 45 s) before returning a
