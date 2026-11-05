@@ -15,6 +15,10 @@ const api_error = (step, e)=>{
     err.step = step;
     err.cause = e;
     err.error_code = e.response?.status??e.code;
+    const not_found = step=='trigger' ? 'scraper_not_found'
+        : 'snapshot_not_found';
+    if (e.response?.status==404)
+        err.reason = not_found;
     return err;
 };
 
@@ -63,7 +67,11 @@ export function create_scraper_run(opt = {}){
         if (res.status==202 || PENDING.includes(res.data?.status))
             return {snapshot_id, status: 'running'};
         if (res.data?.status=='failed')
-            throw api_error('results', new Error('data collection failed'));
+        {
+            throw Object.assign(api_error('results',
+                new Error('data collection failed')),
+                {reason: 'collection_failed'});
+        }
         return {snapshot_id, status: 'ready', data: strip_nulls(res.data)};
     };
     const cancel = async(snapshot_id, headers)=>{

@@ -1,7 +1,9 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {scraper_tools, scraper_tool_names} from '../scraper_tools.js';
+import {scraper_tools, scraper_tool_names, SCRAPER_RULES}
+    from '../scraper_tools.js';
+import {api_error} from '../errors.js';
 
 const setup = (runner = {})=>{
     const calls = [];
@@ -75,4 +77,24 @@ test('tools record the scraper and failed step in tool_meta', async()=>{
         method: 'collect_by_url', input: [{url: 'u'}]}), err);
     assert.deepEqual(tool_meta, {dataset_id: 'gd_2',
         method: 'collect_by_url', failed_step: 'trigger', error_code: 401});
+});
+
+test('scraper errors get their own titles', ()=>{
+    const http = (step, status, data)=>Object.assign(new Error('x'), {step,
+        cause: {isAxiosError: true, response: {status, data, headers: {}}}});
+    const cases = [
+        [Object.assign(http('trigger', 404), {reason: 'scraper_not_found'}),
+            'Scraper not found'],
+        [Object.assign(new Error('x'), {reason: 'method_not_found'}),
+            'Method not found'],
+        [http('trigger', 400, {error: 'Invalid input provided'}),
+            'Scraper input rejected'],
+        [Object.assign(http('results', 404), {reason: 'snapshot_not_found'}),
+            'Snapshot not found'],
+        [Object.assign(new Error('x'), {reason: 'collection_failed'}),
+            'Collection failed'],
+        [http('progress', 400), 'Request rejected'],
+    ];
+    for (const [e, title] of cases)
+        assert.equal(api_error(e, SCRAPER_RULES).split(':')[0], title);
 });

@@ -40,7 +40,9 @@ test('scraper tools are on by default and run end to end', async t=>{
     const bad = await call(client, 'get_scraper_details',
         {dataset_id: 'gd_nope', method: 'collect_by_url'});
     assert.ok(bad.error);
-    assert.match(bad.text, /Unknown dataset_id gd_nope/);
+    assert.equal(bad.text, 'Scraper not found: No scraper has dataset_id '
+        +'gd_nope. Call search_scrapers to find the right dataset_id. '
+        +'Details: Unknown dataset_id gd_nope');
     const run = await call(client, 'run_scraper', {dataset_id: 'gd_rev',
         method: 'collect_by_url', input: [{url: 'https://amazon.com/r'}]});
     assert.deepEqual(run.data, {snapshot_id: 's_1', status: 'ready',

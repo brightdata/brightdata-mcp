@@ -11,7 +11,7 @@ import {redact_url_creds, redact_token, safe_error} from './safe_error.js';
 import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
-import {scraper_tools} from './scraper_tools.js';
+import {scraper_tools, COLLECTION_RULES} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
     batch_pages, batch_cancel_s, single_max_chars, UNLOCKER_RULES,
@@ -681,7 +681,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                     {
                         throw Object.assign(new Error(`Data collection `
                             +`failed (snapshot ${snapshot_id})`),
-                            {snapshot_failed: true});
+                            {reason: 'collection_failed'});
                     }
                     if (['running', 'building', 'starting'].includes(
                         snapshot_response.data?.status))
@@ -702,15 +702,16 @@ for (let {dataset_id, id, description, inputs, defaults = {},
                 } catch(e){
                     console.error(`[${tool_name}] polling error: `
                         +`${e.message}`);
-                    if (e.response?.status === 400 || e.snapshot_failed)
+                    if (e.response?.status === 400 || e.reason)
                         throw e;
                     attempts++;
                     await new Promise(resolve=>setTimeout(resolve, 1000));
                 }
             }
-            throw new Error(`Timeout after ${max_attempts} seconds waiting `
-                +`for data`);
-        }),
+            throw Object.assign(new Error(`snapshot ${snapshot_id} not `
+                +`ready after ${max_attempts} s`),
+                {reason: 'collection_timeout'});
+        }, COLLECTION_RULES),
     });
 }
 

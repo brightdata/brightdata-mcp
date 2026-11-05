@@ -5,6 +5,33 @@ export const scraper_tool_names = ['search_scrapers', 'get_scraper_details',
     'run_scraper', 'get_scraper_progress', 'get_scraper_results',
     'refresh_scrapers'];
 
+export const COLLECTION_RULES = [
+    {reason: 'collection_failed', title: 'Collection failed',
+        what: 'Bright Data couldn\'t collect the data',
+        todo: 'Retry once. If it fails again, tell the user.'},
+    {reason: 'collection_timeout', title: 'Collection timed out',
+        what: 'The data wasn\'t ready after 10 minutes',
+        todo: 'Don\'t start a new run. If get_scraper_results is '
+            +'available, call it later with the snapshot_id in the details.'},
+];
+
+export const SCRAPER_RULES = [
+    {reason: 'scraper_not_found', title: 'Scraper not found',
+        what: 'No scraper has dataset_id {dataset_id}',
+        todo: 'Call search_scrapers to find the right dataset_id.'},
+    {reason: 'method_not_found', title: 'Method not found',
+        what: 'This scraper has no method {method}',
+        todo: 'Use one of the methods listed in the details.'},
+    {step: 'trigger', status: 400, title: 'Scraper input rejected',
+        what: 'The scraper rejected the input',
+        todo: 'Call get_scraper_details for the required fields, fix the '
+            +'input, then retry.'},
+    {reason: 'snapshot_not_found', title: 'Snapshot not found',
+        what: 'No run has snapshot_id {snapshot_id}',
+        todo: 'Use the snapshot_id that run_scraper returned.'},
+    ...COLLECTION_RULES,
+];
+
 const annotations = (name, title)=>{
     const job = name=='run_scraper';
     return {title, readOnlyHint: !job, destructiveHint: false,
@@ -30,7 +57,7 @@ export function scraper_tools({catalog, runner, tool_fn, headers}){
                     error_code: e.error_code});
                 throw e;
             }
-        }),
+        }, SCRAPER_RULES),
     });
     return [
         tool('search_scrapers', 'Search Scrapers', 'Find a Bright Data '

@@ -94,7 +94,8 @@ test('progress and results report status', async t=>{
 
 test('snapshot id is encoded into the path', async t=>{
     const {sr, state} = await setup(t);
-    await assert.rejects(sr.results('../../zone'), /HTTP 404/);
+    await assert.rejects(sr.results('../../zone'), {message: /HTTP 404/,
+        reason: 'snapshot_not_found'});
     assert.deepEqual(state.paths, ['/datasets/v3/snapshot/..%2F..%2Fzone']);
 });
 
@@ -170,8 +171,9 @@ test('trigger without snapshot_id is an error', async t=>{
 test('a failed snapshot is an error, not data', async t=>{
     const {sr, state} = await setup(t);
     state.failed = true;
-    await assert.rejects(sr.results('s_1', headers),
-        /results failed: data collection failed/);
+    await assert.rejects(sr.results('s_1', headers), {reason:
+        'collection_failed', message: 'results failed: data collection '
+        +'failed'});
 });
 
 test('cancel stops the run, a canceled snapshot has no records', async t=>{

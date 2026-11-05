@@ -104,13 +104,17 @@ export function create_scraper_catalog(opt = {}){
     const get_details = async(id, method, headers)=>{
         const entry = (await load_catalog()).find(s=>s.dataset_id==id);
         if (!entry)
-            throw new Error(`Unknown dataset_id ${id}, use search_scrapers`);
+        {
+            throw Object.assign(new Error(`Unknown dataset_id ${id}`),
+                {reason: 'scraper_not_found'});
+        }
         const {source, methods, description} = await fetch_methods(id,
             headers);
         if (!methods[method])
         {
-            throw new Error(`${entry.name} has no method ${method}, `
-                +`available: ${Object.keys(methods).join(', ')}`);
+            throw Object.assign(new Error(`${entry.name} has no method `
+                +`${method}, available: ${Object.keys(methods).join(', ')}`),
+                {reason: 'method_not_found'});
         }
         const d = to_method(methods[method], source);
         return {dataset_id: id, name: entry.name, domain: entry.domain,
