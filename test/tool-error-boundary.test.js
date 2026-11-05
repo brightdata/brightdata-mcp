@@ -237,3 +237,26 @@ test('Bright Data error details are not marked as untrusted site text',
         +'"bad.example". Read the details. Check the query and its options, '
         +'then retry. Details: zone not found');
 });
+
+test('the RATE_LIMIT cap is a titled error, not "execution failed"',
+    async t=>{
+    const stub = await start_stub_server();
+    t.after(()=>close_stub_server(stub));
+    const env = {...process.env, API_TOKEN: 'limit-token', RATE_LIMIT: '1/1h',
+        __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`};
+    delete env.GROUPS;
+    delete env.TOOLS;
+    const client = new Client({name: 'limit-test', version: '0'},
+        {capabilities: {tools: {}}});
+    t.after(()=>client.close());
+    await client.connect(new StdioClientTransport({cwd: repo_root, env,
+        command: process.execPath,
+        args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
+    await client.callTool({name: 'session_stats', arguments: {}});
+    const res = await client.callTool({name: 'session_stats', arguments: {}});
+    assert.equal(res.isError, true);
+    assert.equal(res.content[0].text, 'Call limit reached: This MCP '
+        +'server\'s RATE_LIMIT setting allows no more tool calls right now. '
+        +'Tell the user. Wait for the limit window to pass, or ask the user '
+        +'to raise RATE_LIMIT. Details: RATE_LIMIT is 1/1h');
+});

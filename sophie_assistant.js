@@ -50,10 +50,15 @@ export const ask_sophie = async({question, dialog_id, api_token,
         if (reply)
             return {answer: reply.message, dialog_id: returned_dialog_id};
     }
-    throw new Error('Bright Data assistant timed out after 60s; '
-        +`retry with dialog_id=${returned_dialog_id} to fetch the reply `
-        +`later`);
+    throw Object.assign(new Error(`no reply after 60 s, `
+        +`dialog_id=${returned_dialog_id}`), {reason: 'assistant_timeout'});
 };
+
+export const ASSISTANT_RULES = [
+    {reason: 'assistant_timeout', title: 'Assistant timed out',
+        what: 'The assistant didn\'t answer within 60 s',
+        todo: 'Retry once with the dialog_id from the details.'},
+];
 
 export const sophie_assistant_tool = {
     name: 'ask_brightdata_assistant',

@@ -106,8 +106,8 @@ test('ask_sophie throws with dialog_id when polling times out',
             axios_impl,
             sleep_impl: noop_sleep,
         }),
-        err=>err.message.includes('timed out')
-            && err.message.includes(dialog_id),
+        {reason: 'assistant_timeout',
+            message: `no reply after 60 s, dialog_id=${dialog_id}`},
     );
 });
 
@@ -152,7 +152,7 @@ test('ask_sophie treats non-array GET body as empty and times out',
             axios_impl,
             sleep_impl: noop_sleep,
         }),
-        err=>err.message.includes('timed out')
-            && err.message.includes(dialog_id),
+        {reason: 'assistant_timeout',
+            message: `no reply after 60 s, dialog_id=${dialog_id}`},
     );
 });

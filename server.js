@@ -13,7 +13,8 @@ import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools, COLLECTION_RULES} from './scraper_tools.js';
-import {sophie_assistant_tool, ask_sophie} from './sophie_assistant.js';
+import {sophie_assistant_tool, ask_sophie, ASSISTANT_RULES}
+    from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
     batch_pages, batch_cancel_s, single_max_chars, UNLOCKER_RULES,
     unlocker_body, ascii_url, with_url} from './fetch_api.js';
@@ -122,6 +123,12 @@ const api_headers = (clientName=null, tool_name=null)=>({
     ...tool_name ? {'x-mcp-tool': tool_name} : {},
 });
 
+const CALL_LIMIT_RULE = {reason: 'call_limit', title: 'Call limit reached',
+    what: 'This MCP server\'s RATE_LIMIT setting allows no more tool calls '
+        +'right now',
+    todo: 'Tell the user. Wait for the limit window to pass, or ask the user '
+        +'to raise RATE_LIMIT.'};
+
 function check_rate_limit(){
     if (!rate_limit_config) 
         return true;
@@ -133,7 +140,10 @@ function check_rate_limit(){
         .filter(timestamp=>timestamp>window_start);
     
     if (debug_stats.call_timestamps.length>=rate_limit_config.limit)
-        throw new Error(`Rate limit exceeded: ${rate_limit_config.display}`);
+    {
+        throw Object.assign(new Error(`RATE_LIMIT is `
+            +`${rate_limit_config.display}`), {reason: 'call_limit'});
+    }
     
     debug_stats.call_timestamps.push(now);
     return true;
@@ -217,7 +227,7 @@ addTool({
             api_token,
         });
         return JSON.stringify({answer, dialog_id: returned_id});
-    }),
+    }, ASSISTANT_RULES),
 });
 
 async function run_search(args, ctx, tool, signal){
@@ -764,14 +774,10 @@ function log_error(name, e){
 
 function tool_fn(name, fn, rules = []){
     return async(data, ctx)=>{
-        check_rate_limit();
         const clientInfo = global.mcpClientInfo;
         const clientName = clientInfo?.name || 'unknown-client';
         console.error(`[%s] executing (client=%s) %s`, name, clientName,
             JSON.stringify(data));
-        debug_stats.tool_calls[name] = debug_stats.tool_calls[name]||0;
-        debug_stats.tool_calls[name]++;
-        debug_stats.session_calls++;
         let ts = Date.now();
         const extended_ctx = {
             ...ctx,
@@ -779,6 +785,10 @@ function tool_fn(name, fn, rules = []){
             clientName,
         };
         try {
+            check_rate_limit();
+            debug_stats.tool_calls[name] = (debug_stats.tool_calls[name]||0)
+                +1;
+            debug_stats.session_calls++;
             let result = await fn(data, extended_ctx);
             if (page_content_tools.has(name))
             {
@@ -793,7 +803,7 @@ function tool_fn(name, fn, rules = []){
         }
         catch(e){
             log_error(name, e);
-            const message = error_text(e, rules, data,
+            const message = error_text(e, [CALL_LIMIT_RULE, ...rules], data,
                 site_error_tools.has(name));
             console.error(`[%s] error %s`, name, message);
             throw new UserError(message);
