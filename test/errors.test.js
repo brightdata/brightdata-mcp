@@ -95,12 +95,6 @@ test('account rules win over tool rules', ()=>{
         'Zone not found');
 });
 
-test('the free_tier reason picks the free-tier message', ()=>{
-    const facts = {...read_error(http(402, '', {'x-brd-err-code':
-        'client_10100'})), reason: 'free_tier'};
-    assert.equal(title(describe(facts)), 'Free credits used up');
-});
-
 test('rules match on step, reason and page', ()=>{
     const rules = [
         {step: 'trigger', status: 404, title: 'A', what: 'a', todo: 'a'},

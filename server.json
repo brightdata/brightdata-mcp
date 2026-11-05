@@ -25,13 +25,6 @@
           "format": "string"
         },
         {
-          "name": "WEB_UNLOCKER_ZONE",
-          "description": "Your unlocker zone name",
-          "isRequired": false,
-          "isSecret": false,
-          "format": "string"
-        },
-        {
           "name": "BROWSER_ZONE",
           "description": "Your browser zone name",
           "isRequired": false,

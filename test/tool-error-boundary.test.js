@@ -158,12 +158,12 @@ test('tool_fn caps a long upstream error body', async t=>{
     await client.connect(new StdioClientTransport({cwd: repo_root, env,
         command: process.execPath,
         args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
-    const res = await client.callTool({name: 'scrape_as_html',
+    const res = await client.callTool({name: 'scrape_as_markdown',
         arguments: {url: 'https://long-error.example/'}});
     const text = res.content.find(b=>b.type=='text').text;
     assert.equal(res.isError, true);
-    assert.match(text, /^Request rejected: .* Details: /);
-    assert.match(text, /UNTRUSTED_\w+_BEGIN/, 'site error text is marked');
+    assert.match(text, /^URL rejected: .* Details: /);
+    assert.doesNotMatch(text, /UNTRUSTED_\w+_BEGIN/);
     assert.match(text, /x{290}/);
     assert.doesNotMatch(text, /x{295}/);
 });
@@ -194,25 +194,25 @@ test('tool errors and logs never carry URL credentials', async t=>{
     assert.doesNotMatch(logs, /zone-pass-canary/);
 });
 
-test('the free zone gets the free-tier message on a usage limit', async t=>{
+test('a usage limit names both causes', async t=>{
     const stub = await start_stub_server();
     t.after(()=>close_stub_server(stub));
     const env = {...process.env, API_TOKEN: 'quota-token',
         __BRD_TEST_STUB_URL: `http://127.0.0.1:${stub.address().port}`};
     delete env.GROUPS;
     delete env.TOOLS;
-    delete env.WEB_UNLOCKER_ZONE;
     const client = new Client({name: 'quota-test', version: '0'},
         {capabilities: {tools: {}}});
     t.after(()=>client.close());
     await client.connect(new StdioClientTransport({cwd: repo_root, env,
         command: process.execPath,
         args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
-    const res = await client.callTool({name: 'scrape_as_html',
+    const res = await client.callTool({name: 'scrape_as_markdown',
         arguments: {url: 'https://quota.example/'}});
     const text = res.content.find(b=>b.type=='text').text;
     assert.equal(res.isError, true);
-    assert.match(text, /^Free credits used up: .*\/free-tier Details: /);
+    assert.match(text, /^Usage limit reached: .*free credits or funds, /);
+    assert.match(text, /zone hit a limit .*cp\/zones.* Details: /);
 });
 
 test('Bright Data error details are not marked as untrusted site text',

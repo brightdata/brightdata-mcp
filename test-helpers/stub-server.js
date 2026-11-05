@@ -29,7 +29,7 @@ export function start_stub_server(){
                     && req.url.startsWith('/zone/get_active_zones'))
                 {
                     res.writeHead(200, {'Content-Type': 'application/json'});
-                    res.end(JSON.stringify([{name: 'mcp_unlocker'},
+                    res.end(JSON.stringify([{name: 'mcp_serp'},
                         {name: 'mcp_browser'}]));
                     return;
                 }

@@ -5,14 +5,12 @@ import {redact_url_creds} from './safe_error.js';
 // Details: <details>". Rules are checked in order, first match wins:
 // account rules, then the tool's own rules, then the defaults.
 export const ACCOUNT_RULES = [
-    {reason: 'free_tier', title: 'Free credits used up',
-        what: 'The Bright Data account has used its 5,000 free monthly '
-            +'credits',
-        todo: 'Tell the user. Plan and usage: https://docs.brightdata.com/'
-            +'general/account/billing-and-pricing/free-tier'},
     {brd_code: 'client_10100', title: 'Usage limit reached',
-        what: 'The Bright Data account has reached its usage limit',
-        todo: 'Tell the user. Don\'t retry.'},
+        what: 'The Bright Data account is out of free credits or funds, '
+            +'or the zone hit a limit set on it',
+        todo: 'Tell the user to check billing (https://brightdata.com/cp/'
+            +'billing) and zone limits (https://brightdata.com/cp/zones). '
+            +'Don\'t retry.'},
     {details: /zone ".*" not found/, title: 'Zone not found',
         what: 'The Bright Data zone this tool uses doesn\'t exist',
         todo: 'Tell the user to create it or fix the zone setting; '

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.6.0] - 2026-11-05
+
+### Removed
+- `scrape_as_html`. Use `scrape_as_markdown` with `format: 'html'`.
+- `extract`.
+- `WEB_UNLOCKER_ZONE`. The server no longer uses or creates a Web
+  Unlocker zone. The variable is ignored if set.
+
+### Changed
+- A usage limit (`client_10100`) always returns `Usage limit reached`,
+  naming both causes: free credits or funds used up, or a zone limit.
+  It no longer guesses `Free credits used up` from the zone name.
+
 ## [4.5.0] - 2026-11-05
 
 ### Changed
@@ -10,8 +23,10 @@ All notable changes to this project will be documented in this file.
 - Scraper tools have their own errors: `Scraper not found` (call
   `search_scrapers`), `Method not found`, `Scraper input rejected` (call
   `get_scraper_details`), `Snapshot not found`, `Collection failed`.
-- `web_data_*` tools that wait 10 minutes without data report
-  `Collection timed out` with the snapshot_id, instead of `Tool error`.
+- `chatgpt_ai_insights` and `perplexity_ai_insights` report
+  `Collection timed out` with the snapshot_id after 10 minutes without
+  data, and `Collection failed` when the run fails, instead of
+  `Tool error`.
 - Browser tools use the common error format: `Element not found` /
   `Element ambiguous` (take a new snapshot), `Browser timed out`,
   `Site not found`, `Zone not found`, `Browser action failed`.

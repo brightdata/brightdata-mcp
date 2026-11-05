@@ -2,8 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {to_page, to_items, max_chars, single_max_chars, FETCH_RULES,
-    UNLOCKER_RULES, unlocker_body, ascii_url}
-    from '../fetch_api.js';
+    ascii_url} from '../fetch_api.js';
 import {api_error} from '../errors.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
@@ -129,32 +128,11 @@ test('to_page takes a larger cap for a single page', ()=>{
         max_chars+50);
 });
 
-test('an unknown domain is "Site not found", for fetch and unlocker', ()=>{
+test('an unknown domain is "Site not found"', ()=>{
     const url = 'https://nope.example/';
     assert.match(to_page({url, input: {url}, error_code: 'proxy',
         error: 'Could not resolve host nope.example'}).error,
         /^Site not found: nope.example doesn't resolve\. /);
-    let err;
-    try { unlocker_body({status: 200, data: '', headers: {'x-brd-error':
-        'Could not resolve host nope.example'}}); }
-    catch(e){ err = e; }
-    assert.match(api_error(err, UNLOCKER_RULES, {url}),
-        /^Site not found: nope.example .* Details: Could not resolve host/);
-});
-
-test('unlocker_body: header error, empty page, or the page', ()=>{
-    const err = response=>{
-        try { unlocker_body(response); } catch(e){ return e; }
-    };
-    const url = 'https://a.example/';
-    assert.match(api_error(err({status: 200, data: '', headers:
-        {'x-brd-error': 'response status was rejected: 500 status code'}}),
-        UNLOCKER_RULES, {url}), /^Site error: https:\/\/a.example\/ could not/);
-    assert.match(api_error(err({status: 200, data: ' ', headers:
-        {'x-brd-status-code': '204'}}), UNLOCKER_RULES, {url}),
-        /^Empty page: .* Details: site answered 204 with an empty page$/);
-    assert.equal(unlocker_body({status: 200, data: '<p>x</p>', headers: {}}),
-        '<p>x</p>');
 });
 
 test('ascii_url turns only a Unicode host into punycode', ()=>{

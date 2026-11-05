@@ -80,8 +80,6 @@ export const GROUPS = {
             ...base_tools,
             'search_engine_batch',
             'scrape_batch',
-            'scrape_as_html',
-            'extract',
             'session_stats',
         ],
     },

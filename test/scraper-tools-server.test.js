@@ -85,7 +85,7 @@ test('old groups and web_data names turn on the scraper tools', async t=>{
 
 test('no GROUPS or TOOLS turns on every tool', async t=>{
     const names = await list_tools(t, {GROUPS: '', TOOLS: ''});
-    for (const name of ['scraping_browser_navigate', 'scrape_as_html',
+    for (const name of ['scraping_browser_navigate', 'scrape_as_markdown',
         'session_stats', 'run_scraper'])
     {
         assert.ok(names.includes(name), `${name} listed`);

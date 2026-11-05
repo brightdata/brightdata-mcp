@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "brightdata-mcp",
   "display_name": "Bright Data MCP",
-  "version": "4.5.0",
+  "version": "4.6.0",
   "description": "Enhance AI Agents with Real-Time Web Data via Bright Data's web scraping and unblocking services",
-  "long_description": "The official Bright Data Model Context Protocol (MCP) server enables LLMs to access, discover and extract web data in real-time. This server allows MCP clients to seamlessly search the web, navigate websites, take action and retrieve data - without getting blocked - perfect for scraping tasks. Features include search engine scraping, web page scraping as markdown/HTML, structured data extraction from popular sites, and browser automation capabilities.",
+  "long_description": "The official Bright Data Model Context Protocol (MCP) server enables LLMs to access, discover and extract web data in real-time. This server allows MCP clients to seamlessly search the web, navigate websites, take action and retrieve data - without getting blocked - perfect for scraping tasks. Features include search engine scraping, web page scraping as markdown, text or HTML, structured data extraction from popular sites, and browser automation capabilities.",
   "author": {
     "name": "Bright Data",
     "email": "support@brightdata.com",
@@ -29,7 +29,6 @@
       "env": {
         "API_TOKEN": "${user_config.api_token}",
         "SERP_ZONE": "${user_config.serp_zone}",
-        "WEB_UNLOCKER_ZONE": "${user_config.web_unlocker_zone}",
         "BROWSER_ZONE": "${user_config.browser_zone}"
       }
     }
@@ -39,8 +38,6 @@
     {"name": "scrape_as_markdown", "description": "Scrape a single webpage. Returns the results in markdown (default), text, html or ld_json."},
     {"name": "search_engine_batch", "description": "Run up to 5 searches at once, on Bing (default) or Google. Returns a JSON array in input order, with a result or an error per query."},
     {"name": "scrape_batch", "description": "Scrape multiple webpage URLs and get back the results in markdown (default), text, html or ld_json. Processes up to 5 URLs."},
-    {"name": "scrape_as_html", "description": "Scrape a single webpage URL and get back the results in HTML."},
-    {"name": "extract", "description": "Scrape a webpage and extract structured data as JSON. First scrapes the page as markdown, then uses AI sampling to convert it to structured JSON format."},
     {"name": "ask_brightdata_assistant", "description": "Ask Bright Data's support assistant (Sophie) about Bright Data products, APIs, MCP usage, zones, scraping, or account setup. Supports threaded follow-ups via dialog_id."},
     {"name": "search_scrapers", "description": "Find a pre-built Bright Data scraper (Web Scraper API, 1,200+ sites) by site or data type."},
     {"name": "get_scraper_details", "description": "Show a scraper's description, input fields, example input and main output fields for one collection method."},
@@ -82,13 +79,6 @@
       "description": "SERP API zone name for search tools (default: mcp_serp)",
       "required": false,
       "default": "mcp_serp"
-    },
-    "web_unlocker_zone": {
-      "type": "string",
-      "title": "Web Unlocker Zone",
-      "description": "Custom Web Unlocker zone name (default: mcp_unlocker)",
-      "required": false,
-      "default": "mcp_unlocker"
     },
     "browser_zone": {
       "type": "string",

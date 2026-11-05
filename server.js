@@ -16,8 +16,8 @@ import {scraper_tools, COLLECTION_RULES} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie, ASSISTANT_RULES}
     from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
-    batch_pages, batch_cancel_s, single_max_chars, UNLOCKER_RULES,
-    unlocker_body, ascii_url, with_url} from './fetch_api.js';
+    batch_pages, batch_cancel_s, single_max_chars, ascii_url, with_url}
+    from './fetch_api.js';
 import {api_error, describe, read_error} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch,
     SEARCH_RULES} from './search_utils.js';
@@ -28,7 +28,6 @@ import {createRequire} from 'node:module';
 const require = createRequire(import.meta.url);
 const package_json = require('./package.json');
 const api_token = process.env.API_TOKEN;
-const unlocker_zone = process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker';
 const browser_zone = process.env.BROWSER_ZONE || 'mcp_browser';
 const serp_zone = process.env.SERP_ZONE || 'mcp_serp';
 const base_timeout = process.env.BASE_TIMEOUT
@@ -38,17 +37,13 @@ const base_max_retries = Math.min(
 // Tools whose result is page-derived content. Their return passes through the
 // content gate (see content_gate.js); every other tool is untouched.
 const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
-    'extract', 'scrape_batch', 'search_engine_batch']);
+    'scrape_batch', 'search_engine_batch']);
 // Tools that return attacker-controllable external web content. Their
 // output is wrapped as untrusted data so the model never treats embedded
 // text as instructions (indirect prompt injection). Scraper, dataset and
 // browser tools add themselves to this set below.
 const external_content_tools = new Set(['search_engine',
-    'scrape_as_markdown', 'scrape_as_html', 'search_engine_batch',
-    'scrape_batch', 'extract']);
-// only an unlocker error body can be the target site's own page; other
-// error details are Bright Data's messages
-const site_error_tools = new Set(['scrape_as_html', 'extract']);
+    'scrape_as_markdown', 'search_engine_batch', 'scrape_batch']);
 const wrap_external = (name, result)=>
     external_content_tools.has(name) && typeof result=='string'
         ? wrap_untrusted(result) : result;
@@ -186,8 +181,6 @@ async function ensure_required_zones(){
     }
     await ensure_zone(zones, serp_zone, {type: 'unblocker'},
         {type: 'unblocker', serp: true});
-    await ensure_zone(zones, unlocker_zone, {type: 'unblocker'},
-        {type: 'unblocker', ub_premium: true});
     await ensure_zone(zones, browser_zone, {type: 'browser_api'},
         {type: 'browser_api'});
 }
@@ -389,95 +382,6 @@ addTool({
             api_headers(ctx.clientName, 'scrape_batch'));
         return JSON.stringify(items);
     }),
-});
-
-addTool({
-    name: 'scrape_as_html',
-    description: 'Scrape a single webpage URL and get back the results in '
-    +'HTML.',
-    annotations: {
-        title: 'Scrape as HTML',
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true,
-    },
-    parameters: z.object({url: z.string().url()}),
-    execute: tool_fn('scrape_as_html', async({url}, ctx)=>{
-        let response = await axios({
-            url: 'https://api.brightdata.com/request',
-            method: 'POST',
-            data: {
-                url,
-                zone: unlocker_zone,
-                format: 'raw',
-            },
-            headers: api_headers(ctx.clientName, 'scrape_as_html'),
-            responseType: 'text',
-        });
-        return unlocker_body(response);
-    }, UNLOCKER_RULES),
-});
-
-addTool({
-    name: 'extract',
-    description: 'Scrape a webpage and extract structured data as JSON. '
-        + 'First scrapes the page as markdown, then uses AI sampling to convert '
-        + 'it to structured JSON format.',
-    annotations: {
-        title: 'Extract Structured Data',
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true,
-    },
-    parameters: z.object({
-        url: z.string().url(),
-        extraction_prompt: z.string().optional().describe(
-            'Custom prompt to guide the extraction process. If not provided, '
-            + 'will extract general structured data from the page.'
-        ),
-    }),
-    execute: tool_fn('extract', async ({ url, extraction_prompt }, ctx) => {
-        let scrape_response = await axios({
-            url: 'https://api.brightdata.com/request',
-            method: 'POST',
-            data: {
-                url,
-                zone: unlocker_zone,
-                format: 'raw',
-                data_format: 'markdown',
-            },
-            headers: api_headers(ctx.clientName, 'extract'),
-            responseType: 'text',
-        });
-
-        let markdown_content = unlocker_body(scrape_response);
-
-        let system_prompt = 'You are a data extraction specialist. You MUST respond with ONLY valid JSON, no other text or formatting. '
-            + 'Extract the requested information from the markdown content and return it as a properly formatted JSON object. '
-            + 'Do not include any explanations, markdown formatting, or text outside the JSON response.';
-
-        let user_prompt = extraction_prompt ||
-            'Extract the requested information from this markdown content and return ONLY a JSON object:';
-
-        let session = server.sessions[0]; // Get the first active session
-        if (!session) throw new Error('No active session available for sampling');
-
-        let sampling_response = await session.requestSampling({
-            messages: [
-                {
-                    role: "user",
-                    content: {
-                        type: "text",
-                        text: `${user_prompt}\n\nMarkdown content:\n${markdown_content}\n\nRemember: Respond with ONLY valid JSON, no other text.`,
-                    },
-                },
-            ],
-            systemPrompt: system_prompt,
-            includeContext: "thisServer",
-        });
-
-        return sampling_response.content.text;
-    }, UNLOCKER_RULES),
 });
 
 const SEARCHABLE_DATASETS_DESC = [
@@ -750,15 +654,10 @@ server.on('connect', (event)=>{
 });
 
 server.start({transportType: 'stdio'});
-function error_text(e, rules, vars, untrusted){
+function error_text(e, rules, vars){
     if (e instanceof UserError)
         return safe_error(e, api_token);
     const facts = read_error(e);
-    if (facts.brd_code=='client_10100' && unlocker_zone=='mcp_unlocker')
-        facts.reason = 'free_tier';
-    // error bodies from a scraped origin are also untrusted
-    if (untrusted)
-        facts.details = '\n'+wrap_untrusted(facts.details);
     return redact_token(describe(facts, rules, vars), api_token);
 }
 
@@ -803,8 +702,7 @@ function tool_fn(name, fn, rules = []){
         }
         catch(e){
             log_error(name, e);
-            const message = error_text(e, [CALL_LIMIT_RULE, ...rules], data,
-                site_error_tools.has(name));
+            const message = error_text(e, [CALL_LIMIT_RULE, ...rules], data);
             console.error(`[%s] error %s`, name, message);
             throw new UserError(message);
         } finally {

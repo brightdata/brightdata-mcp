@@ -4,8 +4,6 @@
 |scrape_as_markdown|Scrape a single webpage. Returns the content as markdown (default), text, html or ld_json.|
 |search_engine_batch|Run up to 5 searches in parallel, same params as search_engine. Returns a JSON array with a result or an error per query.|
 |scrape_batch|Scrape up to 5 webpages at once. Returns the content as markdown (default), text, html or ld_json.|
-|scrape_as_html|Scrape a single webpage with advanced extraction and return the HTML response body. Handles sites protected by bot detection or CAPTCHA.|
-|extract|Scrape a webpage as Markdown and convert it to structured JSON using AI sampling, with an optional custom extraction prompt.|
 |ask_brightdata_assistant|Ask Bright Data's support assistant (Sophie) about Bright Data products, APIs, MCP usage, zones, scraping, or account setup. Supports threaded follow-ups via dialog_id.|
 |session_stats|Report how many times each tool has been called during the current MCP session.|
 |search_scrapers|Find a pre-built Web Scraper API scraper (1,200+ sites) by site or data type. Returns dataset ID, name, domain and collection methods.|
