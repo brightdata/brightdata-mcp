@@ -7,6 +7,21 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - `search_engine_batch` waits up to 55 s (was 45 s) before returning a
   timeout for the searches that haven't finished.
+- Scraper tools have their own errors: `Scraper not found` (call
+  `search_scrapers`), `Method not found`, `Scraper input rejected` (call
+  `get_scraper_details`), `Snapshot not found`, `Collection failed`.
+- `web_data_*` tools that wait 10 minutes without data report
+  `Collection timed out` with the snapshot_id, instead of `Tool error`.
+- Browser tools use the common error format: `Element not found` /
+  `Element ambiguous` (take a new snapshot), `Browser timed out`,
+  `Site not found`, `Zone not found`, `Browser action failed`.
+- `ask_brightdata_assistant` reports `Assistant timed out` with the
+  dialog_id to retry with.
+- Reaching the `RATE_LIMIT` cap returns `Call limit reached` instead of
+  `Tool '...' execution failed: Rate limit exceeded`.
+
+### Fixed
+- `scraping_browser_navigate` accepts only http and https URLs.
 
 ## [4.4.0] - 2026-11-04
 
