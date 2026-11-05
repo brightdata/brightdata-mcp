@@ -308,8 +308,8 @@ export class Browser_session {
             const occurrences = snapshot.split(`[ref=${ref}]`).length-1;
             if (!occurrences)
             {
-                throw new Error(`Ref ${ref} not found in the current page `
-                    +`snapshot. Try capturing new snapshot.`);
+                throw Object.assign(new Error(`Ref ${ref} not found in the `
+                    +`current page snapshot`), {reason: 'ref_not_found'});
             }
             // A ref names exactly one element, so the marker appears once
             // on that element's line. A second occurrence can only be page
@@ -317,13 +317,14 @@ export class Browser_session {
             // describe the ref differently from the element it resolves to.
             if (occurrences>1)
             {
-                throw new Error(`Ref ${ref} appears more than once in the `
-                    +`current page snapshot and cannot be resolved `
-                    +`unambiguously. Capture a new snapshot and use the ref `
-                    +`from an element line, not from page text.`);
+                throw Object.assign(new Error(`Ref ${ref} appears more `
+                    +`than once in the current page snapshot`),
+                    {reason: 'ref_ambiguous'});
             }
             return page.locator(`aria-ref=${ref}`).describe(element);
         } catch(e){
+            if (e.reason)
+                throw e;
             throw new Error(`Error creating ref locator for ${element} with `
                 +`ref ${ref}: ${e.message}`);
         }

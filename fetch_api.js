@@ -55,7 +55,7 @@ export const FETCH_RULES = [
         todo: 'Read the details. Check the URL and retry.'},
 ];
 
-const site_not_found = {details: /could not resolve host/i,
+export const site_not_found = {details: /could not resolve host/i,
     title: 'Site not found', what: '{host} doesn\'t resolve',
     todo: 'Check the URL spelling; retrying won\'t help.'};
 

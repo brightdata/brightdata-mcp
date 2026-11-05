@@ -4,6 +4,7 @@ import {FastMCP, UserError} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
+import {BROWSER_RULES} from './browser_rules.js';
 import prompts from './prompts.js';
 import {gate_page_content, refusal_text} from './content_gate.js';
 import {wrap_untrusted} from './untrusted_content.js';
@@ -724,7 +725,7 @@ for (let tool of browser_tools)
         try {
             return wrap_external(tool.name, await tool.execute(params, ctx));
         } catch(e){
-            throw new UserError(error_text(e, [], params));
+            throw new UserError(error_text(e, BROWSER_RULES, params));
         }
     }});
 }

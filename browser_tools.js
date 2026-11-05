@@ -1,5 +1,5 @@
 'use strict'; /*jslint node:true es9:true*/
-import {UserError, imageContent as image_content} from 'fastmcp';
+import {imageContent as image_content} from 'fastmcp';
 import {z} from 'zod';
 import axios from 'axios';
 import {Browser_session} from './browser_session.js';
@@ -45,7 +45,7 @@ const calculate_cdp_endpoint = async country=>{
             +`${country_suffix}:${password}@brd.superproxy.io:9222`;
     } catch(e){
         if (e.response?.status===422)
-            throw new Error(`Browser zone '${browser_zone}' does not exist`);
+            throw new Error(`Browser zone "${browser_zone}" not found`);
         throw new Error(`Error retrieving browser credentials: ${e.message}`,
             {cause: e});
     }
@@ -74,19 +74,15 @@ let scraping_browser_navigate = {
         const browser_session = await require_browser(normalized_country);
         const page = await browser_session.get_page({url});
         await browser_session.clear_requests();
-        try {
-            await page.goto(url, {
-                timeout: 120000,
-                waitUntil: 'domcontentloaded',
-            });
-            return [
-                `Successfully navigated to ${url}`,
-                `Title: ${await page.title()}`,
-                `URL: ${page.url()}`,
-            ].join('\n');
-        } catch(e){
-            throw new UserError(`Error navigating to ${url}: ${e}`);
-        }
+        await page.goto(url, {
+            timeout: 120000,
+            waitUntil: 'domcontentloaded',
+        });
+        return [
+            `Successfully navigated to ${url}`,
+            `Title: ${await page.title()}`,
+            `URL: ${page.url()}`,
+        ].join('\n');
     },
 };
 
@@ -102,16 +98,12 @@ let scraping_browser_go_back = {
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
-        try {
-            await page.goBack();
-            return [
-                'Successfully navigated back',
-                `Title: ${await page.title()}`,
-                `URL: ${page.url()}`,
-            ].join('\n');
-        } catch(e){
-            throw new UserError(`Error navigating back: ${e}`);
-        }
+        await page.goBack();
+        return [
+            'Successfully navigated back',
+            `Title: ${await page.title()}`,
+            `URL: ${page.url()}`,
+        ].join('\n');
     },
 };
 
@@ -127,16 +119,12 @@ const scraping_browser_go_forward = {
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
-        try {
-            await page.goForward();
-            return [
-                'Successfully navigated forward',
-                `Title: ${await page.title()}`,
-                `URL: ${page.url()}`,
-            ].join('\n');
-        } catch(e){
-            throw new UserError(`Error navigating forward: ${e}`);
-        }
+        await page.goForward();
+        return [
+            'Successfully navigated forward',
+            `Title: ${await page.title()}`,
+            `URL: ${page.url()}`,
+        ].join('\n');
     },
 };
 
@@ -167,26 +155,22 @@ let scraping_browser_snapshot = {
     execute: async({filtered=false})=>{
         const browser_session = await require_browser();
         const page = await browser_session.get_page();
-        try {
-            const snapshot = await browser_session.capture_snapshot(
-                {filtered: browser_filtered_snapshot || filtered});
-            const lines = [
-                `Page: ${snapshot.url}`,
-                `Title: ${snapshot.title}`,
-                '',
-                'Interactive Elements:',
-                snapshot.aria_snapshot,
-            ];
-            if (snapshot.dom_snapshot)
-            {
-                lines.push('');
-                lines.push('DOM Interactive Elements:');
-                lines.push(snapshot.dom_snapshot);
-            }
-            return lines.join('\n');
-        } catch(e){
-            throw new UserError(`Error capturing snapshot: ${e}`);
+        const snapshot = await browser_session.capture_snapshot(
+            {filtered: browser_filtered_snapshot || filtered});
+        const lines = [
+            `Page: ${snapshot.url}`,
+            `Title: ${snapshot.title}`,
+            '',
+            'Interactive Elements:',
+            snapshot.aria_snapshot,
+        ];
+        if (snapshot.dom_snapshot)
+        {
+            lines.push('');
+            lines.push('DOM Interactive Elements:');
+            lines.push(snapshot.dom_snapshot);
         }
+        return lines.join('\n');
     },
 };
 
@@ -209,13 +193,9 @@ let scraping_browser_click_ref = {
     }),
     execute: async({ref, element})=>{
         const browser_session = await require_browser();
-        try {
-            const locator = await browser_session.ref_locator({element, ref});
-            await locator.click({timeout: 5000});
-            return `Successfully clicked element: ${element} (ref=${ref})`;
-        } catch(e){
-            throw new UserError(`Error clicking element ${element} with ref ${ref}: ${e}`);
-        }
+        const locator = await browser_session.ref_locator({element, ref});
+        await locator.click({timeout: 5000});
+        return `Successfully clicked element: ${element} (ref=${ref})`;
     },
 };
 
@@ -241,17 +221,13 @@ let scraping_browser_type_ref = {
     }),
     execute: async({ref, element, text, submit})=>{
         const browser_session = await require_browser();
-        try {
-            const locator = await browser_session.ref_locator({element, ref});
-            await locator.fill(text);
-            if (submit)
-                await locator.press('Enter');
-            const suffix = submit ? ' and submitted the form' : '';
-            return 'Successfully typed "'+text+'" into element: '+element
-                +' (ref='+ref+')'+suffix;
-        } catch(e){
-            throw new UserError(`Error typing into element ${element} with ref ${ref}: ${e}`);
-        }
+        const locator = await browser_session.ref_locator({element, ref});
+        await locator.fill(text);
+        if (submit)
+            await locator.press('Enter');
+        const suffix = submit ? ' and submitted the form' : '';
+        return 'Successfully typed "'+text+'" into element: '+element
+            +' (ref='+ref+')'+suffix;
     },
 };
 
@@ -274,12 +250,8 @@ let scraping_browser_screenshot = {
     }),
     execute: async({full_page=false})=>{
         const page = await (await require_browser()).get_page();
-        try {
-            const buffer = await page.screenshot({fullPage: full_page});
-            return image_content({buffer});
-        } catch(e){
-            throw new UserError(`Error taking screenshot: ${e}`);
-        }
+        const buffer = await page.screenshot({fullPage: full_page});
+        return image_content({buffer});
     },
 };
 
@@ -303,16 +275,12 @@ let scraping_browser_get_html = {
     }),
     execute: async({full_page=false})=>{
         const page = await (await require_browser()).get_page();
-        try {
-            if (!full_page)
-                return await page.$eval('body', body=>body.innerHTML);
-            const html = await page.content();
-            if (!full_page && html)
-                return html.split('<body>')[1].split('</body>')[0];
-            return html;
-        } catch(e){
-            throw new UserError(`Error getting HTML content: ${e}`);
-        }
+        if (!full_page)
+            return await page.$eval('body', body=>body.innerHTML);
+        const html = await page.content();
+        if (!full_page && html)
+            return html.split('<body>')[1].split('</body>')[0];
+        return html;
     },
 };
 
@@ -328,8 +296,7 @@ let scraping_browser_get_text = {
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
-        try { return await page.$eval('body', body=>body.innerText); }
-        catch(e){ throw new UserError(`Error getting text content: ${e}`); }
+        return await page.$eval('body', body=>body.innerText);
     },
 };
 
@@ -345,14 +312,10 @@ let scraping_browser_scroll = {
     parameters: z.object({}),
     execute: async()=>{
         const page = await (await require_browser()).get_page();
-        try {
-            await page.evaluate(()=>{
-                window.scrollTo(0, document.body.scrollHeight);
-            });
-            return 'Successfully scrolled to the bottom of the page';
-        } catch(e){
-            throw new UserError(`Error scrolling page: ${e}`);
-        }
+        await page.evaluate(()=>{
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+        return 'Successfully scrolled to the bottom of the page';
     },
 };
 
@@ -375,14 +338,9 @@ let scraping_browser_scroll_to_ref = {
     }),
     execute: async({ref, element})=>{
         const browser_session = await require_browser();
-        try {
-            const locator = await browser_session.ref_locator({element, ref});
-            await locator.scrollIntoViewIfNeeded();
-            return `Successfully scrolled to element: ${element} (ref=${ref})`;
-        } catch(e){
-            throw new UserError(`Error scrolling to element ${element} with `
-                +`ref ${ref}: ${e}`);
-        }
+        const locator = await browser_session.ref_locator({element, ref});
+        await locator.scrollIntoViewIfNeeded();
+        return `Successfully scrolled to element: ${element} (ref=${ref})`;
     },
 };
 
@@ -403,29 +361,25 @@ let scraping_browser_network_requests = {
     parameters: z.object({}),
     execute: async()=>{
         const browser_session = await require_browser();
-        try {
-            const requests = await browser_session.get_requests();
-            if (requests.size==0) 
-                return 'No network requests recorded for the current page.';
+        const requests = await browser_session.get_requests();
+        if (requests.size==0) 
+            return 'No network requests recorded for the current page.';
 
-            const results = [];
-            requests.forEach((response, request)=>{
-                const result = [];
-                result.push(`[${request.method().toUpperCase()}] ${request.url()}`);
-                if (response)
-                    result.push(`=> [${response.status()}] ${response.statusText()}`);
+        const results = [];
+        requests.forEach((response, request)=>{
+            const result = [];
+            result.push(`[${request.method().toUpperCase()}] ${request.url()}`);
+            if (response)
+                result.push(`=> [${response.status()}] ${response.statusText()}`);
 
-                results.push(result.join(' '));
-            });
-            
-            return [
-                `Network Requests (${results.length} total):`,
-                '',
-                ...results
-            ].join('\n');
-        } catch(e){
-            throw new UserError(`Error getting network requests: ${e}`);
-        }
+            results.push(result.join(' '));
+        });
+        
+        return [
+            `Network Requests (${results.length} total):`,
+            '',
+            ...results
+        ].join('\n');
     },
 };
 
@@ -450,13 +404,9 @@ let scraping_browser_wait_for_ref = {
     }),
     execute: async({ref, element, timeout})=>{
         const browser_session = await require_browser();
-        try {
-            const locator = await browser_session.ref_locator({element, ref});
-            await locator.waitFor({timeout: timeout || 30000});
-            return `Successfully waited for element: ${element} (ref=${ref})`;
-        } catch(e){
-            throw new UserError(`Error waiting for element ${element} with ref ${ref}: ${e}`);
-        }
+        const locator = await browser_session.ref_locator({element, ref});
+        await locator.waitFor({timeout: timeout || 30000});
+        return `Successfully waited for element: ${element} (ref=${ref})`;
     },
 };
 
@@ -489,36 +439,32 @@ let scraping_browser_fill_form = {
     }),
     execute: async({fields})=>{
         const browser_session = await require_browser();
-        try {
-            const results = [];
-            for (const field of fields)
+        const results = [];
+        for (const field of fields)
+        {
+            const locator = await browser_session.ref_locator({
+                element: field.name,
+                ref: field.ref,
+            });
+            if (field.type=='textbox' || field.type=='slider')
             {
-                const locator = await browser_session.ref_locator({
-                    element: field.name,
-                    ref: field.ref,
-                });
-                if (field.type=='textbox' || field.type=='slider')
-                {
-                    await locator.fill(field.value);
-                    results.push(`Filled ${field.name} with "${field.value}"`);
-                }
-                else if (field.type=='checkbox' || field.type=='radio')
-                {
-                    const checked = field.value=='true';
-                    await locator.setChecked(checked);
-                    results.push(`Set ${field.name} to ${checked ? 'checked'
-                        : 'unchecked'}`);
-                }
-                else if (field.type=='combobox')
-                {
-                    await locator.selectOption({label: field.value});
-                    results.push(`Selected "${field.value}" in ${field.name}`);
-                }
+                await locator.fill(field.value);
+                results.push(`Filled ${field.name} with "${field.value}"`);
             }
-            return 'Successfully filled form:\n'+results.join('\n');
-        } catch(e){
-            throw new UserError(`Error filling form: ${e}`);
+            else if (field.type=='checkbox' || field.type=='radio')
+            {
+                const checked = field.value=='true';
+                await locator.setChecked(checked);
+                results.push(`Set ${field.name} to ${checked ? 'checked'
+                    : 'unchecked'}`);
+            }
+            else if (field.type=='combobox')
+            {
+                await locator.selectOption({label: field.value});
+                results.push(`Selected "${field.value}" in ${field.name}`);
+            }
         }
+        return 'Successfully filled form:\n'+results.join('\n');
     },
 };
 

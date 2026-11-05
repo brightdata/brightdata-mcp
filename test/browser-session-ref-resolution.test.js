@@ -43,7 +43,7 @@ test('a ref that also appears inside page text is refused as ambiguous',
         ].join('\n'));
         await assert.rejects(
             ()=>session.ref_locator({element: 'Details', ref: 'e8'}),
-            /appears more than once .* cannot be resolved unambiguously/);
+            {reason: 'ref_ambiguous', message: /appears more than once/});
         assert.deepEqual(calls.selectors, [],
             'no locator is built for an ambiguous ref');
     });
@@ -54,7 +54,8 @@ test('a ref absent from the snapshot is still reported as not found',
             '- button "Submit" [ref=e8]');
         await assert.rejects(
             ()=>session.ref_locator({element: 'Other', ref: 'e12'}),
-            /Ref e12 not found in the current page snapshot/);
+            {reason: 'ref_not_found',
+                message: /Ref e12 not found in the current page snapshot/});
         assert.deepEqual(calls.selectors, []);
     });
 
