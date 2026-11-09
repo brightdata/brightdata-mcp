@@ -20,7 +20,7 @@ import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
     from './fetch_api.js';
 import {api_error, describe, read_error} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch,
-    SEARCH_RULES} from './search_utils.js';
+    search_batch_s, SEARCH_RULES} from './search_utils.js';
 import {dataset_id_schema, filter_schema, metadata_to_fields, FILTER_OPERATORS,
     DATASET_RULES}
     from './search_dataset_schema.js';
@@ -238,7 +238,8 @@ async function run_search(args, ctx, tool, signal){
 addTool({
     name: 'search_engine',
     description: 'Search Bing (default) or Google. Returns JSON: organic '
-        +'results with link, title and description.',
+        +'results with link, title and description. Searches not done '
+        +`within ${search_batch_s} s return a timeout error.`,
     annotations: {
         title: 'Search Engine',
         readOnlyHint: true,
@@ -247,8 +248,9 @@ addTool({
     },
     parameters: search_schema,
     execute: tool_fn('search_engine', async(args, ctx)=>
-        JSON.stringify(await run_search(args, ctx, 'search_engine'), null,
-            2), SEARCH_RULES),
+        JSON.stringify(await run_search(args, ctx, 'search_engine',
+            AbortSignal.timeout(search_batch_s*1000)), null, 2),
+        SEARCH_RULES),
 });
 
 const fetch_deadline_ms = 45000;
