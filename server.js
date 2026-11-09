@@ -16,7 +16,7 @@ import {scraper_tools, COLLECTION_RULES} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie, ASSISTANT_RULES}
     from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
-    batch_pages, batch_cancel_s, single_max_chars, ascii_url, with_url}
+    batch_pages, batch_cancel_s, ascii_url, with_url}
     from './fetch_api.js';
 import {api_error, describe, read_error} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch,
@@ -276,7 +276,7 @@ async function fetch_scrape(url, headers){
     }
 }
 
-async function fetch_page(url, format, headers, max){
+async function fetch_page(url, format, headers){
     let response;
     try { response = await fetch_scrape(ascii_url(url), headers); }
     catch(e){ return {url, error: api_error(e, FETCH_RULES, {url})}; }
@@ -286,12 +286,12 @@ async function fetch_page(url, format, headers, max){
             details: 'HTTP 202: still running'}, FETCH_RULES, {url})};
     }
     const record = Array.isArray(response.data) && response.data[0];
-    return record ? to_page(with_url(record, url), format, max)
+    return record ? to_page(with_url(record, url), format)
         : {url, error: page_error('no_data', url, 'empty response')};
 }
 
 async function scrape_page(url, format, headers){
-    const page = await fetch_page(url, format, headers, single_max_chars);
+    const page = await fetch_page(url, format, headers);
     if (page.error)
         throw new UserError(page.error);
     return JSON.stringify(page);

@@ -1,7 +1,7 @@
 'use strict'; /*jslint node:true es9:true*/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {to_page, to_items, max_chars, single_max_chars, FETCH_RULES,
+import {to_page, to_items, max_chars, FETCH_RULES,
     ascii_url} from '../fetch_api.js';
 import {api_error} from '../errors.js';
 
@@ -119,12 +119,6 @@ test('to_page cuts very large pages', ()=>{
     assert.equal(page.note, `content cut to the first ${max_chars} of `
         +`${max_chars+50} characters`);
     assert.equal('note' in to_page(record()), false);
-});
-
-test('to_page takes a larger cap for a single page', ()=>{
-    const big = record({markdown: 'x'.repeat(max_chars+50)});
-    assert.equal(to_page(big, 'markdown', single_max_chars).content.length,
-        max_chars+50);
 });
 
 test('an unknown domain is "Site not found"', ()=>{

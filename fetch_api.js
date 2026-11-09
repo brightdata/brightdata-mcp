@@ -7,8 +7,7 @@ export const fetch_formats = {markdown: 'markdown', text: 'html2text',
     html: 'page_html', ld_json: 'ld_json'};
 const fallback_formats = ['markdown', 'text'];
 const short_len = 100;
-export const max_chars = 100000;
-export const single_max_chars = 200000;
+export const max_chars = 40000;
 export const batch_cancel_s = 35;
 
 const field_text = (record, format)=>{
