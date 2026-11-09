@@ -38,7 +38,7 @@ test('a non-JSON answer is a search failure, google suggests bing', ()=>{
     catch(e){ err = e; }
     assert.equal(to_error(err, {query: 'pizza'}), 'Search failed: Google '
         +'search failed for "pizza". Try again in about 30 seconds, or use '
-        +'engine bing. Details: the search engine answer was not JSON');
+        +'engine bing.');
 });
 
 const hang = (q, signal)=>new Promise((done, fail)=>

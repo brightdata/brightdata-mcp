@@ -14,10 +14,10 @@ export const SEARCH_RULES = [
         what: 'Bright Data rejected the search for "{query}"',
         todo: 'Read the details. Check the query and its options, then '
             +'retry.'},
-    {reason: 'google_failed', title: 'Search failed',
+    {reason: 'google_failed', title: 'Search failed', no_details: true,
         what: 'Google search failed for "{query}"',
         todo: 'Try again in about 30 seconds, or use engine bing.'},
-    {reason: 'bing_failed', title: 'Search failed',
+    {reason: 'bing_failed', title: 'Search failed', no_details: true,
         what: 'Bing search failed for "{query}"',
         todo: 'Try again in about 30 seconds.'},
 ];

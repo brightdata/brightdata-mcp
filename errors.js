@@ -115,7 +115,7 @@ const fill = (text, vars)=>text.replace(/\{(\w+)\}/g,
 export const tool_error = (rule, details, vars = {})=>{
     const all = vars.url ? {host: host_of(vars.url), ...vars} : vars;
     return `${rule.title}: ${fill(rule.what, all)}. ${fill(rule.todo, all)}`
-        +` Details: ${details}`;
+        +(rule.no_details ? '' : ` Details: ${details}`);
 };
 
 export const describe = (facts, rules = [], vars = {})=>{
