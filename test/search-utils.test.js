@@ -103,7 +103,8 @@ test('search_schema rejects the old argument names', ()=>{
         /^Invalid argument: Unknown argument foo\./);
 });
 
-test('search_schema rejects yandex and a negative page', ()=>{
+test('search_schema rejects yandex, a negative page and no query', ()=>{
+    assert.equal(parse({query: ''}).success, false);
     assert.equal(parse({query: 'x', engine: 'yandex'}).success, false);
     assert.equal(parse({query: 'x', page: -1}).success, false);
 });

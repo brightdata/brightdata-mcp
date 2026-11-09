@@ -23,9 +23,9 @@ test('to_page returns the requested format', ()=>{
     assert.equal(page.content, '[{"@type":"Product"}]');
 });
 
-test('to_page shows final_url only after a redirect', ()=>{
+test('to_page drops final_url', ()=>{
     const page = to_page(record({final_url: 'https://b.example/'}));
-    assert.equal(page.final_url, 'https://b.example/');
+    assert.equal('final_url' in page, false);
 });
 
 test('to_page falls back to plain text when markdown is nearly empty', ()=>{
@@ -99,7 +99,6 @@ test('to_items keeps input order and matches records by input.url', ()=>{
         'https://b.example/', 'https://x.example/'], [a, b]);
     assert.deepEqual(items.map(i=>i.url), ['https://b.example/',
         'https://a.example/', 'https://b.example/', 'https://x.example/']);
-    assert.equal(items[0].final_url, 'https://c.example/');
     assert.equal(items[1].content, long_md);
     assert.match(items[3].error, /^No data: /);
 });

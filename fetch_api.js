@@ -159,8 +159,6 @@ export const to_page = (record, format = 'markdown', max = max_chars)=>{
         content = content.slice(0, max);
     }
     const page = {url};
-    if (record.final_url && record.final_url!=url)
-        page.final_url = record.final_url;
     if (record.page_title)
         page.title = record.page_title;
     Object.assign(page, {format, content});

@@ -47,12 +47,13 @@ const error_map = (issue, ctx)=>({message: issue.code=='unrecognized_keys'
     ? unknown_keys_error(issue.keys) : ctx.defaultError});
 
 export const search_schema = z.object({
-    query: z.string(),
+    query: z.string().min(1),
     engine: z.enum(['bing', 'google']).optional().default('bing'),
     country: z.string().length(2).optional()
         .describe('2-letter country code, e.g. "us", "de"'),
     page: z.number().int().min(0).optional().default(0)
-        .describe('Results page, 10 results per page, starting at 0'),
+        .describe('Results page, starting at 0. The number of results on a '
+            +'page varies.'),
     time_range: z.enum(['hour', 'day', 'week', 'month', 'year', 'any'])
         .optional().default('any')
         .describe('Bing supports only day, week, year and any'),

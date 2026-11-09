@@ -238,8 +238,7 @@ async function run_search(args, ctx, tool, signal){
 addTool({
     name: 'search_engine',
     description: 'Search Bing (default) or Google. Returns JSON: organic '
-        +'results with link, title and description, 10 per page. Ideal for '
-        +'gathering current information, news, and detailed search results.',
+        +'results with link, title and description.',
     annotations: {
         title: 'Search Engine',
         readOnlyHint: true,
@@ -313,9 +312,9 @@ const format_param = z.enum(Object.keys(fetch_formats)).optional()
 
 addTool({
     name: 'scrape_as_markdown',
-    description: 'Fetch one web page. Returns JSON: url, title, format, '
-    +'content. content is the page in one format, markdown by default. '
-    +'Pick another with the format param:\n'
+    description: 'Fetch one web page. Returns JSON: url, format, content, '
+    +'plus title and note when present. content is the page in one format, markdown by '
+    +'default. Pick another with the format param:\n'
     +'- text: plain text, no links or headings\n'
     +'- html: raw HTML, for CSS selectors or data hidden in the markup\n'
     +'- ld_json: schema.org data (price, rating, author...)\n'
@@ -358,15 +357,16 @@ addTool({
 addTool({
     name: 'scrape_batch',
     description: 'Fetch up to 5 web pages at once. Returns a JSON array in '
-    +'input order, one item per URL: url, title, format, content, or url '
-    +'and error if that page failed. content is the page in one format, '
-    +'markdown by default. Pick another with the format param:\n'
+    +'input order, one item per URL: url, format, content, plus title and '
+    +'note when present; or url and error if that page failed. content is the page '
+    +'in one format, markdown by default. Pick another with the format '
+    +'param:\n'
     +'- text: plain text, no links or headings\n'
     +'- html: raw HTML, for CSS selectors or data hidden in the markup\n'
     +'- ld_json: schema.org data (price, rating, author...)\n'
     +'If a page has no data in that format, markdown is returned instead, '
     +'with a note. No JavaScript rendering. Pages that take longer than '
-    +`${batch_cancel_s} s time out.`,
+    +`${batch_cancel_s} s time out (45 s when only one URL is sent).`,
     annotations: {
         title: 'Scrape Batch',
         readOnlyHint: true,
