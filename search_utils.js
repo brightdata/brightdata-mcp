@@ -81,8 +81,6 @@ export const search_request = ({query, engine, country, page, time_range})=>{
         return {url: url.href, format: 'raw', data_format: 'parsed_light'};
     }
     params.set('first', page*10+1);
-    if (country)
-        params.set('cc', country);
     if (bing_filters[time_range])
         params.set('filters', `ex1:"${bing_filters[time_range]}"`);
     return {url: url.href, format: 'raw', data_format: 'parsed_bing',

@@ -130,7 +130,7 @@ test('search_request builds the bing request', ()=>{
     assert.equal(url.origin+url.pathname, 'https://www.bing.com/search');
     assert.equal(url.searchParams.get('q'), 'a b');
     assert.equal(url.searchParams.get('first'), '21');
-    assert.equal(url.searchParams.get('cc'), 'fr');
+    assert.equal(url.searchParams.has('cc'), false);
     assert.equal(url.searchParams.get('filters'), 'ex1:"ez3"');
     assert.equal(req.data_format, 'parsed_bing');
     assert.equal(req.country, 'fr');
