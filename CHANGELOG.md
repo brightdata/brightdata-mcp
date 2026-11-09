@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.7.0] - 2026-11-09
+
+### Changed
+- `search_engine` returns a timeout error after 55 s, like
+  `search_engine_batch`.
+- `search_engine` and `search_engine_batch` reject an empty `query`.
+- Bing searches no longer send the `cc` URL parameter; `country` is
+  passed only as the request country.
+- `scrape_as_markdown` and `scrape_batch` cut page content at 40,000
+  characters (was 200,000 and 100,000).
+- `scrape_as_markdown` and `scrape_batch` no longer return `final_url`.
+- `Search failed` errors no longer end with a misleading
+  `Details: the search engine answer was not JSON`.
+- Clearer `search_engine`, `scrape_as_markdown` and `scrape_batch`
+  descriptions.
+
 ## [4.6.0] - 2026-11-05
 
 ### Removed
