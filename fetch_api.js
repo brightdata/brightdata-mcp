@@ -111,7 +111,29 @@ export const page_error = (page, url, details)=>
 const short_note = len=>`Note: only ${len} characters of text. If you `
     +'expected more, the page needs JavaScript.';
 
-export const to_page = (record, format = 'markdown', max = max_chars)=>{
+const chunk_end = (content, start)=>{
+    const end = start+max_chars;
+    if (end>=content.length)
+        return content.length;
+    const nl = content.lastIndexOf('\n', end-1);
+    return nl+1>start+max_chars*0.8 ? nl+1 : end;
+};
+
+const num = n=>n.toLocaleString('en-US');
+
+const cut_note = (start, end, len, snapshot_id)=>{
+    const shown = start ? `Showing ${num(start)}-${num(end)} of ${num(len)} `
+        +'characters' : `Cut at ${num(end)} of ${num(len)} characters `
+        +`(${Math.round(end/len*100)}%)`;
+    if (end==len || !snapshot_id)
+        return shown;
+    return `${shown}. To read the rest at no extra cost, call `
+        +`scrape_as_markdown with snapshot_id "${snapshot_id}" and `
+        +`start ${end}`;
+};
+
+export const to_page = (record, format = 'markdown', paging = {})=>{
+    const {start = 0, snapshot_id} = paging;
     const url = record.input?.url||record.url;
     if (record.error_code)
         return {url, error: describe(read_record(record), PAGE_RULES, {url})};
@@ -151,11 +173,18 @@ export const to_page = (record, format = 'markdown', max = max_chars)=>{
         notes.push(garbled);
     if (len<short_len && (format=='markdown' || format=='text'))
         notes.push(short_note(len));
-    if (content.length>max)
+    const full = content.length;
+    if (start>=full)
     {
-        notes.push(`content cut to the first ${max} of `
-            +`${content.length} characters`);
-        content = content.slice(0, max);
+        return {url, error: `Start out of range: start ${start} is past the `
+            +`end of ${url} (${full} characters). Use a start below `
+            +`${full}.`};
+    }
+    const end = chunk_end(content, start);
+    if (start || end<full)
+    {
+        notes.push(cut_note(start, end, full, snapshot_id));
+        content = content.slice(start, end);
     }
     const page = {url};
     if (record.page_title)
@@ -163,6 +192,8 @@ export const to_page = (record, format = 'markdown', max = max_chars)=>{
     Object.assign(page, {format, content});
     if (notes.length)
         page.note = notes.join('. ');
+    if (end<full && snapshot_id)
+        page.next = {snapshot_id, start: end};
     return page;
 };
 

@@ -116,9 +116,60 @@ test('to_items maps cancelled pages to timeouts', ()=>{
 test('to_page cuts very large pages', ()=>{
     const page = to_page(record({markdown: 'x'.repeat(max_chars+50)}));
     assert.equal(page.content.length, max_chars);
-    assert.equal(page.note, `content cut to the first ${max_chars} of `
-        +`${max_chars+50} characters`);
+    assert.equal(page.note, 'Cut at 40,000 of 40,050 characters (100%)');
+    assert.equal('next' in page, false);
     assert.equal('note' in to_page(record()), false);
+});
+
+const line = 'word '.repeat(19)+'\n';
+const big_md = line.repeat(1500);
+const snap = {snapshot_id: 'sd_x'};
+
+const read_all = (rec, format)=>{
+    let text = '', next = {...snap, start: 0}, page;
+    while (next)
+    {
+        page = to_page(rec, format, next);
+        text += page.content;
+        next = page.next;
+    }
+    return {text, last: page};
+};
+
+test('to_page cuts on a newline and says how to read on', ()=>{
+    const page = to_page(record({markdown: big_md}), 'markdown', snap);
+    assert.equal(page.content, line.repeat(416));
+    assert.deepEqual(page.next, {snapshot_id: 'sd_x', start: 39936});
+    assert.equal(page.note, 'Cut at 39,936 of 144,000 characters (28%). '
+        +'To read the rest at no extra cost, call scrape_as_markdown with '
+        +'snapshot_id "sd_x" and start 39936');
+});
+
+test('to_page chunks join back into the whole page', ()=>{
+    const {text, last} = read_all(record({markdown: big_md}));
+    assert.equal(text, big_md);
+    assert.equal(last.note, 'Showing 119,808-144,000 of 144,000 characters');
+});
+
+test('to_page cuts at 40k when there is no newline', ()=>{
+    const ld = [{'@type': 'Thing', name: 'n'.repeat(90000)}];
+    const page = to_page(record({ld_json: ld}), 'ld_json', snap);
+    assert.equal(page.content.length, max_chars);
+    assert.equal(read_all(record({ld_json: ld}), 'ld_json').text,
+        JSON.stringify(ld));
+});
+
+test('to_page short last chunk keeps format and gets no short note', ()=>{
+    const page = to_page(record({markdown: 'x'.repeat(max_chars+50)}),
+        'markdown', {...snap, start: max_chars});
+    assert.equal(page.format, 'markdown');
+    assert.equal(page.content, 'x'.repeat(50));
+    assert.equal(page.note, 'Showing 40,000-40,050 of 40,050 characters');
+});
+
+test('to_page rejects a start past the end', ()=>{
+    const page = to_page(record(), 'markdown', {...snap, start: 999});
+    assert.match(page.error, /^Start out of range: start 999 is past/);
 });
 
 test('an unknown domain is "Site not found"', ()=>{
