@@ -16,8 +16,8 @@ import {scraper_tools, COLLECTION_RULES} from './scraper_tools.js';
 import {sophie_assistant_tool, ask_sophie, ASSISTANT_RULES}
     from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
-    batch_pages, batch_cancel_s, ascii_url, with_url}
-    from './fetch_api.js';
+    batch_pages, batch_cancel_s, ascii_url, with_url, SNAPSHOT_RULES,
+    snapshot_id_of} from './fetch_api.js';
 import {api_error, describe, read_error} from './errors.js';
 import {search_schema, search_request, parse_search_response, search_batch,
     search_batch_s, SEARCH_RULES} from './search_utils.js';
@@ -276,7 +276,7 @@ async function fetch_scrape(url, headers){
     }
 }
 
-async function fetch_page(url, format, headers){
+async function fetch_page(url, format, headers, paging = {}){
     let response;
     try { response = await fetch_scrape(ascii_url(url), headers); }
     catch(e){ return {url, error: api_error(e, FETCH_RULES, {url})}; }
@@ -286,18 +286,29 @@ async function fetch_page(url, format, headers){
             details: 'HTTP 202: still running'}, FETCH_RULES, {url})};
     }
     const record = Array.isArray(response.data) && response.data[0];
-    return record ? to_page(with_url(record, url), format)
+    const snapshot_id = snapshot_id_of(response.headers);
+    return record ? to_page(with_url(record, url), format,
+        {...paging, snapshot_id})
         : {url, error: page_error('no_data', url, 'empty response')};
 }
 
-async function scrape_page(url, format, headers){
-    const page = await fetch_page(url, format, headers);
-    if (page.error)
-        throw new UserError(page.error);
-    return JSON.stringify(page);
-}
-
 const fetch_runner = create_scraper_run();
+
+async function read_snapshot(url, format, headers, paging){
+    const vars = {url, snapshot_id: paging.snapshot_id};
+    let res;
+    try { res = await fetch_runner.results(paging.snapshot_id, headers); }
+    catch(e){ return {url, error: api_error(e, SNAPSHOT_RULES, vars)}; }
+    if (res.status!='ready')
+    {
+        return {url, error: describe({kind: 'other', reason: res.status,
+            details: `snapshot ${res.status}`}, SNAPSHOT_RULES, vars)};
+    }
+    const record = res.data.find(r=>(r.input?.url||r.url)==ascii_url(url));
+    return record ? to_page(with_url(record, url), format, paging)
+        : {url, error: page_error('no_data', url, 'the snapshot has no '
+            +'record for this URL')};
+}
 
 async function scrape_urls(urls, format, headers){
     const unique = [...new Set(urls)];
@@ -322,17 +333,30 @@ addTool({
     +'- ld_json: schema.org data (price, rating, author...)\n'
     +'If the page has no data in that format, markdown is returned instead, '
     +'with a note. No JavaScript rendering. Pages that take longer than '
-    +'45 s time out.',
+    +'45 s time out. Pages over 40,000 characters are cut. To read the '
+    +'rest for free, call again with the snapshot_id and start from next.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
     },
-    parameters: z.object({url: z.string().url(), format: format_param}),
-    execute: tool_fn('scrape_as_markdown', async({url, format}, ctx)=>
-        scrape_page(url, format,
-            api_headers(ctx.clientName, 'scrape_as_markdown'))),
+    parameters: z.object({url: z.string().url(), format: format_param,
+        snapshot_id: z.string().optional()
+            .describe('From next in a cut result'),
+        start: z.number().int().min(0).optional().default(0)
+            .describe('Character offset to read from, from next')}),
+    execute: tool_fn('scrape_as_markdown', async({url, format, snapshot_id,
+        start}, ctx)=>
+    {
+        const headers = api_headers(ctx.clientName, 'scrape_as_markdown');
+        const page = snapshot_id ? await read_snapshot(url, format, headers,
+            {snapshot_id, start})
+            : await fetch_page(url, format, headers, {start});
+        if (page.error)
+            throw new UserError(page.error);
+        return JSON.stringify(page);
+    }),
 });
 
 addTool({

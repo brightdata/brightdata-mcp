@@ -105,6 +105,20 @@ export const BATCH_RULES = [
 const batch_error = (reason, details)=>new UserError(describe({kind: 'other',
     reason, details}, BATCH_RULES));
 
+export const SNAPSHOT_RULES = [
+    {reason: /^(snapshot_not_found|collection_failed|canceled)$/,
+        title: 'Snapshot not found',
+        what: 'Snapshot {snapshot_id} is gone or unreadable',
+        todo: 'Call scrape_as_markdown with {url} and no snapshot_id to '
+            +'fetch the page again.'},
+    {reason: 'running', title: 'Snapshot not ready',
+        what: 'Snapshot {snapshot_id} is still being written',
+        todo: 'Retry in a few seconds.'},
+];
+
+export const snapshot_id_of = headers=>/filename="?(sd_\w+)\.json/
+    .exec(headers?.['content-disposition']||'')?.[1];
+
 export const page_error = (page, url, details)=>
     describe({kind: 'page', page, details}, PAGE_RULES, {url});
 

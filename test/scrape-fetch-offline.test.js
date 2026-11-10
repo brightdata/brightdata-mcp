@@ -6,7 +6,7 @@ import {dirname, resolve} from 'node:path';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
 import {unwrap} from '../test-helpers/untrusted.js';
-import {start_stub_server, close_stub_server}
+import {start_stub_server, close_stub_server, long_text}
     from '../test-helpers/stub-server.js';
 
 const repo_root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,9 +25,9 @@ test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
         args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']});
     t.after(()=>client.close());
     await client.connect(transport);
-    const scrape = async url=>{
+    const scrape = async(url, more = {})=>{
         const res = await client.callTool({name: 'scrape_as_markdown',
-            arguments: {url}});
+            arguments: {url, ...more}});
         return {is_error: !!res.isError, text: res.content[0].text};
     };
     const calls = url=>stub.observed_requests
@@ -53,4 +53,17 @@ test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
     const busy = await scrape('https://busy.example/');
     assert.match(busy.text, /^Rate limited: .* Details: /);
     assert.equal(calls('https://busy.example/'), 1, '429 is never retried');
+
+    const long = 'https://long.example/';
+    const first = JSON.parse(unwrap((await scrape(long)).text));
+    assert.deepEqual(first.next, {snapshot_id: 'sd_stub1', start: 39996});
+    const rest = JSON.parse(unwrap((await scrape(long, first.next)).text));
+    assert.equal(first.content+rest.content, long_text.slice(0, 79984));
+    assert.equal(calls(long), 1, 'the rest is read from the snapshot');
+    assert.ok(stub.observed_requests.some(r=>
+        r.url?.startsWith('/datasets/v3/snapshot/sd_stub1')));
+
+    const gone = await scrape(long, {snapshot_id: 'sd_gone', start: 10});
+    assert.equal(gone.is_error, true);
+    assert.match(gone.text, /^Snapshot not found: Snapshot sd_gone is gone/);
 });
