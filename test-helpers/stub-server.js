@@ -16,6 +16,8 @@ const batch_record = url=>{
     const base = {url, input: {url}, final_url: url, page_title: 'Stub'};
     if (url.includes('bad.example'))
         return {...base, error_code: 'proxy', error: 'Could not resolve host'};
+    if (url.includes('long.example'))
+        return long_record(url);
     const text = url.includes('poisoned.example') ? poisoned_text
         : '# Example\n\nHello world.';
     return {...base, markdown: text, html2text: text};
@@ -73,6 +75,12 @@ export function start_stub_server(){
                         url: req.url, body: JSON.parse(body)});
                     res.writeHead(200, {'Content-Type': 'application/json'});
                     res.end(JSON.stringify({snapshot_id: 's_1'}));
+                    return;
+                }
+                if (req.url.startsWith('/datasets/v3/snapshot/sd_running'))
+                {
+                    res.writeHead(202, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify({status: 'running'}));
                     return;
                 }
                 if (req.url.startsWith('/datasets/v3/snapshot/sd_stub1'))

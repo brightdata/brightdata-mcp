@@ -240,3 +240,18 @@ test('to_items: a failed page takes none of the 40k', ()=>{
     assert.match(err.error, /^Page not found/);
     assert.equal(ok.content.length, max_chars);
 });
+
+test('fair_shares edges: empty, exact fit, odd split', ()=>{
+    assert.deepEqual(fair_shares([]), []);
+    assert.deepEqual(fair_shares([40000]), [40000]);
+    assert.deepEqual(fair_shares([20000, 20000, 1]), [19999, 19999, 1]);
+});
+
+test('to_page pages through the text fallback the same way', ()=>{
+    const rec = record({markdown: '', html2text: big_md});
+    const first = to_page(rec, 'markdown', snap);
+    assert.equal(first.format, 'text');
+    assert.match(first.note, /^markdown is not available.*\. Cut at 39,936/);
+    const {text} = read_all(rec, 'markdown');
+    assert.equal(text, big_md);
+});

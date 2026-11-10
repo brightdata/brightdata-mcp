@@ -66,4 +66,19 @@ test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
     const gone = await scrape(long, {snapshot_id: 'sd_gone', start: 10});
     assert.equal(gone.is_error, true);
     assert.match(gone.text, /^Snapshot not found: Snapshot sd_gone is gone/);
+
+    const busy_snap = await scrape(long, {snapshot_id: 'sd_running'});
+    assert.match(busy_snap.text, /^Snapshot not ready: .*Retry in a few/);
+
+    const res = await client.callTool({name: 'scrape_batch',
+        arguments: {urls: ['https://good.example/', long]}});
+    const [short, cut] = JSON.parse(unwrap(res.content[0].text));
+    assert.equal(short.content, '# Example\n\nHello world.');
+    assert.equal(short.content.length+cut.content.length<=40000, true);
+    assert.deepEqual(cut.next, {snapshot_id: 'sd_batch',
+        start: cut.content.length});
+    const more = JSON.parse(unwrap((await scrape(long, cut.next)).text));
+    assert.equal(cut.content+more.content,
+        long_text.slice(0, more.next.start), 'picks long.example from the '
+        +'2-record batch snapshot');
 });
