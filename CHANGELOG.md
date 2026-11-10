@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.8.0] - 2026-11-10
+
+### Added
+- `scrape_as_markdown` can read a long page in parts. A cut result has a
+  `next` field with `snapshot_id` and `start`; calling
+  `scrape_as_markdown` again with them returns the following part from
+  the saved snapshot, without fetching the page again and at no extra
+  cost.
+- The note on a cut page says how much was returned and how big the
+  whole page is, e.g. `Cut at 39,996 of 472,270 characters (8%)`.
+
+### Changed
+- `scrape_batch` caps the whole result at 40,000 characters (was
+  40,000 per page), shared between pages: short pages are returned
+  whole, longer ones split what is left. Each cut page has its own
+  `next` for `scrape_as_markdown`.
+- Pages are cut at the last line break before the limit, so a link or
+  table row is not split.
+
 ## [4.7.0] - 2026-11-09
 
 ### Changed
