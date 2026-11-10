@@ -125,12 +125,31 @@ export const page_error = (page, url, details)=>
 const short_note = len=>`Note: only ${len} characters of text. If you `
     +'expected more, the page needs JavaScript.';
 
-const chunk_end = (content, start)=>{
-    const end = start+max_chars;
+const chunk_end = (content, start, max)=>{
+    const end = start+max;
     if (end>=content.length)
         return content.length;
     const nl = content.lastIndexOf('\n', end-1);
-    return nl+1>start+max_chars*0.8 ? nl+1 : end;
+    return nl+1>start+max*0.8 ? nl+1 : end;
+};
+
+// max-min fair: short pages keep all their text, the rest share what's left
+export const fair_shares = (lens, budget = max_chars)=>{
+    const shares = lens.map(()=>0);
+    let left = budget, open = lens.map((_len, i)=>i);
+    while (open.length)
+    {
+        const share = Math.floor(left/open.length);
+        const small = open.filter(i=>lens[i]<=share);
+        if (!small.length)
+        {
+            open.forEach(i=>{ shares[i] = share; });
+            break;
+        }
+        small.forEach(i=>{ shares[i] = lens[i]; left -= lens[i]; });
+        open = open.filter(i=>lens[i]>share);
+    }
+    return shares;
 };
 
 const num = n=>n.toLocaleString('en-US');
@@ -147,7 +166,7 @@ const cut_note = (start, end, len, snapshot_id)=>{
 };
 
 export const to_page = (record, format = 'markdown', paging = {})=>{
-    const {start = 0, snapshot_id} = paging;
+    const {start = 0, snapshot_id, max = max_chars} = paging;
     const url = record.input?.url||record.url;
     if (record.error_code)
         return {url, error: describe(read_record(record), PAGE_RULES, {url})};
@@ -194,7 +213,7 @@ export const to_page = (record, format = 'markdown', paging = {})=>{
             +`end of ${url} (${full} characters). Use a start below `
             +`${full}.`};
     }
-    const end = chunk_end(content, start);
+    const end = chunk_end(content, start, max);
     if (start || end<full)
     {
         notes.push(cut_note(start, end, full, snapshot_id));
@@ -211,14 +230,16 @@ export const to_page = (record, format = 'markdown', paging = {})=>{
     return page;
 };
 
-export const to_items = (urls, records, format)=>{
+export const to_items = (urls, records, format, snapshot_id)=>{
     const by_url = new Map(records.map(r=>[r.input?.url||r.url, r]));
-    return urls.map(url=>{
-        const record = by_url.get(ascii_url(url));
-        return record ? to_page(with_url(record, url), format)
-            : {url, error: page_error('no_data', url, 'no record for this '
-                +'URL')};
-    });
+    const found = urls.map(url=>by_url.get(ascii_url(url)));
+    const lens = found.map((record, i)=>!record ? 0 : to_page(
+        with_url(record, urls[i]), format, {max: Infinity}).content?.length
+        ||0);
+    const shares = fair_shares(lens);
+    return urls.map((url, i)=>found[i] ? to_page(with_url(found[i], url),
+        format, {snapshot_id, max: shares[i]})
+        : {url, error: page_error('no_data', url, 'no record for this URL')});
 };
 
 export const batch_timing = {cancel_ms: batch_cancel_s*1000,
@@ -274,5 +295,5 @@ export const batch_pages = async({runner, urls, format, headers,
     }
     if (!records.length)
         throw batch_error('batch_timeout', 'no results before the deadline');
-    return to_items(urls, records, format);
+    return to_items(urls, records, format, snapshot_id);
 };

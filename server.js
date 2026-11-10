@@ -334,7 +334,8 @@ addTool({
     +'If the page has no data in that format, markdown is returned instead, '
     +'with a note. No JavaScript rendering. Pages that take longer than '
     +'45 s time out. Pages over 40,000 characters are cut. To read the '
-    +'rest for free, call again with the snapshot_id and start from next.',
+    +'rest for free, call again with the snapshot_id and start values from '
+    +'the result\'s next field.',
     annotations: {
         title: 'Scrape as Markdown',
         readOnlyHint: true,
@@ -392,7 +393,11 @@ addTool({
     +'- ld_json: schema.org data (price, rating, author...)\n'
     +'If a page has no data in that format, markdown is returned instead, '
     +'with a note. No JavaScript rendering. Pages that take longer than '
-    +`${batch_cancel_s} s time out (45 s when only one URL is sent).`,
+    +`${batch_cancel_s} s time out (45 s when only one URL is sent). `
+    +'The whole result is cut at 40,000 characters, shared between pages. '
+    +'To read the rest of a cut page for free, call scrape_as_markdown '
+    +'with its url and the snapshot_id and start values from that item\'s '
+    +'next field.',
     annotations: {
         title: 'Scrape Batch',
         readOnlyHint: true,

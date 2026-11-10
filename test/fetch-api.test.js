@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {to_page, to_items, max_chars, FETCH_RULES,
-    ascii_url} from '../fetch_api.js';
+    ascii_url, fair_shares} from '../fetch_api.js';
 import {api_error} from '../errors.js';
 
 const long_md = '# Title\n\n'+'Some text. '.repeat(20);
@@ -206,4 +206,37 @@ test('a garbled page is text with a note, not a binary file', ()=>{
     assert.match(page.note, /^40 characters could not be decoded: the site/);
     assert.equal('note' in to_page(record({markdown: long_md+'�'})),
         false);
+});
+
+test('fair_shares gives short pages all they need, the rest an equal share',
+    ()=>{
+    assert.deepEqual(fair_shares([2000, 5000, 30000, 60000, 100000]),
+        [2000, 5000, 11000, 11000, 11000]);
+    assert.deepEqual(fair_shares([1000, 2000]), [1000, 2000]);
+    assert.deepEqual(fair_shares([0, 90000]), [0, 40000]);
+});
+
+const page_of = (n, len)=>record({url: `https://p${n}.example/`,
+    input: {url: `https://p${n}.example/`}, markdown: 'y'.repeat(len)});
+
+test('to_items caps the whole batch at 40k, shared fairly', ()=>{
+    const lens = [2000, 5000, 30000, 60000, 100000];
+    const urls = lens.map((_len, n)=>`https://p${n}.example/`);
+    const items = to_items(urls, lens.map((len, n)=>page_of(n, len)),
+        'markdown', 'sd_batch');
+    assert.deepEqual(items.map(i=>i.content.length),
+        [2000, 5000, 11000, 11000, 11000]);
+    assert.equal('next' in items[1], false);
+    assert.deepEqual(items[4].next, {snapshot_id: 'sd_batch', start: 11000});
+    assert.match(items[4].note, /^Cut at 11,000 of 100,000 characters/);
+});
+
+test('to_items: a failed page takes none of the 40k', ()=>{
+    const bad = record({url: 'https://bad.example/',
+        input: {url: 'https://bad.example/'}, error_code: 'dead_page',
+        markdown: null});
+    const [err, ok] = to_items(['https://bad.example/', 'https://p1.example/'],
+        [bad, page_of(1, 90000)], 'markdown', 'sd_batch');
+    assert.match(err.error, /^Page not found/);
+    assert.equal(ok.content.length, max_chars);
 });
