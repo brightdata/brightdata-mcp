@@ -11,7 +11,7 @@
 <p>
   <a href="https://www.npmjs.com/package/@brightdata/mcp"><img src="https://img.shields.io/npm/v/@brightdata/mcp?style=flat-square" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/@brightdata/mcp"><img src="https://img.shields.io/npm/dw/@brightdata/mcp?style=flat-square" alt="npm downloads"></a>
-  <a href="https://github.com/brightdata-com/brightdata-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
+  <a href="https://github.com/brightdata/brightdata-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License"></a>
 </p>
 
 <p>
@@ -35,12 +35,10 @@
 The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **30 tools** covering:
 
 - **Web search** — Bing and Google results as structured data
-- **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
+- **Page scraping (Fetch API)** — any URL as Markdown, text, HTML or JSON-LD. Long pages can be read in parts
 - **Structured data (Web Scraper API)** — clean JSON from 1,200+ pre-built scrapers: Amazon, LinkedIn, Instagram, TikTok, YouTube, X, Reddit, Facebook, Crunchbase, Zillow, npm, PyPI and more, without parsing HTML. Six tools find and run any of them
 - **Browser automation** — navigate, click, type, screenshot, and read pages in a remote browser session
-- **LLM response collection** — send prompts to ChatGPT and Perplexity and get their answers back as structured data
-
-Every request is routed through Bright Data's unblocking infrastructure, so pages that block ordinary HTTP clients (bot detection, CAPTCHAs, rate limits, geo-restrictions) return normally. No proxy setup, no headless browser maintenance, no retry logic to write.
+- **LLM response collection** — send a prompt to ChatGPT or Perplexity and get the answer text back as Markdown
 
 Two deployment options: a hosted remote server (one URL, no installation) or a local instance via `npx @brightdata/mcp`.
 
@@ -233,13 +231,12 @@ What's included free:
 - Fetch any webpage and extract as Markdown
 - Access to 60+ pre-built scrapers for popular domains
 - Web search (Bing, Google)
-- Web unlocking (bot detection bypass, CAPTCHA solving, proxy rotation)
 - Browser automation
 - Geo-targeting
 
 Beyond the free tier — pay as you go, no commitment:
 
-| | Search, Scrape & Extract | Browser Navigation |
+| | Search & Scrape | Browser Navigation |
 |---|---|---|
 | **Pay as you go** | $1.50 / 1K results | $8 / GB |
 
@@ -270,10 +267,9 @@ Read product data as structured JSON: price, availability, rating, review count,
 
 | Task | Tools |
 |------|-------|
-| Products, reviews and search results from Amazon, Walmart, eBay, Best Buy, Etsy, Home Depot, Zara and other stores | `search_scrapers` → `get_scraper_details` → `run_scraper` |
-| Cross-retailer price view | the same flow with the Google Shopping scraper |
+| Products and search results from Amazon, Walmart, eBay, Etsy, Home Depot and other stores. Reviews from Walmart | `search_scrapers` → `get_scraper_details` → `run_scraper` |
 
-Example prompts: "Compare this laptop's price on Amazon vs Walmart vs Best Buy", "Get the rating and review count for ASIN B0D2Q9397Y", "Is this product in stock?".
+Example prompts: "Compare this laptop's price on Amazon vs Walmart vs eBay", "Get the rating and review count for ASIN B0D2Q9397Y", "Is this product in stock?".
 
 ### Market and competitor analysis
 
@@ -282,7 +278,7 @@ Build competitor profiles from live data: funding, headcount, hiring, customer r
 | Task | Tools |
 |------|-------|
 | Company funding, size, employees, job postings (Crunchbase, ZoomInfo, LinkedIn) | `search_scrapers` → `run_scraper` |
-| Customer sentiment (Google Maps, Facebook, app store reviews) | `search_scrapers` → `run_scraper` |
+| Customer sentiment (Facebook company reviews, app store reviews) | `search_scrapers` → `run_scraper` |
 | Competitor pricing pages | `scrape_as_markdown`, `scrape_batch` |
 | Market discovery | `search_engine_batch` |
 
@@ -290,14 +286,14 @@ Example prompt: "Analyze Notion as a competitor: pricing, funding, hiring focus,
 
 ### AI agents with reliable web access
 
-Replace built-in fetch/search tools that get blocked on protected sites. Every request goes through unblocking infrastructure, so agents don't fail on bot detection, CAPTCHAs, or geo-restrictions.
+Replace built-in fetch and search tools. Pages that need JavaScript or clicks go to the remote browser tools.
 
 | Task | Tools |
 |------|-------|
 | Drop-in replacement for built-in web search | `search_engine` |
 | Drop-in replacement for built-in URL fetch | `scrape_as_markdown` |
 | Parallel data collection (5 at a time) | `search_engine_batch`, `scrape_batch` |
-| Interactive sites (login walls, infinite scroll, dynamic content) | `scraping_browser_*` (14 tools) |
+| Interactive sites (infinite scroll, dynamic content, forms) | `scraping_browser_*` (14 tools) |
 
 ### Coding agents
 
@@ -312,12 +308,12 @@ Example prompts: "What's the latest version of express on npm?", "Get the README
 
 ### GEO and brand visibility
 
-Send prompts to major LLMs and get their answers back as structured data. Measure how AI assistants describe your brand, which sources they cite, and what they recommend — the feedback loop for Generative Engine Optimization.
+Send a prompt to ChatGPT or Perplexity and get the answer text back as Markdown. Each call sends one prompt.
 
 | Task | Tools |
 |------|-------|
-| ChatGPT answers with citations and recommendations | `chatgpt_ai_insights` |
-| Perplexity answers with sources | `perplexity_ai_insights` |
+| Send a prompt to ChatGPT (web search off) and get the answer text as Markdown | `chatgpt_ai_insights` |
+| Send a prompt to Perplexity and get the answer text as Markdown | `perplexity_ai_insights` |
 
 Example prompt: "Ask ChatGPT and Perplexity 'what is the best proxy provider' and compare how each one ranks us".
 
@@ -344,24 +340,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 | Task | Tools |
 |------|-------|
 | Collect multiple sources in one call | `scrape_batch` (up to 5 URLs) |
-| News and finance data | `search_engine` with news queries, `run_scraper` with the Yahoo Finance scraper |
-
----
-
-## How It Compares
-
-| Capability | Bright Data MCP | Typical web MCP servers |
-|------------|-----------------|------------------------|
-| Total tools | 30 | 2–10 |
-| Platform-specific structured JSON extractors | 1,200+ pre-built scrapers across e-commerce, social, business, finance, travel, app stores, through 6 tools | Rare; generic scraping only |
-| Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
-| Search engines | Bing, Google | Usually one |
-| Browser automation | 14 tools, remote browser, no local setup | Limited or none |
-| LLM response collection (ChatGPT, Perplexity) | Yes | Not offered |
-| Package registry data (npm, PyPI) | Yes | Not offered |
-| Batch operations | 10 searches or 10 scrapes per call | Usually single-request only |
-| Geo-targeting | Yes | Limited or none |
-| Free tier | 5,000 requests/month, browser automation included, no credit card | Varies; often rate-limited keyless access |
+| News | `search_engine` with news queries |
 
 ---
 
@@ -428,9 +407,10 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 
 - **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 5): `scrape_batch`
 - **Need to find information:** `search_engine`. Multiple queries (up to 5): `search_engine_batch`
-- **Structured data from a known platform (Amazon, LinkedIn, TikTok, npm, PyPI, etc.):** `search_scrapers` → `get_scraper_details` → `run_scraper` — returns clean JSON, faster and more reliable than scraping the same page
+- **Structured data from a known platform (Amazon, LinkedIn, TikTok, npm, PyPI, etc.):** `search_scrapers` → `get_scraper_details` → `run_scraper`. Returns JSON records. If the run takes longer than 45 seconds, `run_scraper` returns a `snapshot_id`: check it with `get_scraper_progress`, then read the records with `get_scraper_results`
 - **Raw HTML:** `scrape_as_markdown` with `format: 'html'`
-- **Page requires interaction (click, type, scroll, login):** `scraping_browser_*` tools
+- **Page cut at 40,000 characters:** call `scrape_as_markdown` again with `snapshot_id` and `start` from the result's `next` field. The rest is read from the saved page at no extra cost
+- **Page needs JavaScript or interaction (click, type, scroll):** `scraping_browser_*` tools. The scrape tools don't render JavaScript
 - **How ChatGPT/Perplexity answer a prompt:** `chatgpt_ai_insights` / `perplexity_ai_insights`
 - **Question about Bright Data itself (products, zones, errors, setup):** `ask_brightdata_assistant`
 
@@ -446,9 +426,9 @@ Notes on scraper runs:
 
 | Tool | Description | Group |
 |------|-------------|-------|
-| `search_engine` | Search Bing (default) or Google. Returns JSON (link, title, description), 10 results per page. Params: `country`, `page` (from 0), `time_range` (`hour`, `day`, `week`, `month`, `year`, `any`; Bing supports only `day`, `week`, `year`) | default / every group |
-| `search_engine_batch` | Up to 5 search queries in one call | default / `advanced_scraping` |
-| `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json. Pages over 40,000 characters are cut; to read the rest at no extra cost, call again with `snapshot_id` and `start` from the result's `next` field | default / every group |
+| `search_engine` | Search Bing (default) or Google. Returns JSON (link, title, description), 10 results per page. Params: `country`, `page` (from 0), `time_range` (`hour`, `day`, `week`, `month`, `year`, `any`; Bing supports only `day`, `week`, `year`). Times out after 55 s | default / every group |
+| `search_engine_batch` | Up to 5 search queries in one call. Searches not done within 55 s return a timeout error | default / `advanced_scraping` |
+| `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json. No JavaScript rendering. Pages over 40,000 characters are cut; to read the rest at no extra cost, call again with `snapshot_id` and `start` from the result's `next` field | default / every group |
 | `scrape_batch` | Up to 5 URLs in one call. Returns the content as markdown (default), text, html or ld_json. 40,000 characters in total, shared between pages; each cut page has a `next` for `scrape_as_markdown` | default / `advanced_scraping` |
 | `session_stats` | Tool usage counts for the current session | default / `advanced_scraping` |
 
@@ -537,17 +517,7 @@ Filter search over stored LinkedIn datasets; returns matching records at once, w
 
 ## Agent Skills
 
-Ready-to-use skills that teach your agent how to use this MCP server correctly. The full collection lives at [github.com/brightdata/skills](https://github.com/brightdata/skills) — 21 skills covering MCP orchestration, competitive intelligence, price comparison, brand listening, SEO audits, scraper building, RAG pipelines, and more.
-
-Three of the highest-impact skills:
-
-| Skill | What it does |
-|-------|--------------|
-| [bright-data-mcp](https://github.com/brightdata/skills/tree/main/skills/bright-data-mcp) | Makes Bright Data MCP the default for all web data operations, replacing WebFetch, WebSearch, and other built-in web tools that fail on bot detection |
-| [competitive-intel](https://github.com/brightdata/skills/tree/main/skills/competitive-intel) | Competitor snapshots, pricing comparison, review mining, hiring signals, content/SEO analysis, and market landscape maps from live web data |
-| [price-comparison](https://github.com/brightdata/skills/tree/main/skills/price-comparison) | Resolves a product across Amazon, Walmart, eBay, Best Buy, and Google Shopping and names the cheapest in-stock option |
-
-[Browse all 21 skills →](https://github.com/brightdata/skills)
+Bright Data's agent skills teach your agent when and how to use Bright Data. They live at [github.com/brightdata/skills](https://github.com/brightdata/skills). Start with `agent-onboarding`.
 
 ---
 
@@ -599,8 +569,8 @@ Three of the highest-impact skills:
 | `CONTENT_GATE` | When page content returned by a data tool looks like instructions to change the MCP configuration, the server asks the user (via MCP elicitation) before returning it. Set to `off` to disable | `on` | `off` |
 | `CONTENT_GATE_TIMEOUT` | Seconds to wait for the user's answer before withholding the content | `120` | `60`, `300` |
 | `BROWSER_FILTERED_SNAPSHOT` | `scraping_browser_snapshot` always lists only buttons, links and fields. Saves tokens, and stops page text posing as a clickable element (for sensitive tasks). If necessary, Page text can then be read with `scraping_browser_get_text` | `off` | `on` |
-| `BASE_TIMEOUT` | Request timeout for base tools in seconds (search and scrape) | No limit | `60`, `120` |
-| `BASE_MAX_RETRIES` | Max retries for base tools on transient errors (0-3) | `0` | `1`, `3` |
+| `BASE_TIMEOUT` | Request timeout in seconds for the search and dataset tools (search also stops at 55 s) | No limit | `60`, `120` |
+| `BASE_MAX_RETRIES` | Max retries for the search and dataset tools on transient errors (0-3) | `0` | `1`, `3` |
 | `GROUPS` | Comma-separated tool group IDs. Limits the server to these groups | All tools | `scrapers,browser` |
 | `TOOLS` | Comma-separated individual tool names. Limits the server to these tools | All tools | `scrape_batch,session_stats` |
 
@@ -629,8 +599,8 @@ is the knob on the server side. Browser tools are not covered.
 | API documentation | [docs.brightdata.com/ai/mcp-server/overview](https://docs.brightdata.com/ai/mcp-server/overview) |
 | Full tools reference | [docs.brightdata.com/ai/mcp-server/tools](https://docs.brightdata.com/ai/mcp-server/tools) |
 | Agent skills | [github.com/brightdata/skills](https://github.com/brightdata/skills) |
-| Usage examples | [examples](https://github.com/brightdata-com/brightdata-mcp/blob/main/examples) |
-| Changelog | [CHANGELOG.md](https://github.com/brightdata-com/brightdata-mcp/blob/main/CHANGELOG.md) |
+| Usage examples | [examples](https://github.com/brightdata/brightdata-mcp/blob/main/examples) |
+| Changelog | [CHANGELOG.md](https://github.com/brightdata/brightdata-mcp/blob/main/CHANGELOG.md) |
 
 ---
 
@@ -670,9 +640,9 @@ Check your internet connection and firewall settings.
 
 ## Contributing
 
-- [Report bugs](https://github.com/brightdata-com/brightdata-mcp/issues)
-- [Suggest features](https://github.com/brightdata-com/brightdata-mcp/issues)
-- [Submit PRs](https://github.com/brightdata-com/brightdata-mcp/pulls)
+- [Report bugs](https://github.com/brightdata/brightdata-mcp/issues)
+- [Suggest features](https://github.com/brightdata/brightdata-mcp/issues)
+- [Submit PRs](https://github.com/brightdata/brightdata-mcp/pulls)
 
 Please follow [Bright Data's coding standards](https://brightdata.com/dna/js_code).
 
@@ -682,7 +652,7 @@ Please follow [Bright Data's coding standards](https://brightdata.com/dna/js_cod
 
 | Channel | Link |
 |---------|------|
-| GitHub issues | [github.com/brightdata-com/brightdata-mcp/issues](https://github.com/brightdata-com/brightdata-mcp/issues) |
+| GitHub issues | [github.com/brightdata/brightdata-mcp/issues](https://github.com/brightdata/brightdata-mcp/issues) |
 | Documentation | [docs.brightdata.com/ai/mcp-server/overview](https://docs.brightdata.com/ai/mcp-server/overview) |
 | Email | [support@brightdata.com](mailto:support@brightdata.com) |
 
