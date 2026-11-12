@@ -448,8 +448,8 @@ Notes on scraper runs:
 |------|-------------|-------|
 | `search_engine` | Search Bing (default) or Google. Returns JSON (link, title, description), 10 results per page. Params: `country`, `page` (from 0), `time_range` (`hour`, `day`, `week`, `month`, `year`, `any`; Bing supports only `day`, `week`, `year`) | default / every group |
 | `search_engine_batch` | Up to 5 search queries in one call | default / `advanced_scraping` |
-| `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json | default / every group |
-| `scrape_batch` | Up to 5 URLs in one call. Returns the content as markdown (default), text, html or ld_json | default / `advanced_scraping` |
+| `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json. Pages over 40,000 characters are cut; to read the rest at no extra cost, call again with `snapshot_id` and `start` from the result's `next` field | default / every group |
+| `scrape_batch` | Up to 5 URLs in one call. Returns the content as markdown (default), text, html or ld_json. 40,000 characters in total, shared between pages; each cut page has a `next` for `scrape_as_markdown` | default / `advanced_scraping` |
 | `session_stats` | Tool usage counts for the current session | default / `advanced_scraping` |
 
 </details>
