@@ -18,7 +18,7 @@
   <a href="#quick-start">Quick Start</a> •
   <a href="#pricing-and-free-tier">Pricing</a> •
   <a href="#use-cases">Use Cases</a> •
-  <a href="#tools-reference-30-tools">Tools</a> •
+  <a href="#tools-reference-31-tools">Tools</a> •
   <a href="#agent-skills">Agent Skills</a> •
   <a href="#documentation">Docs</a> •
   <a href="#support">Support</a>
@@ -32,7 +32,7 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **30 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **31 tools** covering:
 
 - **Web search** — Bing and Google results as structured data
 - **Page scraping** — any URL as Markdown or HTML, with bot detection, CAPTCHA solving, and proxy rotation handled automatically on every request
@@ -297,7 +297,7 @@ Replace built-in fetch/search tools that get blocked on protected sites. Every r
 | Drop-in replacement for built-in web search | `search_engine` |
 | Drop-in replacement for built-in URL fetch | `scrape_as_markdown` |
 | Parallel data collection (5 at a time) | `search_engine_batch`, `scrape_batch` |
-| Interactive sites (login walls, infinite scroll, dynamic content) | `scraping_browser_*` (14 tools) |
+| Interactive sites (login walls, infinite scroll, dynamic content) | `scraping_browser_*` (15 tools) |
 
 ### Coding agents
 
@@ -352,11 +352,11 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 | Capability | Bright Data MCP | Typical web MCP servers |
 |------------|-----------------|------------------------|
-| Total tools | 30 | 2–10 |
+| Total tools | 31 | 2–10 |
 | Platform-specific structured JSON extractors | 1,200+ pre-built scrapers across e-commerce, social, business, finance, travel, app stores, through 6 tools | Rare; generic scraping only |
 | Unblocking (bot detection bypass, CAPTCHA solving, proxy rotation) | Built into every request | Usually none; blocked on protected sites |
 | Search engines | Bing, Google | Usually one |
-| Browser automation | 14 tools, remote browser, no local setup | Limited or none |
+| Browser automation | 15 tools, remote browser, no local setup | Limited or none |
 | LLM response collection (ChatGPT, Perplexity) | Yes | Not offered |
 | Package registry data (npm, PyPI) | Yes | Not offered |
 | Batch operations | 10 searches or 10 scrapes per call | Usually single-request only |
@@ -369,7 +369,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 Tools are organized into groups so you only load what you need. Fewer tools means less context for your agent to process.
 
-- With no `GROUPS` or `TOOLS`, all 30 tools are enabled. Setting either one limits the server to those tools only
+- With no `GROUPS` or `TOOLS`, all 31 tools are enabled. Setting either one limits the server to those tools only
 - `GROUPS` enables tool bundles. Comma-separated: `GROUPS="scrapers,browser"` (local) or `&groups=scrapers,browser` (hosted URL)
 - `TOOLS` adds individual tools on top: `TOOLS="scrape_batch,session_stats"`. On its own, it enables only the tools you list
 - Every group also includes `search_engine`, `scrape_as_markdown` and `ask_brightdata_assistant`
@@ -378,7 +378,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 | Group ID | Contents | Tool count |
 |----------|----------|-----------|
 | `scrapers` | Search and run any pre-built Web Scraper API scraper (Amazon, LinkedIn, TikTok, npm, ...) | 6 |
-| `browser` | Remote browser automation | 14 |
+| `browser` | Remote browser automation | 15 |
 | `geo` | ChatGPT and Perplexity response collection | 2 |
 | `advanced_scraping` | Batch tools, session stats | 3 |
 
@@ -422,7 +422,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 
 ---
 
-## Tools Reference (30 Tools)
+## Tools Reference (31 Tools)
 
 ### Which tool to use
 
@@ -473,7 +473,7 @@ Typical flow: `search_scrapers` → `get_scraper_details` → `run_scraper`. Run
 </details>
 
 <details>
-<summary><b>Browser Automation — 14 tools</b></summary>
+<summary><b>Browser Automation — 15 tools</b></summary>
 
 Remote browser session. Typical sequence: navigate → snapshot → interact by ref → extract or screenshot.
 
@@ -483,7 +483,8 @@ Remote browser session. Typical sequence: navigate → snapshot → interact by 
 | `scraping_browser_go_back` | Navigate back |
 | `scraping_browser_go_forward` | Navigate forward |
 | `scraping_browser_snapshot` | ARIA snapshot of the page listing interactive elements with refs. Required before ref-based actions |
-| `scraping_browser_click_ref` | Click an element by ref from the latest snapshot |
+| `scraping_browser_click_ref` | Click an element by ref from the latest snapshot; optional `force` skips the stable, enabled and not-covered checks |
+| `scraping_browser_hover_ref` | Hover over an element by ref to open menus, tooltips and other hover content |
 | `scraping_browser_type_ref` | Type into an element by ref; optionally press Enter to submit |
 | `scraping_browser_fill_form` | Fill several form fields by ref in one call |
 | `scraping_browser_screenshot` | Screenshot of the current page; optional `full_page` |

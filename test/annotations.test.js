@@ -43,6 +43,7 @@ const expected = {
     scraping_browser_get_text: web,
     scraping_browser_scroll: web,
     scraping_browser_scroll_to_ref: web,
+    scraping_browser_hover_ref: web,
     scraping_browser_network_requests: web,
     scraping_browser_wait_for_ref: web,
     scraping_browser_fill_form: act,

@@ -20,7 +20,8 @@
 |scraping_browser_go_back|Navigate the active scraping-browser session back to the previous page and report the new URL and title.|
 |scraping_browser_go_forward|Navigate the active scraping-browser session forward to the next page and report the new URL and title.|
 |scraping_browser_snapshot|Capture an ARIA snapshot of the current page listing interactive elements and their refs for later ref-based actions.|
-|scraping_browser_click_ref|Click an element using its ref from the latest ARIA snapshot; requires a ref and human-readable element description.|
+|scraping_browser_click_ref|Click an element using its ref from the latest ARIA snapshot; requires a ref and human-readable element description. Optional force skips the stable, enabled and not-covered checks; the click still lands at the element's position.|
+|scraping_browser_hover_ref|Move the mouse over an element identified by ARIA ref to show hover menus, tooltips or other hover content; take a new snapshot afterwards.|
 |scraping_browser_type_ref|Fill an element identified by ref from the ARIA snapshot, optionally pressing Enter to submit after typing.|
 |scraping_browser_fill_form|Fill several form fields identified by ARIA refs in one call.|
 |scraping_browser_screenshot|Capture a screenshot of the current page; supports optional full_page mode for full-length images.|
