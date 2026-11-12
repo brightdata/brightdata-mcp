@@ -15,6 +15,12 @@ export const ACCOUNT_RULES = [
         what: 'The Bright Data zone this tool uses doesn\'t exist',
         todo: 'Tell the user to create it or fix the zone setting; '
             +'retrying won\'t help.'},
+    {brd_code: 'client_10030', title: 'IP not allowed',
+        what: 'Your Bright Data API key only allows certain IPs, and this '
+            +'machine\'s IP isn\'t one of them',
+        todo: 'Tell the user to add this machine\'s IP to the API key or '
+            +'remove the IP restriction (https://brightdata.com/cp/setting). '
+            +'Don\'t retry.'},
     {status: [401, 407], title: 'Sign-in failed',
         what: 'Bright Data didn\'t accept the credentials',
         todo: 'Ask the user to reconnect Bright Data or check their API '
@@ -84,7 +90,10 @@ export const read_error = e=>{
         : e?.isAxiosError || e?.cause?.isAxiosError ? 'network' : 'other';
     const details = body_text(ax?.response.data)
         || (status ? `HTTP ${status}` : String(e?.message||e||'no details'));
-    return {kind, status, brd_code: ax?.response.headers?.['x-brd-err-code'],
+    const headers = ax?.response.headers;
+    // the API's key-IP check sends its code in a header named 'client'
+    return {kind, status,
+        brd_code: headers?.['x-brd-err-code']??headers?.client,
         step: e?.step, reason: e?.reason, details: clean(details)};
 };
 

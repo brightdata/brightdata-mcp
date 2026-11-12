@@ -21,6 +21,8 @@ const cases = [
     ['zone', http(400, 'zone "mcp_serp" not found'), 'Zone not found'],
     ['401', http(401, 'Invalid token'), 'Sign-in failed'],
     ['407', http(407), 'Sign-in failed'],
+    ['ip allowlist', http(407, '', {client: 'client_10030'}),
+        'IP not allowed'],
     ['429', http(429), 'Rate limited'],
     ['400', http(400, 'bad'), 'Request rejected'],
     ['403', http(403, 'no'), 'Request refused'],
