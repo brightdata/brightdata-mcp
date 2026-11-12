@@ -190,12 +190,42 @@ let scraping_browser_click_ref = {
     parameters: z.object({
         ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
         element: z.string().describe('Description of the element being clicked for context'),
+        force: z.boolean().optional().describe('Skip the checks that the '
+            +'element is stable, enabled and not covered by another '
+            +'element. The click is still sent at the element\'s position, '
+            +'so an element covering it receives the click. Default false'),
+    }),
+    execute: async({ref, element, force})=>{
+        const browser_session = await require_browser();
+        const locator = await browser_session.ref_locator({element, ref});
+        await locator.click({timeout: 5000, force: !!force});
+        return `Successfully clicked element: ${element} (ref=${ref})`;
+    },
+};
+
+let scraping_browser_hover_ref = {
+    name: 'scraping_browser_hover_ref',
+    description: [
+        'Move the mouse over an element using its ref from the ARIA snapshot.',
+        'Use it to open menus, tooltips and other content shown on hover, '
+            +'then take a new snapshot to see it.',
+        'Use scraping_browser_snapshot first to get the correct ref values.',
+    ].join('\n'),
+    annotations: {
+        title: 'Browser Hover Element',
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+    },
+    parameters: z.object({
+        ref: z.string().describe('The ref attribute from the ARIA snapshot (e.g., "23")'),
+        element: z.string().describe('Description of the element to hover over'),
     }),
     execute: async({ref, element})=>{
         const browser_session = await require_browser();
         const locator = await browser_session.ref_locator({element, ref});
-        await locator.click({timeout: 5000});
-        return `Successfully clicked element: ${element} (ref=${ref})`;
+        await locator.hover({timeout: 5000});
+        return `Successfully hovered over element: ${element} (ref=${ref})`;
     },
 };
 
@@ -474,6 +504,7 @@ export const tools = [
     scraping_browser_go_forward,
     scraping_browser_snapshot,
     scraping_browser_click_ref,
+    scraping_browser_hover_ref,
     scraping_browser_type_ref,
     scraping_browser_screenshot,
     scraping_browser_network_requests,

@@ -55,6 +55,7 @@
     {"name": "scraping_browser_go_forward", "description": "Go forward to the next page in the browser session"},
     {"name": "scraping_browser_snapshot", "description": "Capture an ARIA snapshot of the current page showing all interactive elements with their refs. This provides accurate element references that can be used with ref-based tools. Use this before interacting with elements to get proper refs instead of guessing selectors."},
     {"name": "scraping_browser_click_ref", "description": "Click on an element using its ref from the ARIA snapshot. Use scraping_browser_snapshot first to get the correct ref values. This is more reliable than CSS selectors."},
+    {"name": "scraping_browser_hover_ref", "description": "Move the mouse over an element using its ref from the ARIA snapshot. Use it to open menus, tooltips and other content shown on hover, then take a new snapshot to see it. Use scraping_browser_snapshot first to get the correct ref values."},
     {"name": "scraping_browser_type_ref", "description": "Type text into an element using its ref from the ARIA snapshot. Use scraping_browser_snapshot first to get the correct ref values. This is more reliable than CSS selectors."},
     {"name": "scraping_browser_fill_form", "description": "Fill multiple form fields in one operation. Use scraping_browser_snapshot first to get the correct ref values."},
     {"name": "scraping_browser_screenshot", "description": "Take a screenshot of the current page"},

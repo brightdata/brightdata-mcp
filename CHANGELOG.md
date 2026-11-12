@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- `scraping_browser_hover_ref` moves the mouse over an element by ref, to
+  open menus, tooltips and other content shown on hover.
+- `scraping_browser_click_ref` takes an optional `force` that skips the
+  checks that the element is stable, enabled and not covered.
+  The click is still sent at the element's position, so an element
+  covering it receives the click.
+
 ## [4.8.0] - 2026-11-10
 
 ### Added

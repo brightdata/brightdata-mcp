@@ -32,6 +32,7 @@ export const GROUPS = {
             'scraping_browser_snapshot',
             'scraping_browser_fill_form',
             'scraping_browser_click_ref',
+            'scraping_browser_hover_ref',
             'scraping_browser_type_ref',
             'scraping_browser_screenshot',
             'scraping_browser_network_requests',
