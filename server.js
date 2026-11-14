@@ -245,6 +245,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: search_schema,
     execute: tool_fn('search_engine', async(args, ctx)=>
@@ -341,6 +342,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({url: z.string().url(), format: format_param,
         snapshot_id: z.string().optional()
@@ -371,6 +373,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({queries: z.array(search_schema).min(1).max(5)}),
     execute: tool_fn('search_engine_batch', async({queries}, ctx)=>
@@ -403,6 +406,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
+        idempotentHint: true,
     },
     parameters: z.object({
         urls: z.array(z.string().url()).min(1).max(5),
@@ -433,6 +437,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
+        idempotentHint: true,
     },
     parameters: z.object({dataset_id: dataset_id_schema}),
     execute: tool_fn('list_dataset_fields', async({dataset_id}, ctx)=>{
@@ -462,6 +467,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
+        idempotentHint: true,
     },
     parameters: z.object({
         dataset_id: dataset_id_schema,
@@ -521,6 +527,7 @@ addTool({
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
+        idempotentHint: true,
     },
     parameters: z.object({}),
     execute: tool_fn('session_stats', async()=>{
@@ -586,6 +593,7 @@ for (let {dataset_id, id, description, inputs, defaults = {},
             readOnlyHint: false,
             destructiveHint: false,
             openWorldHint: true,
+            idempotentHint: false,
         },
         parameters: z.object(parameters),
         execute: tool_fn(tool_name, async(data, ctx)=>{
