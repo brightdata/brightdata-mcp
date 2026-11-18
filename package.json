@@ -49,7 +49,6 @@
         "scraper_run.js",
         "safe_error.js",
         "scraper_tools.js",
-        "prompts.js",
         "sophie_assistant.js",
         "untrusted_content.js",
         "fetch_api.js",

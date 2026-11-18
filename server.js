@@ -5,7 +5,6 @@ import {z} from 'zod';
 import axios from 'axios';
 import {tools as browser_tools} from './browser_tools.js';
 import {BROWSER_RULES} from './browser_rules.js';
-import prompts from './prompts.js';
 import {gate_page_content, refusal_text} from './content_gate.js';
 import {wrap_untrusted} from './untrusted_content.js';
 import {redact_url_creds, redact_token, safe_error} from './safe_error.js';
@@ -660,8 +659,6 @@ for (let {dataset_id, id, description, inputs, defaults = {},
         }, COLLECTION_RULES),
     });
 }
-
-server.addPrompts(prompts);
 
 for (let tool of browser_tools)
 {

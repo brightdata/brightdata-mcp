@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Removed
+- The `web_scraping_strategy` and `diagnose_scraping_approach` prompts.
+  The server instructions give the same tool order to every client.
+
 ## [4.8.0] - 2026-11-10
 
 ### Added
