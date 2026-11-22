@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.8.1] - 2026-11-22
+
+### Changed
+- README updated to match 4.8.0: the 40,000 character cut and paging
+  for `scrape_as_markdown` and `scrape_batch`, scraper and tool claims
+  checked against live tests, comparison table removed. No code
+  changes.
+
 ## [4.8.0] - 2026-11-10
 
 ### Added
