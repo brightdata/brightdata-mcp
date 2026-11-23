@@ -4,7 +4,8 @@ import {scraper_tool_names} from './scraper_tools.js';
 const base_tools = ['search_engine', 'scrape_as_markdown',
     'ask_brightdata_assistant'];
 const scraper_tools = [...base_tools, ...scraper_tool_names];
-const dataset_search = ['list_dataset_fields', 'search_dataset'];
+const dataset_search = ['list_dataset_fields', 'search_dataset',
+    'business_search'];
 const ai_tools = ['chatgpt_ai_insights', 'perplexity_ai_insights'];
 
 export const GROUPS = {

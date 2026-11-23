@@ -24,6 +24,7 @@ const expected = {
     scrape_batch: web,
     list_dataset_fields: closed,
     search_dataset: closed,
+    business_search: closed,
     session_stats: closed,
     ask_brightdata_assistant: closed,
     search_scrapers: closed,

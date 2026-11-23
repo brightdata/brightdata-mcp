@@ -12,6 +12,7 @@ import {GROUPS, resolve_tool} from './tool_groups.js';
 import {create_scraper_catalog} from './scraper_catalog.js';
 import {create_scraper_run} from './scraper_run.js';
 import {scraper_tools, COLLECTION_RULES} from './scraper_tools.js';
+import {business_search_tool} from './business_search.js';
 import {sophie_assistant_tool, ask_sophie, ASSISTANT_RULES}
     from './sophie_assistant.js';
 import {fetch_dataset_id, fetch_formats, to_page, FETCH_RULES, page_error,
@@ -447,10 +448,10 @@ addTool({
 
 addTool({
     name: 'search_dataset',
-    description: 'Search a Bright Data dataset by a filter and get matching '
-        +'records back directly (fast Elasticsearch-backed search; no '
-        +'snapshot). Use this to FIND MANY records by criteria, as opposed '
-        +'to run_scraper which collects fresh records by URL.\n'
+    description: 'Exact filters on raw LinkedIn dataset fields, the '
+        +'contact-enriched people dataset, or when business_search is not '
+        +'enabled for this account. To find companies or people by '
+        +'description or criteria.\n'
         +'First call list_dataset_fields to get valid field names.\n'
         +'A filter is a tree: a group {operator:"and"|"or", filters:[...]} '
         +'or a leaf {name, value, operator}. Max nesting depth 3.\n'
@@ -502,6 +503,10 @@ addTool({
         return JSON.stringify(result);
     }, DATASET_RULES),
 });
+
+addTool(business_search_tool({tool_fn,
+    headers: (ctx, name)=>api_headers(ctx.clientName, name),
+    request: config=>axios({...config, timeout: base_timeout})}));
 
 for (const tool of scraper_tools({catalog: create_scraper_catalog(),
     runner: create_scraper_run(), tool_fn,
