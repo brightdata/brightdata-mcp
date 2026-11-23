@@ -506,7 +506,7 @@ addTool({
 
 addTool(business_search_tool({tool_fn,
     headers: (ctx, name)=>api_headers(ctx.clientName, name),
-    request: axios}));
+    request: config=>axios(config)}));
 
 for (const tool of scraper_tools({catalog: create_scraper_catalog(),
     runner: create_scraper_run(), tool_fn,

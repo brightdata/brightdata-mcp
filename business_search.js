@@ -167,7 +167,7 @@ export const business_search_tool = ({tool_fn, headers, request})=>({
                 ...headers(ctx, 'business_search'),
                 'Content-Type': 'application/json',
             },
-        });
+        }, ctx);
         return JSON.stringify(res.data);
     }, BUSINESS_SEARCH_RULES),
 });

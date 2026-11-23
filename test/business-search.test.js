@@ -23,8 +23,8 @@ const setup = (reply = {data: {req_id: 'r1', documents: []}})=>{
     const tool = business_search_tool({
         tool_fn: (name, fn)=>fn,
         headers: (ctx, name)=>({token: ctx.api_token, tool: name}),
-        request: async config=>{
-            calls.push(config);
+        request: async(config, ctx)=>{
+            calls.push({...config, ctx});
             if (reply instanceof Error)
                 throw reply;
             return reply;
@@ -130,6 +130,7 @@ async()=>{
             view: 'summary', offset: 0, limit: 10});
         assert.deepEqual(calls[0].headers, {token: 'tok',
             tool: 'business_search', 'Content-Type': 'application/json'});
+        assert.deepEqual(calls[0].ctx, {api_token: 'tok'});
     }
 });
 
