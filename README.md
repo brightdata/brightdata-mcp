@@ -500,7 +500,7 @@ Search stored LinkedIn company and people data; returns matching records at once
 
 | Tool | Description | Group |
 |------|-------------|-------|
-| `business_search` | Companies or people (`category`) by description or criteria. Up to 10 ranked records per call. Modes: `instant` (default, plain text), `smart` (plain text, AI reranking), `ludicrous` (exact JSON filters, can page past 100). Views: `summary` (default), `full` (`limit` 3 or less), or a field list | default / `social`, `business` |
+| `business_search` | Companies or people (`category`) by description or criteria. Up to 10 ranked records per call. Modes: `instant` (default, plain text), `smart` (plain text, AI reranking), `ludicrous` (exact JSON filters, can page past 100). Views: `summary` (default), `full` (`limit` 5 or less), or a field list | default / `social`, `business` |
 | `list_dataset_fields` | Filterable fields of a dataset (name, type, description). Call before `search_dataset` | default / `social`, `business` |
 | `search_dataset` | Exact filters on raw dataset fields, up to 10 records per call, with a cursor for more. Also the contact-enriched people dataset | default / `social`, `business` |
 

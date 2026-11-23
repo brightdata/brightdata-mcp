@@ -33,7 +33,7 @@ const ARG_RULES = {
         what: 'Instant and Smart reach only the first 100 matches',
         todo: 'Use mode ludicrous to page further.'},
     full: {title: 'Invalid argument',
-        what: 'view full allows limit 3 or less',
+        what: 'view full allows limit 5 or less',
         todo: 'Use summary or a field list for more records.'},
 };
 
@@ -97,7 +97,7 @@ const view_desc = [
         +'current_tenure_months about past_job_titles location city '
         +'country_code experience_years followers connections.',
     'full: all fields, the summary fields plus others, for example the '
-        +'fields below. Records are large: use limit 3 or less.',
+        +'fields below. Records are large: use limit 5 or less.',
     '  company: headquarters_city offices_country_codes offices_addresses '
         +'directions_urls alumni_count alumni_information '
         +'linkedin_follower_to_employee_ratio investor_names crunchbase_id '
@@ -133,7 +133,7 @@ export const business_search_schema = z.object({
             +'limit to offset. instant and smart: offset+limit 100 or less. '
             +'ludicrous: offset 1000 or less.'),
     limit: z.number().int().min(1).max(10).default(10)
-        .describe('Records per call, 1-10, default 10. With view full: 3 '
+        .describe('Records per call, 1-10, default 10. With view full: 5 '
             +'or less.'),
 }).strict().superRefine((args, ctx)=>{
     const issue = (path, rule)=>ctx.addIssue({code: z.ZodIssueCode.custom,
@@ -143,7 +143,7 @@ export const business_search_schema = z.object({
         issue('query', ARG_RULES.query);
     if (args.mode!='ludicrous' && args.offset+args.limit>100)
         issue('offset', ARG_RULES.window);
-    if (args.view=='full' && args.limit>3)
+    if (args.view=='full' && args.limit>5)
         issue('limit', ARG_RULES.full);
 });
 

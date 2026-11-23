@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
   is `company` or `people`. Modes: `instant` (default, plain text up to
   200 characters), `smart` (plain text with AI reranking) and
   `ludicrous` (exact JSON filters). Views: `summary` (default), `full`
-  (`limit` 3 or less) or a field list. Up to 10 records per call;
+  (`limit` 5 or less) or a field list. Up to 10 records per call;
   `instant` and `smart` reach the first 100 matches, `ludicrous` pages
   to offset 1000. Returns the API JSON unchanged. No automatic retry.
 - Accounts without Business Search access get `Business Search not

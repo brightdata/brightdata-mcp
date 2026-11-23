@@ -96,10 +96,10 @@ test('ludicrous: offset 1000 or less, no 100 window', ()=>{
         offset: 1001});
 });
 
-test('view: summary, full (limit 3 or less) or a field list', ()=>{
-    ok({category: 'people', query: text_q, view: 'full', limit: 3});
-    bad({category: 'people', query: text_q, view: 'full', limit: 4},
-        /view full allows limit 3 or less/);
+test('view: summary, full (limit 5 or less) or a field list', ()=>{
+    ok({category: 'people', query: text_q, view: 'full', limit: 5});
+    bad({category: 'people', query: text_q, view: 'full', limit: 6},
+        /view full allows limit 5 or less/);
     bad({category: 'people', query: text_q, view: 'full'});
     ok({category: 'people', query: text_q, view: {fields: ['name']}});
     bad({category: 'people', query: text_q, view: {fields: []}});
