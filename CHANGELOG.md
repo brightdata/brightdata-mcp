@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [4.9.0] - 2026-11-23
+
 ### Added
 - `business_search` tool: find companies or people (LinkedIn data) by
   description or criteria, with ranked results in one call. `category`
@@ -16,9 +18,9 @@ All notable changes to this project will be documented in this file.
 - Accounts without Business Search access get `Business Search not
   enabled`, which names `search_dataset` and `run_scraper` instead.
 
-### Changed
-- The `search_dataset` description points to `business_search` for
-  finding companies or people by description or criteria.
+### Fixed
+- An API key that only allows certain IPs, used from another IP, now
+  gets `IP not allowed` with what to do, instead of `Sign-in failed`.
 
 ### Removed
 - The `web_scraping_strategy` and `diagnose_scraping_approach` prompts.
