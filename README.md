@@ -32,11 +32,12 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **30 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **31 tools** covering:
 
 - **Web search** — Bing and Google results as structured data
 - **Page scraping (Fetch API)** — any URL as Markdown, text, HTML or JSON-LD. Long pages can be read in parts
 - **Structured data (Web Scraper API)** — clean JSON from 1,200+ pre-built scrapers: Amazon, LinkedIn, Instagram, TikTok, YouTube, X, Reddit, Facebook, Crunchbase, Zillow, npm, PyPI and more, without parsing HTML. Six tools find and run any of them
+- **Business Search** — find companies or people (LinkedIn data) by description or criteria, ranked, in one call
 - **Browser automation** — navigate, click, type, screenshot, and read pages in a remote browser session
 - **LLM response collection** — send a prompt to ChatGPT or Perplexity and get the answer text back as Markdown
 
@@ -277,6 +278,7 @@ Build competitor profiles from live data: funding, headcount, hiring, customer r
 
 | Task | Tools |
 |------|-------|
+| Find companies or people by criteria (industry, country, size, funding, title) | `business_search` |
 | Company funding, size, employees, job postings (Crunchbase, ZoomInfo, LinkedIn) | `search_scrapers` → `run_scraper` |
 | Customer sentiment (Facebook company reviews, app store reviews) | `search_scrapers` → `run_scraper` |
 | Competitor pricing pages | `scrape_as_markdown`, `scrape_batch` |
@@ -348,7 +350,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 Tools are organized into groups so you only load what you need. Fewer tools means less context for your agent to process.
 
-- With no `GROUPS` or `TOOLS`, all 30 tools are enabled. Setting either one limits the server to those tools only
+- With no `GROUPS` or `TOOLS`, all 31 tools are enabled. Setting either one limits the server to those tools only
 - `GROUPS` enables tool bundles. Comma-separated: `GROUPS="scrapers,browser"` (local) or `&groups=scrapers,browser` (hosted URL)
 - `TOOLS` adds individual tools on top: `TOOLS="scrape_batch,session_stats"`. On its own, it enables only the tools you list
 - Every group also includes `search_engine`, `scrape_as_markdown` and `ask_brightdata_assistant`
@@ -361,7 +363,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 | `geo` | ChatGPT and Perplexity response collection | 2 |
 | `advanced_scraping` | Batch tools, session stats | 3 |
 
-Older group IDs (`ecommerce`, `social`, `business`, `finance`, `research`, `app_stores`, `travel`, `code`) still work and enable the `scrapers` tools; `social` and `business` also add `search_dataset` and `list_dataset_fields`. Old `web_data_*` names in `TOOLS` enable the `scrapers` tools too.
+Older group IDs (`ecommerce`, `social`, `business`, `finance`, `research`, `app_stores`, `travel`, `code`) still work and enable the `scrapers` tools; `social` and `business` also add `business_search`, `search_dataset` and `list_dataset_fields`. Old `web_data_*` names in `TOOLS` enable the `scrapers` tools too.
 
 ### Configuration examples
 
@@ -401,13 +403,14 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 
 ---
 
-## Tools Reference (30 Tools)
+## Tools Reference (31 Tools)
 
 ### Which tool to use
 
 - **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 5): `scrape_batch`
 - **Need to find information:** `search_engine`. Multiple queries (up to 5): `search_engine_batch`
 - **Structured data from a known platform (Amazon, LinkedIn, TikTok, npm, PyPI, etc.):** `search_scrapers` → `get_scraper_details` → `run_scraper`. Returns JSON records. If the run takes longer than 45 seconds, `run_scraper` returns a `snapshot_id`: check it with `get_scraper_progress`, then read the records with `get_scraper_results`
+- **Find companies or people by description or criteria** (industry, location, size, title): `business_search`. One call, ranked records, no URL needed
 - **Raw HTML:** `scrape_as_markdown` with `format: 'html'`
 - **Page cut at 40,000 characters:** call `scrape_as_markdown` again with `snapshot_id` and `start` from the result's `next` field. The rest is read from the saved page at no extra cost
 - **Page needs JavaScript or interaction (click, type, scroll):** `scraping_browser_*` tools. The scrape tools don't render JavaScript
@@ -491,14 +494,30 @@ Use for Generative Engine Optimization (tracking how LLMs describe your brand) a
 </details>
 
 <details>
-<summary><b>Dataset Search — 2 tools</b></summary>
+<summary><b>Business and Dataset Search — 3 tools</b></summary>
 
-Filter search over stored LinkedIn datasets; returns matching records at once, with no scraper run.
+Search stored LinkedIn company and people data; returns matching records at once, with no scraper run.
 
 | Tool | Description | Group |
 |------|-------------|-------|
+| `business_search` | Companies or people (`category`) by description or criteria. Up to 10 ranked records per call. Modes: `instant` (default, plain text), `smart` (plain text, AI reranking), `ludicrous` (exact JSON filters, can page past 100). Views: `summary` (default), `full` (`limit` 3 or less), or a field list | default / `social`, `business` |
 | `list_dataset_fields` | Filterable fields of a dataset (name, type, description). Call before `search_dataset` | default / `social`, `business` |
-| `search_dataset` | Records matching a filter, up to 10 per call, with a cursor for more | default / `social`, `business` |
+| `search_dataset` | Exact filters on raw dataset fields, up to 10 records per call, with a cursor for more. Also the contact-enriched people dataset | default / `social`, `business` |
+
+`business_search` examples:
+
+```json
+{"category": "company", "query": "fintech startups in Berlin with 50 to 200 employees"}
+{"category": "people", "query": "product managers at SaaS companies in London", "mode": "smart", "view": {"fields": ["name", "url", "current_title", "current_company_name"]}}
+{"category": "company", "mode": "ludicrous", "query": {"and": [{"text": {"industry": "software"}}, {"in": {"headquarters_country_code": ["US", "GB"]}}, {"range": {"employees_in_linkedin": {">=": 50, "<=": 500}}}]}, "offset": 200}
+```
+
+Notes:
+
+- `meta.matched` is a lower bound, not a total. `meta.coverage_percent` below 100 means a partial result
+- `instant` and `smart` reach the first 100 matches only (`offset` + `limit` 100 or less). Use `ludicrous` to page further (`offset` up to 1000)
+- To find people at the companies you found, search `company` first, then `people`
+- Each call is billed. Business Search is in beta and needs an account with a business email; other accounts get `Business Search not enabled` and can use `search_dataset`
 
 </details>
 

@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `business_search` tool: find companies or people (LinkedIn data) by
+  description or criteria, with ranked results in one call. `category`
+  is `company` or `people`. Modes: `instant` (default, plain text up to
+  200 characters), `smart` (plain text with AI reranking) and
+  `ludicrous` (exact JSON filters). Views: `summary` (default), `full`
+  (`limit` 3 or less) or a field list. Up to 10 records per call;
+  `instant` and `smart` reach the first 100 matches, `ludicrous` pages
+  to offset 1000. Returns the API JSON unchanged. No automatic retry.
+- Accounts without Business Search access get `Business Search not
+  enabled`, which names `search_dataset` and `run_scraper` instead.
+
+### Changed
+- The `search_dataset` description points to `business_search` for
+  finding companies or people by description or criteria.
+
 ### Removed
 - The `web_scraping_strategy` and `diagnose_scraping_approach` prompts.
   The server instructions give the same tool order to every client.
