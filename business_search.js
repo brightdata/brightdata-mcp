@@ -2,7 +2,12 @@
 import {z} from 'zod';
 import {tool_error} from './errors.js';
 
+export const BUSINESS_SEARCH_TIMEOUT_MS = 50*1000;
+
 export const BUSINESS_SEARCH_RULES = [
+    {kind: 'timeout', title: 'Search timed out',
+        what: 'Business Search didn\'t answer within 50 s',
+        todo: 'Narrow the query, or use mode ludicrous with exact filters.'},
     {status: 403, details: /Access denied/,
         title: 'Business Search not enabled',
         what: 'this account cannot use Business Search (beta, needs an '
@@ -157,6 +162,7 @@ export const business_search_tool = ({tool_fn, headers, request})=>({
             url: `https://api.brightdata.com/search/${category}`,
             method: 'POST',
             data: body,
+            timeout: BUSINESS_SEARCH_TIMEOUT_MS,
             headers: {
                 ...headers(ctx, 'business_search'),
                 'Content-Type': 'application/json',

@@ -201,6 +201,19 @@ test('500 uses the default 5xx rule', ()=>{
     BUSINESS_SEARCH_RULES), /^Service unavailable: /);
 });
 
+test('request times out after 50 s', async()=>{
+    const {call, calls} = setup();
+    await call({category: 'company', query: text_q});
+    assert.equal(calls[0].timeout, 50000);
+});
+
+test('timeout: Search timed out, not the default Retry once', ()=>{
+    const e = Object.assign(new Error('timeout of 50000ms exceeded'),
+        {isAxiosError: true, code: 'ECONNABORTED'});
+    const msg = api_error(e, BUSINESS_SEARCH_RULES);
+    assert.match(msg, /^Search timed out: Business Search didn't answer within 50 s\. Narrow the query/);
+});
+
 test('no retry: request is called once on 429 and 500', async()=>{
     for (const status of [429, 500])
     {
