@@ -60,7 +60,7 @@ const text_of = result=>result.content.find(b=>b.type=='text')?.text ?? '';
 
 test('approved: the user is asked once and the content is returned', async()=>{
     await with_gate({}, async({client, recorded})=>{
-        const result = await client.callTool({name: 'scrape_as_markdown',
+        const result = await client.callTool({name: 'web_fetch',
             arguments: {url: POISONED}});
         assert.equal(recorded.length, 1, 'exactly one dialog');
         assert.match(recorded[0].message, /npx -y/, 'the human sees the snippet');
@@ -76,7 +76,7 @@ test('declined: the content is withheld and none of it reaches the model',
     async()=>{
         await with_gate({answer: async()=>({action: 'decline'})},
             async({client, recorded})=>{
-                const result = await client.callTool({name: 'scrape_as_markdown',
+                const result = await client.callTool({name: 'web_fetch',
                     arguments: {url: POISONED}});
                 assert.equal(recorded.length, 1);
                 const text = text_of(result);
@@ -91,7 +91,7 @@ test('progress keeps the call alive while the user decides', async()=>{
         r({action: 'accept', content: {return_content: true}}), 350))},
     async({client})=>{
         let ticks = 0;
-        const result = await client.callTool({name: 'scrape_as_markdown',
+        const result = await client.callTool({name: 'web_fetch',
             arguments: {url: POISONED}}, undefined,
         {onprogress: ()=>{ ticks++; }});
         assert.ok(ticks>=1, `expected progress before the result, saw ${ticks}`);
@@ -117,7 +117,7 @@ test('scrape_batch: a declined item is withheld, the rest survive, one dialog',
 
 test('a clean page is returned untouched and nobody is asked', async()=>{
     await with_gate({}, async({client, recorded})=>{
-        const result = await client.callTool({name: 'scrape_as_markdown',
+        const result = await client.callTool({name: 'web_fetch',
             arguments: {url: CLEAN}});
         assert.equal(recorded.length, 0);
         assert.match(text_of(result), /Hello world\./);
@@ -136,7 +136,7 @@ test('a non-gated tool is unaffected', async()=>{
 test('a client without elicitation support gets the content withheld',
     async()=>{
         await with_gate({elicitation: false}, async({client})=>{
-            const result = await client.callTool({name: 'scrape_as_markdown',
+            const result = await client.callTool({name: 'web_fetch',
                 arguments: {url: POISONED}});
             const text = text_of(result);
             assert.match(text, /was not returned/);
@@ -148,7 +148,7 @@ test('CONTENT_GATE=off returns the content even when nobody can be asked',
     async()=>{
         await with_gate({elicitation: false, env: {CONTENT_GATE: 'off'}},
             async({client})=>{
-                const result = await client.callTool({name: 'scrape_as_markdown',
+                const result = await client.callTool({name: 'web_fetch',
                     arguments: {url: POISONED}});
                 assert.match(text_of(result), /helper-demo/);
             });

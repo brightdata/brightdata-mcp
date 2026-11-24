@@ -36,14 +36,14 @@ const base_max_retries = Math.min(
     parseInt(process.env.BASE_MAX_RETRIES || '0', 10), 3);
 // Tools whose result is page-derived content. Their return passes through the
 // content gate (see content_gate.js); every other tool is untouched.
-const page_content_tools = new Set(['scrape_as_markdown', 'search_engine',
+const page_content_tools = new Set(['web_fetch', 'search_engine',
     'scrape_batch', 'search_engine_batch']);
 // Tools that return attacker-controllable external web content. Their
 // output is wrapped as untrusted data so the model never treats embedded
 // text as instructions (indirect prompt injection). Scraper, dataset and
 // browser tools add themselves to this set below.
 const external_content_tools = new Set(['search_engine',
-    'scrape_as_markdown', 'search_engine_batch', 'scrape_batch']);
+    'web_fetch', 'search_engine_batch', 'scrape_batch']);
 const wrap_external = (name, result)=>
     external_content_tools.has(name) && typeof result=='string'
         ? wrap_untrusted(result) : result;
@@ -190,7 +190,7 @@ await ensure_required_zones();
 const instructions = 'Bright Data tools fetch live web data. For a known '
     +'site (Amazon, LinkedIn, Instagram, Zillow, ...), call search_scrapers '
     +'first, then get_scraper_details and run_scraper for structured JSON. '
-    +'Otherwise use scrape_as_markdown, or scrape_batch for several URLs. '
+    +'Otherwise use web_fetch, or scrape_batch for several URLs. '
     +'Use the scraping_browser_* tools only when the task needs clicks, '
     +'typing or screenshots. If run_scraper returns a snapshot_id that is '
     +'still running, poll get_scraper_progress, then call '
@@ -324,7 +324,7 @@ const format_param = z.enum(Object.keys(fetch_formats)).optional()
     .default('markdown');
 
 addTool({
-    name: 'scrape_as_markdown',
+    name: 'web_fetch',
     description: 'Fetch one web page. Returns JSON: url, format, content, '
     +'plus title and note when present. content is the page in one format, markdown by '
     +'default. Pick another with the format param:\n'
@@ -337,7 +337,7 @@ addTool({
     +'rest for free, call again with the snapshot_id and start values from '
     +'the result\'s next field.',
     annotations: {
-        title: 'Scrape as Markdown',
+        title: 'Web Fetch',
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: true,
@@ -347,10 +347,10 @@ addTool({
             .describe('From next in a cut result'),
         start: z.number().int().min(0).optional().default(0)
             .describe('Character offset to read from, from next')}),
-    execute: tool_fn('scrape_as_markdown', async({url, format, snapshot_id,
+    execute: tool_fn('web_fetch', async({url, format, snapshot_id,
         start}, ctx)=>
     {
-        const headers = api_headers(ctx.clientName, 'scrape_as_markdown');
+        const headers = api_headers(ctx.clientName, 'web_fetch');
         const page = snapshot_id ? await read_snapshot(url, format, headers,
             {snapshot_id, start})
             : await fetch_page(url, format, headers, {start});
@@ -395,7 +395,7 @@ addTool({
     +'with a note. No JavaScript rendering. Pages that take longer than '
     +`${batch_cancel_s} s time out (45 s when only one URL is sent). `
     +'The whole result is cut at 40,000 characters, shared between pages. '
-    +'To read the rest of a cut page for free, call scrape_as_markdown '
+    +'To read the rest of a cut page for free, call web_fetch '
     +'with its url and the snapshot_id and start values from that item\'s '
     +'next field.',
     annotations: {

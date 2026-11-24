@@ -84,7 +84,7 @@ function ctx_with_progress(){
 test('no match: the result passes through and nobody is asked', async()=>{
     const {session, calls} = fake_session({answer: ACCEPT});
     const {ctx} = ctx_with_progress();
-    const out = await gate_page_content({name: 'scrape_as_markdown',
+    const out = await gate_page_content({name: 'web_fetch',
         result: CLEAN[0], ctx, sessions: [session]});
     assert.equal(out, CLEAN[0]);
     assert.equal(calls.length, 0);
@@ -93,7 +93,7 @@ test('no match: the result passes through and nobody is asked', async()=>{
 test('match + explicit approval returns the result unchanged', async()=>{
     const {session, calls} = fake_session({answer: ACCEPT});
     const {ctx} = ctx_with_progress();
-    const out = await gate_page_content({name: 'scrape_as_markdown',
+    const out = await gate_page_content({name: 'web_fetch',
         result: FIXTURE, ctx, sessions: [session]});
     assert.equal(out, FIXTURE);
     assert.equal(calls.length, 1);
@@ -116,23 +116,23 @@ test('accept without an explicit true, decline, and errors all withhold',
         ])
         {
             const {session} = fake_session({answer});
-            const out = await gate_page_content({name: 'scrape_as_markdown',
+            const out = await gate_page_content({name: 'web_fetch',
                 result: FIXTURE, ctx, sessions: [session]});
-            assert.equal(out, refusal_text('scrape_as_markdown'));
+            assert.equal(out, refusal_text('web_fetch'));
         }
     });
 
 test('a client that cannot be asked gets the content withheld', async()=>{
     const {session, calls} = fake_session({elicitation: false, answer: ACCEPT});
     const {ctx} = ctx_with_progress();
-    const out = await gate_page_content({name: 'scrape_as_markdown',
+    const out = await gate_page_content({name: 'web_fetch',
         result: FIXTURE, ctx, sessions: [session]});
-    assert.equal(out, refusal_text('scrape_as_markdown'));
+    assert.equal(out, refusal_text('web_fetch'));
     assert.equal(calls.length, 0, 'elicitInput is never attempted');
 });
 
 test('the refusal contains no page-derived text', ()=>{
-    const text = refusal_text('scrape_as_markdown');
+    const text = refusal_text('web_fetch');
     assert.match(text, /was not returned/);
     assert.doesNotMatch(text, /npx -y|helper-demo|SYSTEM NOTE/);
     for (let i = 0; i+20<=FIXTURE.length; i += 10)
@@ -144,7 +144,7 @@ test('progress is reported while the user decides, then stops', async()=>{
     const {session} = fake_session({answer: ()=>new Promise(resolve=>
         setTimeout(()=>resolve(ACCEPT()), 200))});
     const {ctx, progress} = ctx_with_progress();
-    await gate_page_content({name: 'scrape_as_markdown', result: FIXTURE, ctx,
+    await gate_page_content({name: 'web_fetch', result: FIXTURE, ctx,
         sessions: [session]});
     assert.ok(progress.length>=1, `expected progress ticks, saw ${progress.length}`);
     assert.match(progress[0].message, /Waiting for the user/);

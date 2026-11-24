@@ -109,7 +109,7 @@ export const SNAPSHOT_RULES = [
     {reason: /^(snapshot_not_found|collection_failed|canceled)$/,
         title: 'Snapshot not found',
         what: 'Snapshot {snapshot_id} is gone or unreadable',
-        todo: 'Call scrape_as_markdown with {url} and no snapshot_id to '
+        todo: 'Call web_fetch with {url} and no snapshot_id to '
             +'fetch the page again.'},
     {reason: 'running', title: 'Snapshot not ready',
         what: 'Snapshot {snapshot_id} is still being written',
@@ -161,7 +161,7 @@ const cut_note = (start, end, len, snapshot_id)=>{
     if (end==len || !snapshot_id)
         return shown;
     return `${shown}. To read the rest at no extra cost, call `
-        +`scrape_as_markdown with snapshot_id "${snapshot_id}" and `
+        +`web_fetch with snapshot_id "${snapshot_id}" and `
         +`start ${end}`;
 };
 

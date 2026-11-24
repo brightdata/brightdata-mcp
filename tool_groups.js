@@ -1,7 +1,7 @@
 'use strict'; /*jslint node:true es9:true*/
 import {scraper_tool_names} from './scraper_tools.js';
 
-const base_tools = ['search_engine', 'scrape_as_markdown',
+const base_tools = ['search_engine', 'web_fetch',
     'ask_brightdata_assistant'];
 const scraper_tools = [...base_tools, ...scraper_tool_names];
 const dataset_search = ['list_dataset_fields', 'search_dataset',
@@ -125,7 +125,11 @@ export const get_total_tool_count = ()=>{
     return all_tools.size;
 };
 
+const renamed_tools = {scrape_as_markdown: 'web_fetch'};
+
 export const resolve_tool = name=>{
+    if (renamed_tools[name])
+        return [renamed_tools[name]];
     const short = name.replace(/^web_data_/, '');
     if (short==name)
         return [name];
