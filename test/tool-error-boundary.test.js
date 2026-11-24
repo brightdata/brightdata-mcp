@@ -37,10 +37,10 @@ test('tool_fn error boundary sanitizes a single-tool failure whose '
         });
         try {
             await client.connect(transport);
-            const result = await client.callTool({name: 'scrape_as_markdown',
+            const result = await client.callTool({name: 'web_fetch',
                 arguments: {url: 'https://bad.example/fail'}});
             assert.equal(result.isError, true,
-                'scrape_as_markdown must report a tool error for HTTP 400');
+                'web_fetch must report a tool error for HTTP 400');
 
             const text_block = result.content.find(block=>block.type=='text');
             assert.ok(text_block, 'the tool error carries text content');
@@ -158,7 +158,7 @@ test('tool_fn caps a long upstream error body', async t=>{
     await client.connect(new StdioClientTransport({cwd: repo_root, env,
         command: process.execPath,
         args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
-    const res = await client.callTool({name: 'scrape_as_markdown',
+    const res = await client.callTool({name: 'web_fetch',
         arguments: {url: 'https://long-error.example/'}});
     const text = res.content.find(b=>b.type=='text').text;
     assert.equal(res.isError, true);
@@ -184,7 +184,7 @@ test('tool errors and logs never carry URL credentials', async t=>{
     transport.stderr.on('data', d=>{ logs += d; });
     t.after(()=>client.close());
     await client.connect(transport);
-    const result = await client.callTool({name: 'scrape_as_markdown',
+    const result = await client.callTool({name: 'web_fetch',
         arguments: {url: 'https://cred-error.example/'}});
     const text = result.content.find(b=>b.type=='text').text;
     assert.equal(result.isError, true);
@@ -207,7 +207,7 @@ test('a usage limit names both causes', async t=>{
     await client.connect(new StdioClientTransport({cwd: repo_root, env,
         command: process.execPath,
         args: ['--import', './test-helpers/redirect-api.mjs', 'server.js']}));
-    const res = await client.callTool({name: 'scrape_as_markdown',
+    const res = await client.callTool({name: 'web_fetch',
         arguments: {url: 'https://quota.example/'}});
     const text = res.content.find(b=>b.type=='text').text;
     assert.equal(res.isError, true);

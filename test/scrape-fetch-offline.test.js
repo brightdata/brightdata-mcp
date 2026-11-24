@@ -11,7 +11,7 @@ import {start_stub_server, close_stub_server, long_text}
 
 const repo_root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
+test('web_fetch on the Fetch API, fully offline', async t=>{
     const stub = await start_stub_server();
     t.after(()=>close_stub_server(stub));
     const env = {...process.env, API_TOKEN: 'fetch-test-token',
@@ -26,7 +26,7 @@ test('scrape_as_markdown on the Fetch API, fully offline', async t=>{
     t.after(()=>client.close());
     await client.connect(transport);
     const scrape = async(url, more = {})=>{
-        const res = await client.callTool({name: 'scrape_as_markdown',
+        const res = await client.callTool({name: 'web_fetch',
             arguments: {url, ...more}});
         return {is_error: !!res.isError, text: res.content[0].text};
     };

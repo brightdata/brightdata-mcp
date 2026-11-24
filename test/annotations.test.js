@@ -20,7 +20,7 @@ const act = {readOnlyHint: false, destructiveHint: true, openWorldHint: true};
 const expected = {
     search_engine: web,
     search_engine_batch: web,
-    scrape_as_markdown: web,
+    web_fetch: web,
     scrape_batch: web,
     list_dataset_fields: closed,
     search_dataset: closed,

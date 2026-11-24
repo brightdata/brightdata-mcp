@@ -1,7 +1,7 @@
 |Feature|Description|
 |---|---|
 |search_engine|Search Bing (default) or Google. Returns JSON organic results (link, title, description), 10 per page. Params: country, page (from 0), time_range (Bing: day, week, year only).|
-|scrape_as_markdown|Scrape a single webpage. Returns the content as markdown (default), text, html or ld_json.|
+|web_fetch|Scrape a single webpage. Returns the content as markdown (default), text, html or ld_json.|
 |search_engine_batch|Run up to 5 searches in parallel, same params as search_engine. Returns a JSON array with a result or an error per query.|
 |scrape_batch|Scrape up to 5 webpages at once. Returns the content as markdown (default), text, html or ld_json.|
 |ask_brightdata_assistant|Ask Bright Data's support assistant (Sophie) about Bright Data products, APIs, MCP usage, zones, scraping, or account setup. Supports threaded follow-ups via dialog_id.|

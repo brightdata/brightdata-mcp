@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- `scrape_as_markdown` is renamed to `web_fetch`. `TOOLS` still accepts
+  `scrape_as_markdown` and enables `web_fetch`.
+
 ## [4.9.0] - 2026-11-23
 
 ### Added

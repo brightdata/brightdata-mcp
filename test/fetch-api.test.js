@@ -141,7 +141,7 @@ test('to_page cuts on a newline and says how to read on', ()=>{
     assert.equal(page.content, line.repeat(416));
     assert.deepEqual(page.next, {snapshot_id: 'sd_x', start: 39936});
     assert.equal(page.note, 'Cut at 39,936 of 144,000 characters (28%). '
-        +'To read the rest at no extra cost, call scrape_as_markdown with '
+        +'To read the rest at no extra cost, call web_fetch with '
         +'snapshot_id "sd_x" and start 39936');
 });
 

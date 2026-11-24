@@ -60,7 +60,7 @@ Optional URL parameters:
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `groups=<ids>` | Limit to specific tool groups (default: all tools) | `...&groups=scrapers,browser` |
-| `tools=<names>` | Limit to specific tools | `...&tools=search_engine,scrape_as_markdown` |
+| `tools=<names>` | Limit to specific tools | `...&tools=search_engine,web_fetch` |
 
 <details>
 <summary><b>Claude Desktop</b></summary>
@@ -258,7 +258,7 @@ Answer questions using live web data instead of training data. Search, then read
 | Task | Tools |
 |------|-------|
 | Search the web for current information | `search_engine`, `search_engine_batch` |
-| Read a specific page as clean Markdown | `scrape_as_markdown`, `scrape_batch` |
+| Read a specific page as clean Markdown | `web_fetch`, `scrape_batch` |
 
 Example prompts: "What's Tesla's current stock price?", "Get today's weather forecast for New York", "Find the most cited sources on EU AI regulation from the last 6 months".
 
@@ -281,7 +281,7 @@ Build competitor profiles from live data: funding, headcount, hiring, customer r
 | Find companies or people by criteria (industry, country, size, funding, title) | `business_search` |
 | Company funding, size, employees, job postings (Crunchbase, ZoomInfo, LinkedIn) | `search_scrapers` → `run_scraper` |
 | Customer sentiment (Facebook company reviews, app store reviews) | `search_scrapers` → `run_scraper` |
-| Competitor pricing pages | `scrape_as_markdown`, `scrape_batch` |
+| Competitor pricing pages | `web_fetch`, `scrape_batch` |
 | Market discovery | `search_engine_batch` |
 
 Example prompt: "Analyze Notion as a competitor: pricing, funding, hiring focus, and what customers complain about".
@@ -293,7 +293,7 @@ Replace built-in fetch and search tools. Pages that need JavaScript or clicks go
 | Task | Tools |
 |------|-------|
 | Drop-in replacement for built-in web search | `search_engine` |
-| Drop-in replacement for built-in URL fetch | `scrape_as_markdown` |
+| Drop-in replacement for built-in URL fetch | `web_fetch` |
 | Parallel data collection (5 at a time) | `search_engine_batch`, `scrape_batch` |
 | Interactive sites (infinite scroll, dynamic content, forms) | `scraping_browser_*` (14 tools) |
 
@@ -353,7 +353,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 - With no `GROUPS` or `TOOLS`, all 31 tools are enabled. Setting either one limits the server to those tools only
 - `GROUPS` enables tool bundles. Comma-separated: `GROUPS="scrapers,browser"` (local) or `&groups=scrapers,browser` (hosted URL)
 - `TOOLS` adds individual tools on top: `TOOLS="scrape_batch,session_stats"`. On its own, it enables only the tools you list
-- Every group also includes `search_engine`, `scrape_as_markdown` and `ask_brightdata_assistant`
+- Every group also includes `search_engine`, `web_fetch` and `ask_brightdata_assistant`
 - Group ID `custom` is reserved; use `TOOLS` for individual picks
 
 | Group ID | Contents | Tool count |
@@ -407,12 +407,12 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 
 ### Which tool to use
 
-- **Known URL, need the content:** `scrape_as_markdown`. Multiple URLs (up to 5): `scrape_batch`
+- **Known URL, need the content:** `web_fetch`. Multiple URLs (up to 5): `scrape_batch`
 - **Need to find information:** `search_engine`. Multiple queries (up to 5): `search_engine_batch`
 - **Structured data from a known platform (Amazon, LinkedIn, TikTok, npm, PyPI, etc.):** `search_scrapers` → `get_scraper_details` → `run_scraper`. Returns JSON records. If the run takes longer than 45 seconds, `run_scraper` returns a `snapshot_id`: check it with `get_scraper_progress`, then read the records with `get_scraper_results`
 - **Find companies or people by description or criteria** (industry, location, size, title): `business_search`. One call, ranked records, no URL needed
-- **Raw HTML:** `scrape_as_markdown` with `format: 'html'`
-- **Page cut at 40,000 characters:** call `scrape_as_markdown` again with `snapshot_id` and `start` from the result's `next` field. The rest is read from the saved page at no extra cost
+- **Raw HTML:** `web_fetch` with `format: 'html'`
+- **Page cut at 40,000 characters:** call `web_fetch` again with `snapshot_id` and `start` from the result's `next` field. The rest is read from the saved page at no extra cost
 - **Page needs JavaScript or interaction (click, type, scroll):** `scraping_browser_*` tools. The scrape tools don't render JavaScript
 - **How ChatGPT/Perplexity answer a prompt:** `chatgpt_ai_insights` / `perplexity_ai_insights`
 - **Question about Bright Data itself (products, zones, errors, setup):** `ask_brightdata_assistant`
@@ -422,7 +422,7 @@ Notes on scraper runs:
 - Return structured JSON, billed per record returned
 - Records with an `error` field explain inputs that failed, e.g. a URL of the wrong type
 - Results can be large. Keep `limit_per_input` low for `discover_by_*` methods and run bulk collection in a subagent where your framework supports it, so records don't flood the main context window
-- If a run fails, `scrape_as_markdown` works on the same URL as a fallback
+- If a run fails, `web_fetch` works on the same URL as a fallback
 
 <details>
 <summary><b>Search and Scraping — 5 tools</b></summary>
@@ -431,8 +431,8 @@ Notes on scraper runs:
 |------|-------------|-------|
 | `search_engine` | Search Bing (default) or Google. Returns JSON (link, title, description), 10 results per page. Params: `country`, `page` (from 0), `time_range` (`hour`, `day`, `week`, `month`, `year`, `any`; Bing supports only `day`, `week`, `year`). Times out after 55 s | default / every group |
 | `search_engine_batch` | Up to 5 search queries in one call. Searches not done within 55 s return a timeout error | default / `advanced_scraping` |
-| `scrape_as_markdown` | Any URL. Returns the content as markdown (default), text, html or ld_json. No JavaScript rendering. Pages over 40,000 characters are cut; to read the rest at no extra cost, call again with `snapshot_id` and `start` from the result's `next` field | default / every group |
-| `scrape_batch` | Up to 5 URLs in one call. Returns the content as markdown (default), text, html or ld_json. 40,000 characters in total, shared between pages; each cut page has a `next` for `scrape_as_markdown` | default / `advanced_scraping` |
+| `web_fetch` | Any URL. Returns the content as markdown (default), text, html or ld_json. No JavaScript rendering. Pages over 40,000 characters are cut; to read the rest at no extra cost, call again with `snapshot_id` and `start` from the result's `next` field | default / every group |
+| `scrape_batch` | Up to 5 URLs in one call. Returns the content as markdown (default), text, html or ld_json. 40,000 characters in total, shared between pages; each cut page has a `next` for `web_fetch` | default / `advanced_scraping` |
 | `session_stats` | Tool usage counts for the current session | default / `advanced_scraping` |
 
 </details>
@@ -477,7 +477,7 @@ Remote browser session. Typical sequence: navigate → snapshot → interact by 
 | `scraping_browser_wait_for_ref` | Wait for an element to become visible, with optional timeout |
 | `scraping_browser_network_requests` | Network requests since page load: method, URL, status |
 
-Refs come from the latest snapshot. If the page changes after a click or navigation, take a new snapshot before the next ref-based action. For static pages, `scrape_as_markdown` is faster and cheaper than a browser session.
+Refs come from the latest snapshot. If the page changes after a click or navigation, take a new snapshot before the next ref-based action. For static pages, `web_fetch` is faster and cheaper than a browser session.
 
 </details>
 
@@ -595,7 +595,7 @@ Bright Data's agent skills teach your agent when and how to use Bright Data. The
 
 ### Content gate
 
-`scrape_as_markdown`, `search_engine` and their batch variants return whatever a web
+`web_fetch`, `search_engine` and their batch variants return whatever a web
 page says. If that content contains text that reads like instructions to change your MCP
 configuration — register a server, run an `npx -y` package, edit the MCP config file — the server
 pauses and asks you, through your MCP client, before returning it. Approve and the content is
@@ -647,7 +647,7 @@ Verify your API token is valid and has the required permissions. Tokens are mana
 
 ### run_scraper returns errors or no data
 
-Records with an `error` field explain inputs that failed. Compare your input with `sample_input` from `get_scraper_details` (e.g., Amazon product URLs contain `/dp/`, Walmart ones `/ip/`) and check the page is publicly accessible. `scrape_as_markdown` works on the same URL as a fallback.
+Records with an `error` field explain inputs that failed. Compare your input with `sample_input` from `get_scraper_details` (e.g., Amazon product URLs contain `/dp/`, Walmart ones `/ip/`) and check the page is publicly accessible. `web_fetch` works on the same URL as a fallback.
 
 ### Remote server connection fails
 
