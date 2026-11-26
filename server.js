@@ -552,17 +552,6 @@ const datasets = [{
         additional_prompt: '',
     },
     trigger_params: {custom_output_fields: 'answer_text_markdown'},
-}, {
-    id: 'perplexity_ai_insights',
-    dataset_id: 'gd_m7dhdot1vw9a7gc1n',
-    description: [
-        'Send a prompt to Perplexity and get back AI-generated insights.',
-        'Returns structured answer text in markdown format.',
-        'Useful for GEO and LLM as a judge.',
-    ].join('\n'),
-    inputs: ['prompt'],
-    fixed_values: {url: 'https://www.perplexity.ai', index: '', country: ''},
-    trigger_params: {custom_output_fields: 'answer_text_markdown'},
 }];
 const dataset_id_to_title = id=>{
     return id.split('_')

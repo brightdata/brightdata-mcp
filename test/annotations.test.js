@@ -34,7 +34,6 @@ const expected = {
     refresh_scrapers: closed,
     run_scraper: write,
     chatgpt_ai_insights: write,
-    perplexity_ai_insights: write,
     scraping_browser_navigate: web,
     scraping_browser_go_back: web,
     scraping_browser_go_forward: web,
