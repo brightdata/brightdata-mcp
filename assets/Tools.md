@@ -13,7 +13,6 @@
 |get_scraper_results|Records of a finished scraper run.|
 |refresh_scrapers|Reload the scraper list now instead of waiting for the daily refresh.|
 |chatgpt_ai_insights|Send a prompt to ChatGPT and get its answer back as Markdown. Useful for GEO and LLM-as-a-judge.|
-|perplexity_ai_insights|Send a prompt to Perplexity and get its answer back as Markdown. Useful for GEO and LLM-as-a-judge.|
 |list_dataset_fields|List the filterable fields (name, type, description) of a searchable LinkedIn dataset. Call before search_dataset.|
 |search_dataset|Search a stored dataset by a filter and get up to 10 matching records directly, with a cursor for more.|
 |scraping_browser_navigate|Open or reuse a scraping-browser session and navigate to the provided URL, resetting tracked network requests.|

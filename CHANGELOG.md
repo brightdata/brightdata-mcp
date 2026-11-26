@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 - `scrape_as_markdown` is renamed to `web_fetch`. `TOOLS` still accepts
   `scrape_as_markdown` and enables `web_fetch`.
 
+### Removed
+- `perplexity_ai_insights` tool. The Perplexity scraper does not return
+  results. The `geo` group now has only `chatgpt_ai_insights`.
+
 ## [4.9.0] - 2026-11-23
 
 ### Added

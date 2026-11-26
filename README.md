@@ -32,14 +32,14 @@
 
 ## Overview
 
-The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **31 tools** covering:
+The Bright Data MCP server gives AI agents real-time access to public web data. It exposes **30 tools** covering:
 
 - **Web search** — Bing and Google results as structured data
 - **Page scraping (Fetch API)** — any URL as Markdown, text, HTML or JSON-LD. Long pages can be read in parts
 - **Structured data (Web Scraper API)** — clean JSON from 1,200+ pre-built scrapers: Amazon, LinkedIn, Instagram, TikTok, YouTube, X, Reddit, Facebook, Crunchbase, Zillow, npm, PyPI and more, without parsing HTML. Six tools find and run any of them
 - **Business Search** — find companies or people (LinkedIn data) by description or criteria, ranked, in one call
 - **Browser automation** — navigate, click, type, screenshot, and read pages in a remote browser session
-- **LLM response collection** — send a prompt to ChatGPT or Perplexity and get the answer text back as Markdown
+- **LLM response collection** — send a prompt to ChatGPT and get the answer text back as Markdown
 
 Two deployment options: a hosted remote server (one URL, no installation) or a local instance via `npx @brightdata/mcp`.
 
@@ -310,14 +310,13 @@ Example prompts: "What's the latest version of express on npm?", "Get the README
 
 ### GEO and brand visibility
 
-Send a prompt to ChatGPT or Perplexity and get the answer text back as Markdown. Each call sends one prompt.
+Send a prompt to ChatGPT and get the answer text back as Markdown. Each call sends one prompt.
 
 | Task | Tools |
 |------|-------|
 | Send a prompt to ChatGPT (web search off) and get the answer text as Markdown | `chatgpt_ai_insights` |
-| Send a prompt to Perplexity and get the answer text as Markdown | `perplexity_ai_insights` |
 
-Example prompt: "Ask ChatGPT and Perplexity 'what is the best proxy provider' and compare how each one ranks us".
+Example prompt: "Ask ChatGPT 'what is the best proxy provider' and check how it ranks us".
 
 ### Social media monitoring
 
@@ -350,7 +349,7 @@ Gather source material from many pages at once, filtered by recency and relevanc
 
 Tools are organized into groups so you only load what you need. Fewer tools means less context for your agent to process.
 
-- With no `GROUPS` or `TOOLS`, all 31 tools are enabled. Setting either one limits the server to those tools only
+- With no `GROUPS` or `TOOLS`, all 30 tools are enabled. Setting either one limits the server to those tools only
 - `GROUPS` enables tool bundles. Comma-separated: `GROUPS="scrapers,browser"` (local) or `&groups=scrapers,browser` (hosted URL)
 - `TOOLS` adds individual tools on top: `TOOLS="scrape_batch,session_stats"`. On its own, it enables only the tools you list
 - Every group also includes `search_engine`, `web_fetch` and `ask_brightdata_assistant`
@@ -360,7 +359,7 @@ Tools are organized into groups so you only load what you need. Fewer tools mean
 |----------|----------|-----------|
 | `scrapers` | Search and run any pre-built Web Scraper API scraper (Amazon, LinkedIn, TikTok, npm, ...) | 6 |
 | `browser` | Remote browser automation | 14 |
-| `geo` | ChatGPT and Perplexity response collection | 2 |
+| `geo` | ChatGPT response collection | 1 |
 | `advanced_scraping` | Batch tools, session stats | 3 |
 
 Older group IDs (`ecommerce`, `social`, `business`, `finance`, `research`, `app_stores`, `travel`, `code`) still work and enable the `scrapers` tools; `social` and `business` also add `business_search`, `search_dataset` and `list_dataset_fields`. Old `web_data_*` names in `TOOLS` enable the `scrapers` tools too.
@@ -414,7 +413,7 @@ Coding agent setup (Claude Code / Cursor / Windsurf) — npm, PyPI and GitHub da
 - **Raw HTML:** `web_fetch` with `format: 'html'`
 - **Page cut at 40,000 characters:** call `web_fetch` again with `snapshot_id` and `start` from the result's `next` field. The rest is read from the saved page at no extra cost
 - **Page needs JavaScript or interaction (click, type, scroll):** `scraping_browser_*` tools. The scrape tools don't render JavaScript
-- **How ChatGPT/Perplexity answer a prompt:** `chatgpt_ai_insights` / `perplexity_ai_insights`
+- **How ChatGPT answers a prompt:** `chatgpt_ai_insights`
 - **Question about Bright Data itself (products, zones, errors, setup):** `ask_brightdata_assistant`
 
 Notes on scraper runs:
@@ -482,12 +481,11 @@ Refs come from the latest snapshot. If the page changes after a click or navigat
 </details>
 
 <details>
-<summary><b>GEO and LLM Visibility — 2 tools</b></summary>
+<summary><b>GEO and LLM Visibility — 1 tool</b></summary>
 
 | Tool | Input | Returns |
 |------|-------|---------|
 | `chatgpt_ai_insights` | Prompt | ChatGPT's answer as Markdown |
-| `perplexity_ai_insights` | Prompt | Perplexity's answer as Markdown |
 
 Use for Generative Engine Optimization (tracking how LLMs describe your brand) and LLM-as-a-judge workflows.
 

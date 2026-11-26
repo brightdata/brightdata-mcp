@@ -46,7 +46,6 @@
     {"name": "get_scraper_results", "description": "Get the records of a finished scraper run."},
     {"name": "refresh_scrapers", "description": "Reload the list of pre-built scrapers now."},
     {"name": "chatgpt_ai_insights", "description": "Send a prompt to ChatGPT and get its answer back as Markdown. Useful for GEO and LLM as a judge."},
-    {"name": "perplexity_ai_insights", "description": "Send a prompt to Perplexity and get its answer back as Markdown. Useful for GEO and LLM as a judge."},
     {"name": "list_dataset_fields", "description": "List the filterable fields of a searchable dataset (field name, type, and description). Call this before search_dataset."},
     {"name": "search_dataset", "description": "Exact filters on raw LinkedIn dataset fields, up to 10 records per call, with a cursor for more."},
     {"name": "business_search", "description": "Find companies or people (LinkedIn data) by description or criteria. Ranked results in one call. First choice to find companies or people."},
